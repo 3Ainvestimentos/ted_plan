@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -20,13 +21,17 @@ import { USER_ROLES } from "@/lib/constants";
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const [email, setEmail] = useState("user@example.com");
-  const [password, setPassword] = useState("password");
+  const [email, setEmail] = useState("demo.user@tedapp.com"); // Mocked email
   const [selectedRole, setSelectedRole] = useState<UserRole>("Contributor");
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, you'd validate credentials here
+    // Password is not required for this mock login
+    if (!email) {
+      // Basic validation in case email is cleared
+      alert("Please enter an email.");
+      return;
+    }
     login(selectedRole);
   };
 
@@ -39,7 +44,7 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-2xl font-headline">Welcome to Ted 1.0</CardTitle>
           <CardDescription>
-            Enter your credentials to access your dashboard.
+            Select your role and enter your email to access your dashboard.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>
@@ -52,16 +57,6 @@ export default function LoginPage() {
                 placeholder="m@example.com" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input 
-                id="password" 
-                type="password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 required 
               />
             </div>
