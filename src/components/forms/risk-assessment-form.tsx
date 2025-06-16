@@ -1,6 +1,6 @@
 "use client";
 
-import { useState }_ from "react";
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -57,7 +57,7 @@ export function RiskAssessmentForm() {
         <CardHeader>
           <CardTitle className="font-headline">Análise de Risco com IA</CardTitle>
           <CardDescription>
-            Cole os dados do seu projeto (ex: do Focalboard, listas de tarefas ou atualizações de projeto) abaixo. 
+            Cole os dados do seu projeto (ex: do Focalboard, listas de tarefas ou atualizações de projeto) abaixo.
             A IA irá analisá-los para identificar riscos e atrasos potenciais.
           </CardDescription>
         </CardHeader>
