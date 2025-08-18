@@ -15,15 +15,16 @@ import {
   DropdownMenuRadioItem
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/auth-context";
-import { USER_ROLES } from "@/lib/constants";
+import { NAV_ITEMS_FOOTER, USER_ROLES } from "@/lib/constants";
 import type { UserRole } from "@/types";
-import { Settings, ChevronUp } from "lucide-react";
+import { Settings, ChevronUp, LogOut } from "lucide-react";
 import Link from "next/link";
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "../ui/sidebar";
 
 export function UserNav() {
-  const { userRole, setUserRole, isAuthenticated } = useAuth();
+  const { userRole, setUserRole, isAuthenticated, logout } = useAuth();
   const { open } = useSidebar();
 
   if (!isAuthenticated) {
@@ -44,42 +45,54 @@ export function UserNav() {
 
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="w-full justify-start items-center text-left p-2 h-auto text-sidebar-foreground hover:bg-sidebar-accent">
-          <div className="flex items-center gap-3 w-full">
-            <Avatar className="h-9 w-9">
-              <AvatarImage src={`https://placehold.co/40x40.png?text=${getInitials(userName)}`} alt={userName} data-ai-hint="profile avatar" />
-              <AvatarFallback>{getInitials(userName)}</AvatarFallback>
-            </Avatar>
-            <div className={cn("flex-col items-start", open ? "flex" : "hidden")}>
-              <span className="text-sm font-medium leading-none">{userName}</span>
-              <span className="text-xs text-sidebar-foreground/70 leading-none mt-1">{userRole}</span>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="w-full justify-start items-center text-left p-2 h-auto text-sidebar-foreground hover:bg-sidebar-accent">
+            <div className="flex items-center gap-3 w-full">
+              <Avatar className="h-9 w-9">
+                <AvatarImage src={`https://placehold.co/40x40.png?text=${getInitials(userName)}`} alt={userName} data-ai-hint="profile avatar" />
+                <AvatarFallback>{getInitials(userName)}</AvatarFallback>
+              </Avatar>
+              <div className={cn("flex-col items-start", open ? "flex" : "hidden")}>
+                <span className="text-sm font-medium leading-none">{userName}</span>
+                <span className="text-xs text-sidebar-foreground/70 leading-none mt-1">{userRole}</span>
+              </div>
+              <ChevronUp className={cn("h-4 w-4 text-sidebar-foreground/70 ml-auto", open ? "block" : "hidden")} />
             </div>
-            <ChevronUp className={cn("h-4 w-4 text-sidebar-foreground/70 ml-auto", open ? "block" : "hidden")} />
-          </div>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56 mb-2" align="start" side="top" forceMount>
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{userName}</p>
-            <p className="text-xs leading-none text-muted-foreground">
-              {userEmail}
-            </p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel>Mudar Papel (Demo)</DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={userRole} onValueChange={(value) => setUserRole(value as UserRole)}>
-          {USER_ROLES.map((role) => (
-            <DropdownMenuRadioItem key={role} value={role}>
-              {role}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-56 mb-2" align="start" side="top" forceMount>
+          <DropdownMenuLabel className="font-normal">
+            <div className="flex flex-col space-y-1">
+              <p className="text-sm font-medium leading-none">{userName}</p>
+              <p className="text-xs leading-none text-muted-foreground">
+                {userEmail}
+              </p>
+            </div>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel>Mudar Papel (Demo)</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={userRole} onValueChange={(value) => setUserRole(value as UserRole)}>
+            {USER_ROLES.map((role) => (
+              <DropdownMenuRadioItem key={role} value={role}>
+                {role}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+          <DropdownMenuSeparator />
+           <DropdownMenuItem asChild>
+             <Link href="/settings">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Configurações</span>
+             </Link>
+           </DropdownMenuItem>
+           <DropdownMenuItem onClick={logout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Sair</span>
+           </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   );
 }
-

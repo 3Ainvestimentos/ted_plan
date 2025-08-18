@@ -42,23 +42,6 @@ export default function AppLayout({
         </SidebarContent>
         <SidebarFooter className="p-2 mt-auto">
            <UserNav />
-           <SidebarMenu>
-            {NAV_ITEMS_FOOTER.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                    <Link href={item.href} passHref>
-                        <SidebarMenuButton
-                            onClick={item.title === 'Sair' ? logout : undefined}
-                            tooltip={{content: item.title}}
-                            aria-label={item.title}
-                            className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                        >
-                            <item.icon className="h-5 w-5" />
-                            <span className="truncate group-data-[collapsible=icon]:hidden">{item.title}</span>
-                        </SidebarMenuButton>
-                    </Link>
-                </SidebarMenuItem>
-            ))}
-           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
@@ -76,4 +59,3 @@ export default function AppLayout({
     </SidebarProvider>
   );
 }
-
