@@ -36,6 +36,7 @@ export const KANBAN_COLUMNS_ORDER: InitiativeStatus[] = ['A Fazer', 'Em Dia', 'A
 export const MOCK_INITIATIVES: Initiative[] = [
   {
     id: 'task-1',
+    topicNumber: '1',
     title: 'Dev Contributor infrastructure',
     status: 'A Fazer',
     owner: 'Alice W.',
@@ -48,6 +49,7 @@ export const MOCK_INITIATIVES: Initiative[] = [
   },
   {
     id: 'task-2',
+    topicNumber: '1.1',
     title: 'Create install package',
     status: 'A Fazer',
     owner: 'Bob T.',
@@ -60,6 +62,7 @@ export const MOCK_INITIATIVES: Initiative[] = [
   },
   {
     id: 'task-3',
+    topicNumber: '1.2',
     title: 'UI Review',
     status: 'A Fazer',
     owner: 'Charlie B.',
@@ -71,6 +74,7 @@ export const MOCK_INITIATIVES: Initiative[] = [
   },
   {
     id: 'task-4',
+    topicNumber: '2',
     title: 'API client libraries',
     status: 'A Fazer',
     owner: 'David C.',
@@ -82,6 +86,7 @@ export const MOCK_INITIATIVES: Initiative[] = [
   },
   {
     id: 'task-5',
+    topicNumber: '3',
     title: 'Bugbash',
     status: 'Em Dia',
     owner: 'Anne K.',
@@ -94,6 +99,7 @@ export const MOCK_INITIATIVES: Initiative[] = [
   },
   {
     id: 'task-6',
+    topicNumber: '3.1',
     title: 'Code-sign client binaries',
     status: 'Em Dia',
     owner: 'Bob T.',
@@ -105,6 +111,7 @@ export const MOCK_INITIATIVES: Initiative[] = [
   },
   {
     id: 'task-7',
+    topicNumber: '3.2',
     title: 'Create initial help-wanted tickets',
     status: 'Em Dia',
     owner: 'Bob T.',
@@ -116,6 +123,7 @@ export const MOCK_INITIATIVES: Initiative[] = [
   },
   {
     id: 'task-8',
+    topicNumber: '4',
     title: 'Handle forgotten passwords',
     status: 'Em Risco',
     owner: 'Alice W.',
@@ -127,6 +135,7 @@ export const MOCK_INITIATIVES: Initiative[] = [
   },
   {
     id: 'task-9',
+    topicNumber: '5',
     title: 'Innovation Program',
     status: 'Atrasado',
     owner: 'Fred L.',
@@ -139,6 +148,7 @@ export const MOCK_INITIATIVES: Initiative[] = [
   },
   {
     id: 'task-10',
+    topicNumber: '5.1',
     title: 'Update license file',
     status: 'Em Dia',
     owner: 'Bob T.',
@@ -151,6 +161,7 @@ export const MOCK_INITIATIVES: Initiative[] = [
   },
   {
     id: 'task-11',
+    topicNumber: '6',
     title: 'Add help link to docs website',
     status: 'Concluído',
     owner: 'Bob T.',
@@ -162,6 +173,7 @@ export const MOCK_INITIATIVES: Initiative[] = [
   },
   {
     id: 'task-12',
+    topicNumber: '7',
     title: 'Settings flags',
     status: 'Concluído',
     owner: 'Fred L.',
@@ -173,6 +185,7 @@ export const MOCK_INITIATIVES: Initiative[] = [
   },
   {
     id: 'task-13',
+    topicNumber: '7.1',
     title: 'Show comment user name',
     status: 'Concluído',
     owner: 'Bob T.',
@@ -184,6 +197,7 @@ export const MOCK_INITIATIVES: Initiative[] = [
   },
   {
     id: 'task-14',
+    topicNumber: '8',
     title: 'Update Repo',
     status: 'Concluído',
     owner: 'Alice W.',

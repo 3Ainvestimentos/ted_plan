@@ -13,6 +13,7 @@ import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 export default function InitiativesPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -68,7 +69,8 @@ export default function InitiativesPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[40%]">Título da Iniciativa</TableHead>
+              <TableHead className="w-[80px]">Tópico</TableHead>
+              <TableHead className="w-[35%]">Título da Iniciativa</TableHead>
               <TableHead>Responsável</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Progresso</TableHead>
@@ -79,8 +81,10 @@ export default function InitiativesPage() {
             {filteredInitiatives.length > 0 ? (
               filteredInitiatives.map((initiative: Initiative) => {
                 const StatusIcon = STATUS_ICONS[initiative.status];
+                const isSubTopic = initiative.topicNumber.includes('.');
                 return (
                   <TableRow key={initiative.id}>
+                    <TableCell className={cn("font-medium", isSubTopic && "pl-8")}>{initiative.topicNumber}</TableCell>
                     <TableCell className="font-medium">{initiative.title}</TableCell>
                     <TableCell>{initiative.owner}</TableCell>
                     <TableCell>
@@ -107,7 +111,7 @@ export default function InitiativesPage() {
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="text-center h-48">
+                <TableCell colSpan={6} className="text-center h-48">
                   <p className="text-muted-foreground">Nenhuma iniciativa encontrada.</p>
                   <p className="text-sm text-muted-foreground mt-1">Tente ajustar sua busca ou filtros.</p>
                 </TableCell>

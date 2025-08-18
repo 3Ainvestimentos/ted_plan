@@ -4,6 +4,7 @@ export type InitiativePriority = 'P0' | 'P1' | 'P2' | 'P3' | 'P4';
 
 export interface Initiative {
   id: string;
+  topicNumber: string; // "1", "1.1", "2", etc.
   title: string;
   status: InitiativeStatus;
   owner: string; // Assignee
