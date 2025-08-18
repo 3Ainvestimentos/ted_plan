@@ -4,7 +4,7 @@
 import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { UserNav } from '@/components/layout/user-nav';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { Logo } from '@/components/icons/logo';
@@ -34,12 +34,6 @@ export default function AppLayout({
   return (
     <SidebarProvider defaultOpen>
       <Sidebar>
-        <SidebarHeader className="p-4 flex items-center justify-between">
-           <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full">
-            <Logo className="w-8 h-8 text-sidebar-primary" />
-            <h1 className="text-xl font-semibold text-sidebar-primary group-data-[collapsible=icon]:hidden">Ted 1.0</h1>
-          </div>
-        </SidebarHeader>
         <SidebarContent>
           <SidebarNav />
         </SidebarContent>
