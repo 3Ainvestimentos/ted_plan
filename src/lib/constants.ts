@@ -1,9 +1,8 @@
 import type { NavItem, UserRole, Initiative, InitiativeStatus, InitiativePriority } from '@/types';
-import { LayoutDashboard, ShieldAlert, ScrollText, ClipboardList, Target, TrendingUp, TrendingDown, Minus, CircleCheck, AlertTriangle, Clock, CheckCircle, ListTodo, User, CalendarDays, FileText, Lightbulb, Bug } from 'lucide-react';
+import { LayoutDashboard, ScrollText, ClipboardList, Target, TrendingUp, TrendingDown, Minus, CircleCheck, AlertTriangle, Clock, CheckCircle, ListTodo, User, CalendarDays, FileText, Lightbulb, Bug } from 'lucide-react';
 
 export const NAV_ITEMS_CONFIG: NavItem[] = [
   { title: 'Quadro de Projetos', href: '/dashboard', icon: LayoutDashboard }, // Renamed to match new focus
-  { title: 'Análise de Risco', href: '/risk-assessment', icon: ShieldAlert },
   { title: 'Sumários Executivos', href: '/executive-summaries', icon: ScrollText },
   { title: 'Automação de Reuniões', href: '/meeting-automation', icon: ClipboardList },
   { title: 'Iniciativas (Lista)', href: '/initiatives', icon: Target }, // Kept for list view if needed
@@ -200,7 +199,7 @@ export const KANBAN_COLUMN_NAMES: Record<InitiativeStatus, string> = {
 
 export const KANBAN_COLUMN_DISPLAY_ORDER: InitiativeStatus[] = ['A Fazer', 'Em Dia', 'Concluído'];
 // Note: 'Em Risco' and 'Atrasado' items will appear in 'IN PROGRESS' (Em Dia) column,
-// but their cards will be styled differently. This mapping defines the primary columns shown.
+// but their cards will be styled differently. This defines the primary columns shown.
 
 export const STATUS_TO_COLUMN_MAP: Record<InitiativeStatus, InitiativeStatus> = {
     'A Fazer': 'A Fazer',
