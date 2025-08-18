@@ -4,7 +4,7 @@
 import { MOCK_INITIATIVES, STATUS_ICONS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { PlusCircle, Filter, ExternalLink } from "lucide-react";
+import { PlusCircle, Filter, ExternalLink, ChevronDown, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import React, { useState, useMemo } from "react";
@@ -18,18 +18,47 @@ import { cn } from "@/lib/utils";
 export default function InitiativesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  
+  const [expandedTopics, setExpandedTopics] = useState<Set<string>>(() => 
+    new Set(MOCK_INITIATIVES.filter(i => !i.topicNumber.includes('.')).map(i => i.topicNumber))
+  );
+
+  const toggleTopic = (topicNumber: string) => {
+    setExpandedTopics(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(topicNumber)) {
+        newSet.delete(topicNumber);
+      } else {
+        newSet.add(topicNumber);
+      }
+      return newSet;
+    });
+  };
+
   const filteredInitiatives = useMemo(() => {
-    return MOCK_INITIATIVES.filter(initiative => {
+    const baseFiltered = MOCK_INITIATIVES.filter(initiative => {
       const matchesSearch = initiative.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             initiative.owner.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             initiative.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "all" || initiative.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [searchTerm, statusFilter]);
+
+    // Now, filter based on expansion state
+    return baseFiltered.filter(initiative => {
+        if (!initiative.topicNumber.includes('.')) {
+            return true; // Always show parent topics
+        }
+        const parentTopic = initiative.topicNumber.split('.')[0];
+        return expandedTopics.has(parentTopic); // Show sub-topic only if parent is expanded
+    });
+
+  }, [searchTerm, statusFilter, expandedTopics]);
 
   const initiativeStatuses = ["all", ...new Set(MOCK_INITIATIVES.map(i => i.status))] as const;
+  
+  const parentTopics = useMemo(() => 
+      new Set(MOCK_INITIATIVES.filter(i => i.topicNumber.includes('.')).map(i => i.topicNumber.split('.')[0]))
+  , []);
 
 
   return (
@@ -82,9 +111,23 @@ export default function InitiativesPage() {
               filteredInitiatives.map((initiative: Initiative) => {
                 const StatusIcon = STATUS_ICONS[initiative.status];
                 const isSubTopic = initiative.topicNumber.includes('.');
+                const isParent = parentTopics.has(initiative.topicNumber);
+                const isExpanded = expandedTopics.has(initiative.topicNumber);
+
                 return (
                   <TableRow key={initiative.id}>
-                    <TableCell className={cn("font-medium", isSubTopic && "pl-8")}>{initiative.topicNumber}</TableCell>
+                    <TableCell className={cn("font-medium", isSubTopic && "pl-8")}>
+                        <div className="flex items-center gap-1">
+                        {isParent && (
+                            <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2" onClick={() => toggleTopic(initiative.topicNumber)}>
+                                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            </Button>
+                        )}
+                         <span className={cn(isParent && "cursor-pointer")} onClick={() => isParent && toggleTopic(initiative.topicNumber)}>
+                            {initiative.topicNumber}
+                         </span>
+                        </div>
+                    </TableCell>
                     <TableCell className="font-medium">{initiative.title}</TableCell>
                     <TableCell>{initiative.owner}</TableCell>
                     <TableCell>
