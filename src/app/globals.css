@@ -4,64 +4,61 @@
 
 body {
   font-family: 'Archivo', sans-serif;
+  font-weight: 300; /* Use Archivo Light as the default weight */
 }
 
 @layer base {
   :root {
-    /* Original light theme, will be base for content area */
-    --background: 0 0% 98%; /* Very light gray for main content */
-    --foreground: 220 10% 23%; 
-    --card: 0 0% 100%; /* White cards */
+    /* Style Guide from PRD */
+    --background: 0 0% 100%; /* Branco puro */
+    --foreground: 220 10% 23%; /* Cinza escuro levemente azulado */
+    --card: 0 0% 100%;
     --card-foreground: 220 10% 23%;
     --popover: 0 0% 100%;
     --popover-foreground: 220 10% 23%;
-    
-    /* Primary color updated to Focalboard-like blue for general UI accents if needed */
-    --primary: 210 80% 55%; 
-    --primary-foreground: 0 0% 100%; 
-    
-    --secondary: 220 16% 94%; /* Light gray for secondary elements like column backgrounds */
+    --primary: 214 79% 51%; /* Azul vibrante */
+    --primary-foreground: 0 0% 100%; /* Branco puro */
+    --secondary: 220 16% 94%; /* Cinza claro */
     --secondary-foreground: 220 10% 20%; 
-    --muted: 220 15% 90%; 
-    --muted-foreground: 220 10% 45%; 
-    --accent: 220 16% 92%; 
-    --accent-foreground: 220 10% 20%; 
-    --destructive: 0 75% 60%; 
-    --destructive-foreground: 0 0% 100%; 
-    --border: 220 15% 88%; /* Light gray for borders */
-    --input: 0 0% 100%; /* White input background */
-    --ring: 210 80% 65%; 
-    --radius: 0.375rem; /* Slightly smaller radius for a tighter look */
+    --muted: 220 15% 90%; /* Cinza ainda mais claro */
+    --muted-foreground: 220 10% 45%; /* Cinza médio */
+    --accent: 220 16% 92%; /* Cinza claro para interações */
+    --accent-foreground: 220 10% 20%; /* Cinza escuro */
+    --destructive: 0 75% 60%; /* Vermelho claro */
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 15% 88%; /* Cinza claro e sutil */
+    --input: 220 16% 94%;
+    --ring: 214 79% 61%; /* Tom de azul levemente mais claro que o primário */
+    --radius: 0.5rem; /* Default radius */
 
-    --chart-1: 210 80% 55%;
+    /* Chart colors */
+    --chart-1: 214 79% 51%;
     --chart-2: 180 65% 55%;
     --chart-3: 45 85% 60%;
     --chart-4: 0 75% 60%;
     --chart-5: 270 70% 65%;
 
     /* Sidebar specific theme variables */
-    --sidebar-background: 210 80% 45%; /* Dark blue for sidebar */
-    --sidebar-foreground: 0 0% 95%; /* Off-white text */
-    --sidebar-primary: 0 0% 100%; /* White for active/hover highlights like text or icons */
-    --sidebar-primary-foreground: 210 80% 45%; /* Blue text on white active elements (if any) */
-    --sidebar-accent: 210 80% 55%; /* Slightly lighter blue for hover background */
+    --sidebar-background: 240 2% 16%; /* #2B2A27 */
+    --sidebar-foreground: 0 0% 95%;   /* Off-white text for good contrast */
+    --sidebar-primary: 0 0% 100%;    /* White for active/hover text or icons */
+    --sidebar-primary-foreground: 240 2% 16%; /* Dark text on active elements (if any) */
+    --sidebar-accent: 240 2% 25%; /* Slightly lighter gray for hover background */
     --sidebar-accent-foreground: 0 0% 100%; /* White text on hover */
-    --sidebar-border: 210 80% 35%; /* Darker blue for borders within sidebar (if any) */
-    --sidebar-ring: 0 0% 100%; /* White ring for focus on sidebar items */
+    --sidebar-border: 240 2% 22%; /* Darker gray for borders within sidebar */
+    --sidebar-ring: 0 0% 100%; /* White ring for focus */
   }
 
   .dark {
-    /* Dark theme adjustments for main content (sidebar will mostly keep its own dark theme) */
+    /* Dark theme adjustments */
     --background: 220 10% 10%; 
     --foreground: 0 0% 98%; 
     --card: 220 10% 12%; 
     --card-foreground: 0 0% 98%;
     --popover: 220 10% 12%;
     --popover-foreground: 0 0% 98%;
-    
-    --primary: 210 80% 60%; /* Slightly lighter blue for dark mode primary */
+    --primary: 214 79% 61%; /* Lighter blue for dark mode */
     --primary-foreground: 0 0% 100%;
-    
     --secondary: 220 10% 18%; 
     --secondary-foreground: 0 0% 98%;
     --muted: 220 10% 20%; 
@@ -71,23 +68,24 @@ body {
     --destructive: 0 70% 55%; 
     --destructive-foreground: 0 0% 100%;
     --border: 220 10% 25%; 
-    --input: 220 10% 15%; /* Darker input background */
-    --ring: 210 80% 70%; 
+    --input: 220 10% 15%; 
+    --ring: 214 79% 71%; 
 
-    --chart-1: 210 80% 60%;
+    /* Chart colors */
+    --chart-1: 214 79% 61%;
     --chart-2: 180 65% 60%;
     --chart-3: 45 85% 65%;
     --chart-4: 0 70% 55%;
     --chart-5: 270 70% 70%;
-
-    /* Sidebar dark theme is essentially the same as its light theme (blue) */
-    --sidebar-background: 210 80% 45%;
+    
+    /* Sidebar dark theme is the same as its light theme */
+    --sidebar-background: 240 2% 16%;
     --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 210 80% 45%;
-    --sidebar-accent: 210 80% 55%;
+    --sidebar-primary-foreground: 240 2% 16%;
+    --sidebar-accent: 240 2% 25%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 210 80% 35%;
+    --sidebar-border: 240 2% 22%;
     --sidebar-ring: 0 0% 100%;
   }
 }

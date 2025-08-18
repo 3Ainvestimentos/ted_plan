@@ -16,11 +16,14 @@ import {
 import { useAuth } from "@/contexts/auth-context";
 import { USER_ROLES } from "@/lib/constants";
 import type { UserRole } from "@/types";
-import { LogOut, UserCircle2, Settings, ChevronDown } from "lucide-react";
+import { LogOut, Settings, ChevronUp } from "lucide-react";
 import Link from "next/link";
+import { useSidebar } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
 export function UserNav() {
   const { userRole, setUserRole, logout, isAuthenticated } = useAuth();
+  const { open } = useSidebar();
 
   if (!isAuthenticated) {
     return null; 
@@ -34,7 +37,7 @@ export function UserNav() {
     return name.substring(0, 2).toUpperCase();
   }
 
-  // Dados de usuário simulados
+  // Mock user data based on role
   const userName = userRole === "PMO" ? "Patricia M. Oliveira" : userRole === "Líder" ? "Leo Dirigente" : "Carlos Contribuidor";
   const userEmail = userRole.toLowerCase().replace('ç', 'c').replace('í', 'i') + "@tedapp.com";
 
@@ -42,19 +45,21 @@ export function UserNav() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-10 flex items-center gap-2 px-2">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={`https://placehold.co/40x40.png?text=${getInitials(userName)}`} alt={userName} data-ai-hint="profile avatar" />
-            <AvatarFallback>{getInitials(userName)}</AvatarFallback>
-          </Avatar>
-          <div className="hidden md:flex flex-col items-start text-left">
-            <span className="text-sm font-medium">{userName}</span>
-            <span className="text-xs text-muted-foreground">{userRole}</span>
+        <Button variant="ghost" className="w-full justify-start items-center text-left p-2 h-auto text-sidebar-foreground hover:bg-sidebar-accent">
+          <div className="flex items-center gap-3 w-full">
+            <Avatar className="h-9 w-9">
+              <AvatarImage src={`https://placehold.co/40x40.png?text=${getInitials(userName)}`} alt={userName} data-ai-hint="profile avatar" />
+              <AvatarFallback>{getInitials(userName)}</AvatarFallback>
+            </Avatar>
+            <div className={cn("flex-col items-start", open ? "flex" : "hidden")}>
+              <span className="text-sm font-medium leading-none">{userName}</span>
+              <span className="text-xs text-sidebar-foreground/70 leading-none mt-1">{userRole}</span>
+            </div>
+            <ChevronUp className={cn("h-4 w-4 text-sidebar-foreground/70 ml-auto", open ? "block" : "hidden")} />
           </div>
-          <ChevronDown className="h-4 w-4 text-muted-foreground ml-1 hidden md:block" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
+      <DropdownMenuContent className="w-56 mb-2" align="start" side="top" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{userName}</p>
@@ -64,7 +69,7 @@ export function UserNav() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuLabel>Papel</DropdownMenuLabel>
+        <DropdownMenuLabel>Mudar Papel (Demo)</DropdownMenuLabel>
         <DropdownMenuRadioGroup value={userRole} onValueChange={(value) => setUserRole(value as UserRole)}>
           {USER_ROLES.map((role) => (
             <DropdownMenuRadioItem key={role} value={role}>
