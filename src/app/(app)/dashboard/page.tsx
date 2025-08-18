@@ -58,9 +58,6 @@ export default function DashboardPage() {
             <GripVertical className="h-6 w-6 text-muted-foreground" />
             <h1 className="text-2xl font-semibold text-foreground">Quadro de Status do Projeto</h1>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Status atual dos itens de trabalho | <a href="#" className="text-primary hover:underline">Repositório GitHub</a>
-        </p>
       </div>
 
       {/* Toolbar */}
