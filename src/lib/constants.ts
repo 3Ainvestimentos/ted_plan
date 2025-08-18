@@ -3,10 +3,10 @@ import type { NavItem, UserRole, Initiative, InitiativeStatus, InitiativePriorit
 import { LayoutDashboard, ScrollText, ClipboardList, Target, TrendingUp, TrendingDown, Minus, CircleCheck, AlertTriangle, Clock, CheckCircle, ListTodo, User, CalendarDays, FileText, Lightbulb, Bug, Settings, LogOut } from 'lucide-react';
 
 export const NAV_ITEMS_CONFIG: NavItem[] = [
-  { title: 'Quadro de Projetos', href: '/dashboard', icon: LayoutDashboard }, // Renamed to match new focus
+  { title: 'Iniciativas Estratégicas', href: '/initiatives', icon: Target },
+  { title: 'Quadro de Projetos', href: '/dashboard', icon: LayoutDashboard },
   { title: 'Sumários Executivos', href: '/executive-summaries', icon: ScrollText },
   { title: 'Automação de Reuniões', href: '/meeting-automation', icon: ClipboardList },
-  { title: 'Iniciativas (Lista)', href: '/initiatives', icon: Target }, // Kept for list view if needed
   { title: 'Configurações', href: '/settings', icon: Settings },
 ];
 

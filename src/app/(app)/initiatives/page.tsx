@@ -1,14 +1,18 @@
+
 "use client";
 
-import { InitiativeCard } from "@/components/dashboard/initiative-card";
-import { MOCK_INITIATIVES } from "@/lib/constants";
+import { MOCK_INITIATIVES, STATUS_ICONS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { PlusCircle, Filter } from "lucide-react";
+import { PlusCircle, Filter, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import React, { useState, useMemo } from "react";
-import type { Initiative } from "@/types";
+import type { Initiative, InitiativeStatus } from "@/types";
+import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 
 export default function InitiativesPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -24,7 +28,7 @@ export default function InitiativesPage() {
     });
   }, [searchTerm, statusFilter]);
 
-  const initiativeStatuses = ["all", ...new Set(MOCK_INITIATIVES.map(i => i.status))];
+  const initiativeStatuses = ["all", ...new Set(MOCK_INITIATIVES.map(i => i.status))] as const;
 
 
   return (
@@ -59,19 +63,59 @@ export default function InitiativesPage() {
           </Select>
         </div>
       </div>
-
-      {filteredInitiatives.length > 0 ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredInitiatives.map((initiative: Initiative) => (
-            <InitiativeCard key={initiative.id} initiative={initiative} showDetailsLink={true} />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-10">
-          <p className="text-xl text-muted-foreground">Nenhuma iniciativa encontrada com seus critérios.</p>
-          <p className="text-sm text-muted-foreground mt-2">Tente ajustar sua busca ou filtros.</p>
-        </div>
-      )}
+      
+      <Card className="shadow-sm">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[40%]">Título da Iniciativa</TableHead>
+              <TableHead>Responsável</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Progresso</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredInitiatives.length > 0 ? (
+              filteredInitiatives.map((initiative: Initiative) => {
+                const StatusIcon = STATUS_ICONS[initiative.status];
+                return (
+                  <TableRow key={initiative.id}>
+                    <TableCell className="font-medium">{initiative.title}</TableCell>
+                    <TableCell>{initiative.owner}</TableCell>
+                    <TableCell>
+                      <Badge variant={initiative.status === 'Concluído' ? 'default' : initiative.status === 'Em Risco' || initiative.status === 'Atrasado' ? 'destructive' : 'secondary'} className="capitalize flex items-center w-fit">
+                        <StatusIcon className="mr-1.5 h-3.5 w-3.5" />
+                        {initiative.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Progress value={initiative.progress} className="w-24 h-2" aria-label={`Progresso de ${initiative.title}`} />
+                        <span className="text-sm text-muted-foreground">{initiative.progress}%</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                       <Button variant="outline" size="sm" asChild>
+                         <Link href={`/initiatives/${initiative.id}`}>
+                           Ver Dossiê <ExternalLink className="ml-2 h-4 w-4" />
+                         </Link>
+                       </Button>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            ) : (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center h-48">
+                  <p className="text-muted-foreground">Nenhuma iniciativa encontrada.</p>
+                  <p className="text-sm text-muted-foreground mt-1">Tente ajustar sua busca ou filtros.</p>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Card>
     </div>
   );
 }
