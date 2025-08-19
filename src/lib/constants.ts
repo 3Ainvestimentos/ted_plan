@@ -1,13 +1,13 @@
 
 import type { NavItem, UserRole, Initiative, InitiativeStatus, InitiativePriority, ContentItem, ContentStatus } from '@/types';
-import { LayoutDashboard, ScrollText, ClipboardList, Target, TrendingUp, TrendingDown, Minus, CircleCheck, AlertTriangle, Clock, CheckCircle, ListTodo, User, CalendarDays, FileText, Lightbulb, Bug, Settings, LogOut, Calendar } from 'lucide-react';
+import { LayoutDashboard, ScrollText, ClipboardList, Target, TrendingUp, TrendingDown, Minus, CircleCheck, AlertTriangle, Clock, CheckCircle, ListTodo, User, CalendarDays, FileText, Lightbulb, Bug, Settings, LogOut, Calendar, CalendarClock } from 'lucide-react';
 
 export const NAV_ITEMS_CONFIG: NavItem[] = [
   { title: 'Iniciativas Estratégicas', href: '/initiatives', icon: Target },
   { title: 'Quadro de Projetos', href: '/dashboard', icon: LayoutDashboard },
   { title: 'Calendário de Conteúdo', href: '/content-calendar', icon: Calendar },
   { title: 'Sumários Executivos', href: '/executive-summaries', icon: ScrollText },
-  { title: 'Automação de Reuniões', href: '/meeting-automation', icon: ClipboardList },
+  { title: 'Pautas de Reunião', href: '/meeting-automation', icon: CalendarClock },
   { title: 'Configurações', href: '/settings', icon: Settings },
 ];
 
