@@ -39,8 +39,8 @@ export default function AppLayout({
   return (
     <InitiativesProvider>
       <ContentCalendarProvider>
-        <div className="flex min-h-screen w-full bg-background">
-          <SidebarProvider defaultOpen>
+        <SidebarProvider defaultOpen>
+          <div className="flex min-h-screen w-full bg-background">
             <Sidebar>
               <SidebarContent>
                 <SidebarNav />
@@ -76,8 +76,8 @@ export default function AppLayout({
                 {children}
               </main>
             </SidebarInset>
-          </SidebarProvider>
-        </div>
+          </div>
+        </SidebarProvider>
       </ContentCalendarProvider>
     </InitiativesProvider>
   );
