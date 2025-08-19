@@ -184,7 +184,7 @@ const Sidebar = React.forwardRef<
       <div
         ref={ref}
         className={cn(
-          "group/sidebar hidden md:flex flex-col h-svh bg-sidebar text-sidebar-foreground border-sidebar-border transition-[width] duration-300 ease-in-out",
+          "group/sidebar sticky top-0 hidden md:flex flex-col self-start bg-sidebar text-sidebar-foreground border-sidebar-border transition-[width] duration-300 ease-in-out",
           open ? "w-[--sidebar-width]" : "w-[--sidebar-width-icon]",
           side === "left" ? "border-r" : "border-l",
           className
