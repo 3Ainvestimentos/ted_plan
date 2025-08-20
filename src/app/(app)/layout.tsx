@@ -8,6 +8,7 @@ import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter, SidebarTrigger
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { InitiativesProvider } from '@/contexts/initiatives-context';
 import { ContentCalendarProvider } from '@/contexts/content-calendar-context';
+import { UserNav } from '@/components/layout/user-nav';
 
 export default function AppLayout({
   children,
@@ -41,7 +42,7 @@ export default function AppLayout({
                 <SidebarNav />
               </SidebarContent>
               <SidebarFooter>
-                 {/* UserNav removido */}
+                 <UserNav />
               </SidebarFooter>
             </Sidebar>
             <div className="flex flex-col flex-1 overflow-hidden">

@@ -10,13 +10,11 @@ import {
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import type { NavItem } from "@/types";
-import { Separator } from "@/components/ui/separator";
 
 export function SidebarNav() {
   const pathname = usePathname();
   
   const mainNavItems = NAV_ITEMS_CONFIG.filter(item => !item.isFooter);
-  const settingsNavItem = NAV_ITEMS_CONFIG.find(item => item.isFooter);
 
   const renderNavItem = (item: NavItem) => (
     <SidebarMenuItem key={item.title}>
@@ -40,13 +38,6 @@ export function SidebarNav() {
         <SidebarMenu className="flex-grow">
             {mainNavItems.map(renderNavItem)}
         </SidebarMenu>
-        
-        <div className="mt-auto">
-            <SidebarMenu>
-                <Separator className="my-2 bg-sidebar-border" />
-                {settingsNavItem && renderNavItem(settingsNavItem)}
-            </SidebarMenu>
-        </div>
     </div>
   );
 }
