@@ -5,7 +5,6 @@ import { LayoutDashboard, ScrollText, ClipboardList, Target, TrendingUp, Trendin
 export const NAV_ITEMS_CONFIG: NavItem[] = [
   { title: 'Painel Estratégico', href: '/strategic-panel', icon: LayoutDashboard },
   { title: 'Iniciativas Estratégicas', href: '/strategic-initiatives', icon: Target },
-  { title: 'Quadro de Projetos', href: '/project-board', icon: ClipboardList },
   { title: 'Calendário de Conteúdo', href: '/content-calendar', icon: Calendar },
   { title: 'Agenda de Reuniões', href: '/meeting-agenda', icon: CalendarClock },
   // Admin Section Divider (visual only)
