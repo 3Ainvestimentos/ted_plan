@@ -37,7 +37,7 @@ export default function AppLayout({
       <ContentCalendarProvider>
         <SidebarProvider>
           <div className="flex min-h-screen w-full bg-background">
-            <Sidebar>
+            <Sidebar className="h-full">
               <SidebarContent>
                 <SidebarNav />
               </SidebarContent>
@@ -45,7 +45,7 @@ export default function AppLayout({
                  <UserNav />
               </SidebarFooter>
             </Sidebar>
-            <SidebarInset>
+            <div className="flex flex-col w-full">
               <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-lg px-4 sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
                 <SidebarTrigger /> 
                 <div className="ml-auto flex items-center gap-2">
@@ -55,12 +55,10 @@ export default function AppLayout({
               <main className="flex-1 p-4 md:p-6 overflow-auto">
                 {children}
               </main>
-            </SidebarInset>
+            </div>
           </div>
         </SidebarProvider>
       </ContentCalendarProvider>
     </InitiativesProvider>
   );
 }
-
-    
