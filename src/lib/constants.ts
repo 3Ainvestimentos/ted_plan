@@ -1,18 +1,21 @@
 
 import type { NavItem, UserRole, Initiative, InitiativeStatus, InitiativePriority, ContentItem, ContentStatus } from '@/types';
-import { LayoutDashboard, ScrollText, ClipboardList, Target, TrendingUp, TrendingDown, Minus, CircleCheck, AlertTriangle, Clock, CheckCircle, ListTodo, User, CalendarDays, FileText, Lightbulb, Bug, Settings, LogOut, Calendar, CalendarClock } from 'lucide-react';
+import { LayoutDashboard, ScrollText, ClipboardList, Target, TrendingUp, TrendingDown, Minus, CircleCheck, AlertTriangle, Clock, CheckCircle, ListTodo, User, CalendarDays, FileText, Lightbulb, Bug, Settings, LogOut, Calendar, CalendarClock, Shield, BarChart3 } from 'lucide-react';
 
 export const NAV_ITEMS_CONFIG: NavItem[] = [
-  { title: 'Painel Estratégico', href: '/dashboard', icon: LayoutDashboard },
-  { title: 'Iniciativas Estratégicas', href: '/initiatives', icon: Target },
+  { title: 'Painel Estratégico', href: '/strategic-panel', icon: LayoutDashboard },
+  { title: 'Iniciativas Estratégicas', href: '/strategic-initiatives', icon: Target },
+  { title: 'Quadro de Projetos', href: '/project-board', icon: ClipboardList },
   { title: 'Calendário de Conteúdo', href: '/content-calendar', icon: Calendar },
   { title: 'Agenda de Reuniões', href: '/meeting-agenda', icon: CalendarClock },
-  { title: 'Configurações', href: '/settings', icon: Settings },
+  // Admin Section Divider (visual only)
+  { isDivider: true, title: 'Painéis de Controle' },
+  { title: 'Gerenciar Conteúdo', href: '/admin/content', icon: BarChart3 },
+  { title: 'Gerenciar Usuários', href: '/admin/users', icon: User },
+  { title: 'Auditoria', href: '/audit', icon: Shield },
+  { title: 'Configurações', href: '/settings', icon: Settings, isFooter: true },
 ];
 
-export const NAV_ITEMS_FOOTER: NavItem[] = [
-    { title: 'Sair', href: '/login', icon: LogOut },
-]
 
 export const USER_ROLES: UserRole[] = ['PMO', 'Líder', 'Colaborador'];
 
@@ -283,3 +286,21 @@ export const CONTENT_COLUMN_NAMES: Record<ContentStatus, string> = {
 };
 
 export const CONTENT_COLUMN_DISPLAY_ORDER: ContentStatus[] = ['Idea', 'Draft', 'In Review', 'Ready to Publish', 'Published'];
+
+// Mock data for collaborators
+export const initialCollaborators = [
+  { id: 1, name: 'Patricia M. Oliveira', email: 'pmo@tedapp.com', area: 'PMO', cargo: 'Gerente de Projetos' },
+  { id: 2, name: 'Leo Dirigente', email: 'lider@tedapp.com', area: 'Liderança', cargo: 'Diretor de Estratégia' },
+  { id: 3, name: 'Carlos Contribuidor', email: 'colaborador@tedapp.com', area: 'Desenvolvimento', cargo: 'Desenvolvedor Sênior' },
+  { id: 4, name: 'Ana Silva', email: 'ana.silva@tedapp.com', area: 'Marketing', cargo: 'Analista de Marketing' },
+];
+
+// Mock data for permissions
+export const initialPermissions = initialCollaborators.reduce((acc, user) => {
+  const navItemsForPermissions = NAV_ITEMS_CONFIG.filter(item => !item.isDivider);
+  acc[user.id] = navItemsForPermissions.reduce((userPermissions, navItem) => {
+    userPermissions[navItem.href] = true; // All enabled by default
+    return userPermissions;
+  }, {} as Record<string, boolean>);
+  return acc;
+}, {} as Record<number, Record<string, boolean>>);

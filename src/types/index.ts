@@ -23,6 +23,8 @@ export interface NavItem {
   href: string;
   icon: React.ElementType;
   disabled?: boolean;
+  isDivider?: boolean;
+  isFooter?: boolean;
   onClick?: () => void;
 }
 

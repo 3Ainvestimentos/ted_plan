@@ -3,76 +3,21 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { useAuth } from "@/contexts/auth-context";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { NAV_ITEMS_CONFIG } from '@/lib/constants';
+import { NAV_ITEMS_CONFIG, initialCollaborators, initialPermissions } from '@/lib/constants';
 import { Textarea } from '@/components/ui/textarea';
 import { SlidersHorizontal, UserX } from 'lucide-react';
-
-// Mock data for collaborators
-const initialCollaborators = [
-  { id: 1, name: 'Patricia M. Oliveira', email: 'pmo@tedapp.com', area: 'PMO', cargo: 'Gerente de Projetos' },
-  { id: 2, name: 'Leo Dirigente', email: 'lider@tedapp.com', area: 'Liderança', cargo: 'Diretor de Estratégia' },
-  { id: 3, name: 'Carlos Contribuidor', email: 'colaborador@tedapp.com', area: 'Desenvolvimento', cargo: 'Desenvolvedor Sênior' },
-  { id: 4, name: 'Ana Silva', email: 'ana.silva@tedapp.com', area: 'Marketing', cargo: 'Analista de Marketing' },
-];
-
-// Mock data for permissions
-const initialPermissions = initialCollaborators.reduce((acc, user) => {
-  acc[user.id] = NAV_ITEMS_CONFIG.reduce((userPermissions, navItem) => {
-    userPermissions[navItem.href] = true; // All enabled by default
-    return userPermissions;
-  }, {} as Record<string, boolean>);
-  return acc;
-}, {} as Record<number, Record<string, boolean>>);
-
+import { PageHeader } from '@/components/layout/page-header';
+import { Label } from '@/components/ui/label';
 
 export default function SettingsPage() {
-  const { userRole } = useAuth(); 
-  const userName = userRole === "PMO" ? "Patricia M. Oliveira" : userRole === "Líder" ? "Leo Dirigente" : "Carlos Contribuidor";
-  const userEmail = userRole.toLowerCase().replace('ç', 'c').replace('í', 'i') + "@tedapp.com";
-  
-  const [collaborators, setCollaborators] = useState(initialCollaborators);
   const [permissions, setPermissions] = useState(initialPermissions);
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState("A plataforma está temporariamente indisponível para manutenção. Voltaremos em breve!");
 
-  const getInitials = (name: string) => {
-    const parts = name.split(' ');
-    if (parts.length > 1) {
-      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
-  }
-  
-  const handleAddCollaborator = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const newCollaborator = {
-      id: collaborators.length + 1,
-      name: formData.get('name') as string,
-      email: formData.get('email') as string,
-      area: formData.get('area') as string,
-      cargo: formData.get('cargo') as string,
-    };
-    setCollaborators([...collaborators, newCollaborator]);
-    
-    // Set default permissions for new user
-    const newUserPermissions = NAV_ITEMS_CONFIG.reduce((acc, navItem) => {
-        acc[navItem.href] = true;
-        return acc;
-    }, {} as Record<string, boolean>);
-    setPermissions({...permissions, [newCollaborator.id]: newUserPermissions});
-
-    event.currentTarget.reset();
-  };
-  
   const handlePermissionChange = (userId: number, pageHref: string, isEnabled: boolean) => {
       setPermissions(prev => ({
           ...prev,
@@ -83,76 +28,20 @@ export default function SettingsPage() {
       }));
   };
 
-  const pagesForPermissions = NAV_ITEMS_CONFIG.filter(item => item.href !== '/dashboard');
+  const pagesForPermissions = NAV_ITEMS_CONFIG.filter(item => !item.isDivider && item.href !== '/dashboard');
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
-      <h1 className="font-headline text-3xl font-semibold tracking-tight">Configurações</h1>
+      <PageHeader
+        title="Configurações e Acesso"
+        description="Gerencie permissões de acesso e o estado da plataforma."
+      />
 
-      <Tabs defaultValue="collaborators">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="collaborators">Gerenciar Colaboradores</TabsTrigger>
-          <TabsTrigger value="permissions">Permissões</TabsTrigger>
+      <Tabs defaultValue="permissions">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="permissions">Permissões de Acesso</TabsTrigger>
           <TabsTrigger value="maintenance">Modo de Manutenção</TabsTrigger>
         </TabsList>
-
-        {/* Collaborators Tab */}
-        <TabsContent value="collaborators" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Adicionar Novo Colaborador</CardTitle>
-              <CardDescription>Insira os detalhes abaixo para adicionar um novo usuário ao sistema.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleAddCollaborator} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-                <div className="space-y-1 lg:col-span-1">
-                  <Label htmlFor="name">Nome</Label>
-                  <Input id="name" name="name" placeholder="Nome do Colaborador" required />
-                </div>
-                <div className="space-y-1 lg:col-span-1">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" name="email" type="email" placeholder="email@tedapp.com" required />
-                </div>
-                <div className="space-y-1 lg:col-span-1">
-                  <Label htmlFor="area">Área</Label>
-                  <Input id="area" name="area" placeholder="Ex: Marketing" required />
-                </div>
-                 <div className="space-y-1 lg:col-span-1">
-                  <Label htmlFor="cargo">Cargo</Label>
-                  <Input id="cargo" name="cargo" placeholder="Ex: Analista" required />
-                </div>
-                <Button type="submit" className="w-full lg:w-auto">Adicionar</Button>
-              </form>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Colaboradores Cadastrados</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Área</TableHead>
-                    <TableHead>Cargo</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {collaborators.map(user => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.area}</TableCell>
-                      <TableCell>{user.cargo}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* Permissions Tab */}
         <TabsContent value="permissions">
@@ -174,7 +63,7 @@ export default function SettingsPage() {
                         </TableRow>
                         </TableHeader>
                         <TableBody>
-                        {collaborators.map(user => (
+                        {initialCollaborators.map(user => (
                             <TableRow key={user.id}>
                             <TableCell className="font-medium">{user.name}</TableCell>
                             {pagesForPermissions.map(page => (

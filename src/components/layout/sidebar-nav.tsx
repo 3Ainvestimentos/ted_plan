@@ -10,30 +10,49 @@ import {
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import type { NavItem } from "@/types";
+import { Separator } from "@/components/ui/separator";
 
 export function SidebarNav() {
   const pathname = usePathname();
   
+  const mainNavItems = NAV_ITEMS_CONFIG.filter(item => !item.isFooter && !item.isDivider && !item.title.startsWith('Gerenciar') && !item.title.startsWith('Auditoria') && item.title !== 'Configurações');
+  const adminNavItems = NAV_ITEMS_CONFIG.filter(item => item.title.startsWith('Gerenciar') || item.title.startsWith('Auditoria'));
+  const settingsNavItem = NAV_ITEMS_CONFIG.find(item => item.title === 'Configurações');
+
+  const renderNavItem = (item: NavItem) => (
+    <SidebarMenuItem key={item.title}>
+      <SidebarMenuButton
+        asChild
+        isActive={pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))}
+        disabled={item.disabled}
+        tooltip={{ children: item.title }}
+        aria-label={item.title}
+      >
+       <Link href={item.href}>
+          <item.icon />
+          <span>{item.title}</span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+
   return (
-    <SidebarMenu>
-      {NAV_ITEMS_CONFIG.map((item: NavItem) => (
-        <SidebarMenuItem key={item.title}>
-            <SidebarMenuButton
-              asChild
-              isActive={pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))}
-              disabled={item.disabled}
-              tooltip={{ children: item.title }}
-              aria-label={item.title}
-            >
-             <Link href={item.href}>
-                <item.icon />
-                <span>{item.title}</span>
-              </Link>
-            </SidebarMenuButton>
-        </SidebarMenuItem>
-      ))}
-    </SidebarMenu>
+    <div className="flex flex-col h-full">
+      <SidebarMenu className="flex-grow">
+        {mainNavItems.map(renderNavItem)}
+        
+        {adminNavItems.length > 0 && (
+          <div className="mt-4">
+            <p className="px-3 py-2 text-xs font-semibold text-sidebar-foreground/70 uppercase tracking-wider group-data-[state=collapsed]/sidebar:text-center">Admin</p>
+             {adminNavItems.map(renderNavItem)}
+          </div>
+        )}
+      </SidebarMenu>
+      
+      <SidebarMenu className="mt-auto">
+        <Separator className="my-2 bg-sidebar-border" />
+        {settingsNavItem && renderNavItem(settingsNavItem)}
+      </SidebarMenu>
+    </div>
   );
 }
-
-    
