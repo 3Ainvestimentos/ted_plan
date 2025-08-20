@@ -3,8 +3,8 @@ import type { NavItem, UserRole, Initiative, InitiativeStatus, InitiativePriorit
 import { LayoutDashboard, ScrollText, ClipboardList, Target, TrendingUp, TrendingDown, Minus, CircleCheck, AlertTriangle, Clock, CheckCircle, ListTodo, User, CalendarDays, FileText, Lightbulb, Bug, Settings, LogOut, Calendar, CalendarClock } from 'lucide-react';
 
 export const NAV_ITEMS_CONFIG: NavItem[] = [
+  { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { title: 'Iniciativas Estratégicas', href: '/initiatives', icon: Target },
-  { title: 'Quadro de Projetos', href: '/dashboard', icon: LayoutDashboard },
   { title: 'Calendário de Conteúdo', href: '/content-calendar', icon: Calendar },
   { title: 'Sumários Executivos', href: '/executive-summaries', icon: ScrollText },
   { title: 'Pautas de Reunião', href: '/meeting-automation', icon: CalendarClock },
