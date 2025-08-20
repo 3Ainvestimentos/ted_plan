@@ -1,3 +1,4 @@
+
 import type {Config} from 'tailwindcss';
 
 export default {
@@ -11,7 +12,7 @@ export default {
     extend: {
       fontFamily: {
         body: ['Archivo', 'sans-serif'],
-        headline: ['Archivo', 'sans-serif'],
+        headline: ['Roboto', 'sans-serif'],
         code: ['monospace'],
       },
       colors: {
@@ -57,6 +58,7 @@ export default {
         },
         sidebar: {
           DEFAULT: 'hsl(var(--sidebar-background))',
+          background: 'hsl(var(--sidebar-background))',
           foreground: 'hsl(var(--sidebar-foreground))',
           primary: 'hsl(var(--sidebar-primary))',
           'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
@@ -97,3 +99,5 @@ export default {
   },
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;
+
+    

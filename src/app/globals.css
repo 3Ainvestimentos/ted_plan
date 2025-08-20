@@ -1,35 +1,40 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 body {
   font-family: 'Archivo', sans-serif;
-  font-weight: 300; /* Use Archivo Light as the default weight */
+  font-weight: 400; 
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Roboto', sans-serif;
 }
 
 @layer base {
   :root {
     /* Style Guide from PRD */
-    --background: 0 0% 100%; /* Branco puro */
-    --foreground: 220 10% 23%; /* Cinza escuro levemente azulado */
+    --background: 0 0% 100%; 
+    --foreground: 220 10% 23%; 
     --card: 0 0% 100%;
     --card-foreground: 220 10% 23%;
     --popover: 0 0% 100%;
     --popover-foreground: 220 10% 23%;
-    --primary: 170 60% 45%; /* Verde - Alterado de Azul */
-    --primary-foreground: 0 0% 100%; /* Branco puro */
-    --secondary: 220 16% 94%; /* Cinza claro */
+    --primary: 170 60% 45%; 
+    --primary-foreground: 0 0% 100%; 
+    --secondary: 220 16% 94%; 
     --secondary-foreground: 220 10% 20%; 
-    --muted: 220 15% 90%; /* Cinza ainda mais claro */
-    --muted-foreground: 220 10% 45%; /* Cinza médio */
-    --accent: 220 16% 92%; /* Cinza claro para interações */
-    --accent-foreground: 220 10% 20%; /* Cinza escuro */
-    --destructive: 0 75% 60%; /* Vermelho claro */
+    --muted: 220 15% 90%; 
+    --muted-foreground: 220 10% 45%; 
+    --accent: 220 16% 92%; 
+    --accent-foreground: 220 10% 20%; 
+    --destructive: 0 75% 60%; 
     --destructive-foreground: 0 0% 100%;
-    --border: 220 15% 88%; /* Cinza claro e sutil */
+    --border: 220 15% 88%; 
     --input: 220 16% 94%;
-    --ring: 170 60% 50%; /* Verde para anel de foco - Alterado de Azul */
-    --radius: 0.5rem; /* Default radius */
+    --ring: 170 60% 50%;
+    --radius: 0.5rem;
 
     /* Chart colors */
     --chart-1: 170 60% 45%;
@@ -38,15 +43,15 @@ body {
     --chart-4: 0 75% 60%;
     --chart-5: 270 70% 65%;
 
-    /* Sidebar specific theme variables */
-    --sidebar-background: 240 2% 16%; /* #2B2A27 */
-    --sidebar-foreground: 0 0% 95%;   /* Off-white text for good contrast */
-    --sidebar-primary: 0 0% 100%;    /* White for active/hover text or icons */
-    --sidebar-primary-foreground: 240 2% 16%; /* Dark text on active elements (if any) */
-    --sidebar-accent: 240 2% 25%; /* Slightly lighter gray for hover background */
-    --sidebar-accent-foreground: 0 0% 100%; /* White text on hover */
-    --sidebar-border: 240 2% 22%; /* Darker gray for borders within sidebar */
-    --sidebar-ring: 0 0% 100%; /* White ring for focus */
+    /* New Sidebar Theme */
+    --sidebar-background: 220 20% 96%;
+    --sidebar-foreground: 220 10% 45%;
+    --sidebar-primary: 38 59% 68%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 0 0% 94%;
+    --sidebar-accent-foreground: 0 0% 13%;
+    --sidebar-border: 0 0% 89%;
+    --sidebar-ring: 38 59% 68%;
   }
 
   .dark {
@@ -57,7 +62,7 @@ body {
     --card-foreground: 0 0% 98%;
     --popover: 220 10% 12%;
     --popover-foreground: 0 0% 98%;
-    --primary: 170 60% 50%; /* Verde mais claro para modo escuro */
+    --primary: 170 60% 50%;
     --primary-foreground: 0 0% 100%;
     --secondary: 220 10% 18%; 
     --secondary-foreground: 0 0% 98%;
@@ -78,15 +83,15 @@ body {
     --chart-4: 0 70% 55%;
     --chart-5: 270 70% 70%;
     
-    /* Sidebar dark theme is the same as its light theme */
-    --sidebar-background: 240 2% 16%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 240 2% 16%;
-    --sidebar-accent: 240 2% 25%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 240 2% 22%;
-    --sidebar-ring: 0 0% 100%;
+    /* New Sidebar Dark Theme */
+    --sidebar-background: 210 20% 14%;
+    --sidebar-foreground: 210 20% 95%;
+    --sidebar-primary: 38 59% 68%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 210 15% 22%;
+    --sidebar-accent-foreground: 210 20% 95%;
+    --sidebar-border: 210 20% 12%;
+    --sidebar-ring: 38 59% 68%;
   }
 }
 
@@ -100,3 +105,5 @@ body {
     -moz-osx-font-smoothing: grayscale;
   }
 }
+
+    

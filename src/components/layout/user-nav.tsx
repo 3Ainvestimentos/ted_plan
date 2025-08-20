@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -15,17 +14,16 @@ import {
   DropdownMenuRadioItem
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/auth-context";
-import { NAV_ITEMS_FOOTER, USER_ROLES } from "@/lib/constants";
+import { USER_ROLES } from "@/lib/constants";
 import type { UserRole } from "@/types";
-import { Settings, ChevronUp, LogOut } from "lucide-react";
+import { Settings, LogOut } from "lucide-react";
 import Link from "next/link";
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "../ui/sidebar";
 
 export function UserNav() {
   const { userRole, setUserRole, isAuthenticated, logout } = useAuth();
-  const { open } = useSidebar();
+  const { state } = useSidebar();
 
   if (!isAuthenticated) {
     return null; 
@@ -43,22 +41,23 @@ export function UserNav() {
   const userName = userRole === "PMO" ? "Patricia M. Oliveira" : userRole === "Líder" ? "Leo Dirigente" : "Carlos Contribuidor";
   const userEmail = userRole.toLowerCase().replace('ç', 'c').replace('í', 'i') + "@tedapp.com";
 
-
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="w-full justify-start items-center text-left p-2 h-auto text-sidebar-foreground hover:bg-sidebar-accent">
-            <div className="flex items-center gap-3 w-full">
-              <Avatar className="h-9 w-9">
+          <Button 
+            variant="ghost" 
+            className="w-full h-auto justify-start items-center text-left p-0 text-sidebar-foreground hover:bg-transparent"
+          >
+            <div className="flex items-center gap-3 w-full p-1 rounded-md hover:bg-sidebar-accent">
+              <Avatar className="h-8 w-8">
                 <AvatarImage src={`https://placehold.co/40x40.png?text=${getInitials(userName)}`} alt={userName} data-ai-hint="profile avatar" />
                 <AvatarFallback>{getInitials(userName)}</AvatarFallback>
               </Avatar>
-              <div className={cn("flex-col items-start", open ? "flex" : "hidden")}>
+              <div className={cn("flex-col items-start", state === 'expanded' ? "flex" : "hidden")}>
                 <span className="text-sm font-medium leading-none">{userName}</span>
                 <span className="text-xs text-sidebar-foreground/70 leading-none mt-1">{userRole}</span>
               </div>
-              <ChevronUp className={cn("h-4 w-4 text-sidebar-foreground/70 ml-auto", open ? "block" : "hidden")} />
             </div>
           </Button>
         </DropdownMenuTrigger>
@@ -96,3 +95,5 @@ export function UserNav() {
     </>
   );
 }
+
+    

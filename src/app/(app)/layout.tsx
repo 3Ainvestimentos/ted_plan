@@ -6,11 +6,9 @@ import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter, SidebarTrigger, SidebarInset, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
 import { SidebarNav } from '@/components/layout/sidebar-nav';
-import { NAV_ITEMS_CONFIG } from '@/lib/constants';
-import Link from 'next/link';
-import { Settings } from 'lucide-react';
 import { InitiativesProvider } from '@/contexts/initiatives-context';
 import { ContentCalendarProvider } from '@/contexts/content-calendar-context';
+import { UserNav } from '@/components/layout/user-nav';
 
 export default function AppLayout({
   children,
@@ -33,43 +31,25 @@ export default function AppLayout({
       </div>
     );
   }
-
-  const settingsItem = NAV_ITEMS_CONFIG.find(item => item.href === '/settings');
   
   return (
     <InitiativesProvider>
       <ContentCalendarProvider>
-        <SidebarProvider defaultOpen>
+        <SidebarProvider>
           <div className="flex min-h-screen w-full bg-background">
             <Sidebar>
               <SidebarContent>
                 <SidebarNav />
               </SidebarContent>
-              <SidebarFooter className="p-2 mt-auto">
-                {settingsItem && (
-                  <SidebarMenu>
-                        <SidebarMenuItem>
-                          <Link href={settingsItem.href} passHref>
-                              <SidebarMenuButton
-                              tooltip={{content: settingsItem.title, hidden: true}}
-                              aria-label={settingsItem.title}
-                              className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-primary"
-                              >
-                              <settingsItem.icon className="h-5 w-5" />
-                              <span className="truncate group-data-[collapsible=icon]:hidden">{settingsItem.title}</span>
-                              </SidebarMenuButton>
-                          </Link>
-                      </SidebarMenuItem>
-                  </SidebarMenu>
-                )}
+              <SidebarFooter>
+                 <UserNav />
               </SidebarFooter>
             </Sidebar>
             <SidebarInset>
-              <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-lg px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-                <SidebarTrigger className="p-2 -ml-2 text-foreground" /> 
-                {/* Header content can go here if needed, e.g. breadcrumbs or global search */}
+              <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-lg px-4 sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+                <SidebarTrigger /> 
                 <div className="ml-auto flex items-center gap-2">
-                  {/* Additional header items */}
+                  {/* Additional header items can go here */}
                 </div>
               </header>
               <main className="flex-1 p-4 md:p-6 overflow-auto">
@@ -82,3 +62,5 @@ export default function AppLayout({
     </InitiativesProvider>
   );
 }
+
+    
