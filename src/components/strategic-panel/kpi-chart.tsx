@@ -50,6 +50,7 @@ export function KpiChart({ data }: KpiChartProps) {
                         tickLine={false}
                         axisLine={false}
                         tickMargin={10}
+                        width={80} // Explicitly set width to accommodate longer labels
                         className="text-xs font-body"
                     />
                     <XAxis dataKey="value" type="number" hide />
