@@ -13,8 +13,7 @@ import { ArrowLeft, Edit3, MessageSquare, Paperclip, Users, CalendarDays, BarCha
 import Image from 'next/image';
 
 export default function InitiativeDossierPage() {
-  const params = useParams();
-  const id = params.id as string;
+  const { id } = useParams() as { id: string };
   const { initiatives } = useInitiatives();
 
   const initiative = initiatives.find(init => init.id === id);
