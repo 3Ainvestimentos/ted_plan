@@ -8,35 +8,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DollarSign, Target, Briefcase, Users, BadgeCheck, ListChecks, TrendingUp } from 'lucide-react';
 import { KpiChart } from '@/components/strategic-panel/kpi-chart';
 
+const kpiSeriesData = [
+  { month: 'Jan', Previsto: 100, Realizado: 90, Projetado: 95 },
+  { month: 'Fev', Previsto: 110, Realizado: 105, Projetado: 108 },
+  { month: 'Mar', Previsto: 120, Realizado: 115, Projetado: 118 },
+  { month: 'Abr', Previsto: 130, Realizado: 135, Projetado: 132 },
+  { month: 'Mai', Previsto: 140, Realizado: 145, Projetado: 142 },
+  { month: 'Jun', Previsto: 150, Realizado: 155, Projetado: 158 },
+];
+
+
 const businessAreas = [
   {
     name: 'Financeiro',
     icon: DollarSign,
     kpis: [
-      { 
-        name: 'Receita (YTD)', 
-        data: [
-          { name: 'Previsto', value: 6.1, label: "R$6.1M" },
-          { name: 'Realizado', value: 5.2, label: "R$5.2M" },
-          { name: 'Projetado', value: 6.3, label: "R$6.3M" }
-        ],
-      },
-      { 
-        name: 'Margem de Lucro', 
-        data: [
-          { name: 'Previsto', value: 25, label: "25%" },
-          { name: 'Realizado', value: 23, label: "23%" },
-          { name: 'Projetado', value: 24, label: "24%" }
-        ],
-      },
-       { 
-        name: 'Custos Operacionais', 
-        data: [
-          { name: 'Previsto', value: 1.8, label: "R$1.8M" },
-          { name: 'Realizado', value: 1.9, label: "R$1.9M" },
-          { name: 'Projetado', value: 1.85, label: "R$1.85M" }
-        ],
-      },
+      { name: 'Receita (YTD)', series: kpiSeriesData.map(d => ({...d, Previsto: d.Previsto * 50000, Realizado: d.Realizado * 48000, Projetado: d.Projetado * 49000})), unit: 'R$' },
+      { name: 'Margem de Lucro', series: kpiSeriesData.map(d => ({...d, Previsto: 25, Realizado: 23 + (d.Realizado - 90)/20, Projetado: 24 + (d.Projetado - 95)/20})), unit: '%' },
+      { name: 'Custos Operacionais', series: kpiSeriesData.map(d => ({...d, Previsto: d.Previsto * 15000, Realizado: d.Realizado * 15500, Projetado: d.Projetado * 15200})), unit: 'R$' },
     ],
     okrs: [
       { name: 'Reduzir custos operacionais em 10%', progress: 60, status: 'Em Dia' },
@@ -47,30 +36,9 @@ const businessAreas = [
     name: 'Marketing & Vendas',
     icon: Target,
     kpis: [
-      { 
-        name: 'Novos Leads (Mês)', 
-        data: [
-          { name: 'Previsto', value: 1400, label: "1.400" },
-          { name: 'Realizado', value: 1240, label: "1.240" },
-          { name: 'Projetado', value: 1500, label: "1.500" }
-        ],
-      },
-      { 
-        name: 'Taxa de Conversão', 
-        data: [
-          { name: 'Previsto', value: 5, label: "5.0%" },
-          { name: 'Realizado', value: 4.5, label: "4.5%" },
-          { name: 'Projetado', value: 5.2, label: "5.2%" }
-        ],
-      },
-      { 
-        name: 'Custo por Aquisição (CAC)', 
-        data: [
-          { name: 'Previsto', value: 120, label: "R$120" },
-          { name: 'Realizado', value: 125, label: "R$125" },
-          { name: 'Projetado', value: 118, label: "R$118" }
-        ],
-      },
+        { name: 'Novos Leads (Mês)', series: kpiSeriesData.map(d => ({...d, Previsto: d.Previsto * 12, Realizado: d.Realizado * 11, Projetado: d.Projetado * 11.5})), unit: '' },
+        { name: 'Taxa de Conversão', series: kpiSeriesData.map(d => ({...d, Previsto: 5, Realizado: 4.5 + (d.Realizado - 90)/25, Projetado: 4.8 + (d.Projetado - 95)/25})), unit: '%' },
+        { name: 'Custo por Aquisição (CAC)', series: kpiSeriesData.map(d => ({...d, Previsto: 120, Realizado: 125 - (d.Realizado - 90)/5, Projetado: 118 - (d.Projetado - 95)/5})), unit: 'R$' },
     ],
     okrs: [
       { name: 'Expandir presença em 2 novos mercados LATAM', progress: 45, status: 'Em Risco' },
@@ -81,22 +49,8 @@ const businessAreas = [
     name: 'Operações & RH',
     icon: Briefcase,
     kpis: [
-      { 
-        name: 'Satisfação do Colaborador (eNPS)', 
-        data: [
-          { name: 'Previsto', value: 50, label: "50" },
-          { name: 'Realizado', value: 58, label: "58" },
-          { name: 'Projetado', value: 60, label: "60" }
-        ],
-      },
-      { 
-        name: 'Turnover (Anual)', 
-        data: [
-          { name: 'Previsto', value: 15, label: "< 15%" },
-          { name: 'Realizado', value: 12, label: "12%" },
-          { name: 'Projetado', value: 11, label: "11%" }
-        ],
-      },
+      { name: 'Satisfação do Colaborador (eNPS)', series: kpiSeriesData.map(d => ({...d, Previsto: 50, Realizado: 48 + (d.Realizado - 90)/5, Projetado: 52 + (d.Projetado - 95)/5})), unit: 'pts' },
+      { name: 'Turnover (Anual)', series: kpiSeriesData.map(d => ({...d, Previsto: 15, Realizado: 16 - (d.Realizado - 90)/10, Projetado: 14 - (d.Projetado - 95)/10})), unit: '%' },
     ],
     okrs: [
       { name: 'Implementar novo sistema de avaliação de desempenho', progress: 90, status: 'Concluído' },
@@ -130,15 +84,15 @@ export default function StrategicPanelPage() {
                                 <h2 className="font-headline text-2xl font-semibold mb-4 text-foreground/90">Indicadores Chave de Performance (KPIs)</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {area.kpis.map(kpi => (
-                                        <Card key={kpi.name} className="shadow-lg hover:shadow-xl transition-shadow duration-300">
+                                        <Card key={kpi.name} className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
                                             <CardHeader>
-                                                <CardTitle className="text-lg flex items-center gap-2">
+                                                <CardTitle className="font-headline text-lg flex items-center gap-2">
                                                    <TrendingUp className="w-5 h-5 text-primary" />
                                                     {kpi.name}
                                                 </CardTitle>
                                             </CardHeader>
-                                            <CardContent>
-                                                <KpiChart data={kpi.data} />
+                                            <CardContent className="flex-grow">
+                                                <KpiChart data={kpi.series} unit={kpi.unit} />
                                             </CardContent>
                                         </Card>
                                     ))}

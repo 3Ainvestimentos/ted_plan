@@ -1,8 +1,8 @@
 
 "use client";
 
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
-import { ChartContainer, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { ChartContainer, ChartTooltipContent, ChartConfig, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 
 const chartConfig = {
   Previsto: {
@@ -20,63 +20,74 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 interface KpiChartProps {
-  data: { name: string; value: number; label: string }[];
+  data: { month: string; Previsto: number; Realizado: number; Projetado: number; }[];
+  unit?: string;
 }
 
-export function KpiChart({ data }: KpiChartProps) {
-    const chartData = data.map(item => {
-        const capitalizedName = item.name.charAt(0).toUpperCase() + item.name.slice(1);
-        return {
-            ...item,
-            name: capitalizedName,
-            fill: `var(--color-${capitalizedName})`,
-        };
-    });
+const formatNumber = (value: number, unit?: string) => {
+    const prefix = unit === 'R$' ? 'R$ ' : '';
+    const suffix = unit && unit !== 'R$' ? ` ${unit}` : '';
+    if (value >= 1000000) {
+        return `${prefix}${(value / 1000000).toFixed(1)}M${suffix}`;
+    }
+    if (value >= 1000) {
+        return `${prefix}${(value / 1000).toFixed(0)}k${suffix}`;
+    }
+    return `${prefix}${value.toLocaleString('pt-BR', { maximumFractionDigits: unit === '%' ? 1 : 0 })}${suffix}`;
+};
 
+
+export function KpiChart({ data, unit }: KpiChartProps) {
   return (
-    <div className="h-48 w-full">
+    <div className="h-56 w-full">
        <ChartContainer config={chartConfig} className="w-full h-full">
             <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                    accessibilityLayer
-                    data={chartData}
-                    layout="vertical"
-                    margin={{ left: 0, right: 10, top: 0, bottom: -10 }}
+                <LineChart
+                    data={data}
+                    margin={{
+                        top: 5,
+                        right: 10,
+                        left: -10,
+                        bottom: 0,
+                    }}
                 >
-                    <CartesianGrid horizontal={false} />
-                    <YAxis
-                        dataKey="name"
-                        type="category"
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                        dataKey="month"
                         tickLine={false}
                         axisLine={false}
-                        tickMargin={10}
-                        width={80} // Explicitly set width to accommodate longer labels
-                        className="text-xs font-body"
+                        tickMargin={8}
+                        tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
                     />
-                    <XAxis dataKey="value" type="number" hide />
+                    <YAxis 
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        tickFormatter={(value) => formatNumber(value, unit)}
+                        tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                    />
                     <Tooltip
-                        cursor={{ fill: 'hsl(var(--accent))' }}
                         content={
-                           <ChartTooltipContent
-                                formatter={(value, name, props) => {
-                                    const item = chartData.find(d => d.name === name);
-                                    // Use the color from the item's fill property
-                                    const color = props.payload?.fill;
-
-                                    return (
-                                        <div className="flex items-center">
-                                            {color && <div className="w-2.5 h-2.5 rounded-full mr-2" style={{backgroundColor: color}}></div>}
-                                            <span className="capitalize mr-2 text-muted-foreground">{name}:</span>
-                                            <span className="font-bold">{item?.label}</span>
-                                        </div>
-                                    )
-                                }}
-                                hideLabel
+                            <ChartTooltipContent 
+                                 formatter={(value, name) => (
+                                    <div className="flex items-center">
+                                      <div
+                                        className="w-2.5 h-2.5 rounded-full mr-2"
+                                        style={{ backgroundColor: chartConfig[name as keyof typeof chartConfig].color }}
+                                      />
+                                      <span className="capitalize mr-2 text-muted-foreground">{name}:</span>
+                                      <span className="font-bold">{formatNumber(value as number, unit)}</span>
+                                    </div>
+                                )}
+                                hideLabel 
                             />
                         }
                     />
-                    <Bar dataKey="value" layout="vertical" radius={5} barSize={20} />
-                </BarChart>
+                     <ChartLegend content={<ChartLegendContent />} />
+                    <Line type="monotone" dataKey="Previsto" stroke="var(--color-Previsto)" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="Realizado" stroke="var(--color-Realizado)" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="Projetado" stroke="var(--color-Projetado)" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                </LineChart>
             </ResponsiveContainer>
         </ChartContainer>
     </div>
