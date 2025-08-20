@@ -4,7 +4,7 @@
 import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
-import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter, SidebarTrigger, SidebarInset, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
+import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter, SidebarTrigger } from "@/components/ui/sidebar";
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { InitiativesProvider } from '@/contexts/initiatives-context';
 import { ContentCalendarProvider } from '@/contexts/content-calendar-context';
@@ -36,26 +36,24 @@ export default function AppLayout({
     <InitiativesProvider>
       <ContentCalendarProvider>
         <SidebarProvider>
-          <div className="flex min-h-screen w-full bg-background">
-            <Sidebar className="h-full">
-              <SidebarContent>
-                <SidebarNav />
-              </SidebarContent>
-              <SidebarFooter>
-                 <UserNav />
-              </SidebarFooter>
-            </Sidebar>
-            <div className="flex flex-col w-full">
-              <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-lg px-4 sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-                <SidebarTrigger /> 
-                <div className="ml-auto flex items-center gap-2">
-                  {/* Additional header items can go here */}
-                </div>
-              </header>
-              <main className="flex-1 p-4 md:p-6 overflow-auto">
-                {children}
-              </main>
-            </div>
+          <Sidebar>
+            <SidebarContent>
+              <SidebarNav />
+            </SidebarContent>
+            <SidebarFooter>
+               <UserNav />
+            </SidebarFooter>
+          </Sidebar>
+          <div className="flex flex-col w-full">
+            <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-lg px-4 sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+              <SidebarTrigger /> 
+              <div className="ml-auto flex items-center gap-2">
+                {/* Additional header items can go here */}
+              </div>
+            </header>
+            <main className="flex-1 p-4 md:p-6 overflow-auto">
+              {children}
+            </main>
           </div>
         </SidebarProvider>
       </ContentCalendarProvider>
