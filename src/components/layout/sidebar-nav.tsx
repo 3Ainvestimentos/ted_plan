@@ -37,14 +37,16 @@ export function SidebarNav() {
 
   return (
     <div className="flex flex-col h-full">
-      <SidebarMenu className="flex-grow">
-        {mainNavItems.map(renderNavItem)}
-      </SidebarMenu>
-      
-      <SidebarMenu className="mt-auto">
-        <Separator className="my-2 bg-sidebar-border" />
-        {settingsNavItem && renderNavItem(settingsNavItem)}
-      </SidebarMenu>
+        <SidebarMenu className="flex-grow">
+            {mainNavItems.map(renderNavItem)}
+        </SidebarMenu>
+        
+        <div className="mt-auto">
+            <SidebarMenu>
+                <Separator className="my-2 bg-sidebar-border" />
+                {settingsNavItem && renderNavItem(settingsNavItem)}
+            </SidebarMenu>
+        </div>
     </div>
   );
 }
