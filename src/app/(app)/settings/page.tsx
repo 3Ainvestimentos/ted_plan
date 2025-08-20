@@ -178,15 +178,11 @@ export default function SettingsHubPage() {
 
         <Tabs defaultValue="permissions" className="w-full">
             <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 h-auto">
-                 {adminModules.map((mod) => {
-                    const ModuleIcon = mod.icon;
-                    return (
-                        <TabsTrigger key={mod.name} value={mod.name} className="py-2 flex-col h-auto">
-                            <ModuleIcon className="w-5 h-5 mb-1.5" />
-                            <span>{mod.title}</span>
-                        </TabsTrigger>
-                    )
-                 })}
+                 {adminModules.map((mod) => (
+                    <TabsTrigger key={mod.name} value={mod.name} className="py-2 flex-col h-auto">
+                        <span>{mod.title}</span>
+                    </TabsTrigger>
+                 ))}
             </TabsList>
 
             {adminModules.map((mod) => (
