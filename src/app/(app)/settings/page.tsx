@@ -9,9 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { NAV_ITEMS_CONFIG, initialCollaborators, initialPermissions } from '@/lib/constants';
 import { Textarea } from '@/components/ui/textarea';
-import { SlidersHorizontal, UserX } from 'lucide-react';
+import { SlidersHorizontal, UserX, Users, GanttChartSquare, ShieldCheck, BarChartHorizontal } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 export default function SettingsPage() {
   const [permissions, setPermissions] = useState(initialPermissions);
@@ -28,20 +29,96 @@ export default function SettingsPage() {
       }));
   };
 
-  const pagesForPermissions = NAV_ITEMS_CONFIG.filter(item => !item.isDivider && item.href !== '/dashboard');
+  const pagesForPermissions = NAV_ITEMS_CONFIG.filter(item => !item.isFooter);
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
+    <div className="space-y-8 max-w-6xl mx-auto">
       <PageHeader
-        title="Configurações e Acesso"
-        description="Gerencie permissões de acesso e o estado da plataforma."
+        title="Configurações e Administração"
+        description="Gerencie usuários, permissões, metas e o estado da plataforma."
       />
 
-      <Tabs defaultValue="permissions">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="permissions">Permissões de Acesso</TabsTrigger>
-          <TabsTrigger value="maintenance">Modo de Manutenção</TabsTrigger>
+      <Tabs defaultValue="users" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+          <TabsTrigger value="users">
+            <Users className="w-4 h-4 mr-2" />
+            Usuários
+          </TabsTrigger>
+          <TabsTrigger value="goals">
+             <GanttChartSquare className="w-4 h-4 mr-2" />
+             Metas
+          </TabsTrigger>
+          <TabsTrigger value="permissions">
+            <ShieldCheck className="w-4 h-4 mr-2" />
+            Permissões
+          </TabsTrigger>
+          <TabsTrigger value="system">
+            <SlidersHorizontal className="w-4 h-4 mr-2" />
+            Sistema
+          </TabsTrigger>
         </TabsList>
+
+        {/* Users Management Tab */}
+        <TabsContent value="users">
+           <Card>
+            <CardHeader>
+                <CardTitle>Gerenciamento de Usuários</CardTitle>
+                <CardDescription>Adicione, edite ou remova usuários da plataforma.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="flex justify-between items-center mb-4">
+                    <Input placeholder="Buscar colaborador..." className="max-w-sm" />
+                    <div className="flex gap-2">
+                        <Button variant="outline">Exportar CSV</Button>
+                        <Button>Adicionar Colaborador</Button>
+                    </div>
+                </div>
+                 <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                        <TableRow>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>E-mail</TableHead>
+                            <TableHead>Área</TableHead>
+                             <TableHead>Cargo</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {initialCollaborators.map(user => (
+                            <TableRow key={user.id}>
+                                <TableCell className="font-medium">{user.name}</TableCell>
+                                <TableCell>{user.email}</TableCell>
+                                <TableCell>{user.area}</TableCell>
+                                <TableCell>{user.cargo}</TableCell>
+                                <TableCell className="text-right">
+                                    <Button variant="ghost" size="sm">Editar</Button>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            </CardContent>
+           </Card>
+        </TabsContent>
+
+        {/* Goals Management Tab */}
+        <TabsContent value="goals">
+             <Card>
+                <CardHeader>
+                    <CardTitle>Gerenciamento de Metas (OKRs e KPIs)</CardTitle>
+                    <CardDescription>Defina as áreas de negócio e as metas que aparecem no Painel Estratégico.</CardDescription>
+                </CardHeader>
+                <CardContent className="min-h-[300px] flex items-center justify-center text-center text-muted-foreground bg-secondary/20 rounded-lg">
+                    <div>
+                        <GanttChartSquare className="w-12 h-12 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-foreground">Funcionalidade em Desenvolvimento</h3>
+                        <p>Aqui você poderá gerenciar as áreas de negócio e as metas da sua organização.</p>
+                    </div>
+                </CardContent>
+             </Card>
+        </TabsContent>
 
         {/* Permissions Tab */}
         <TabsContent value="permissions">
@@ -56,7 +133,6 @@ export default function SettingsPage() {
                         <TableHeader>
                         <TableRow>
                             <TableHead className="w-[200px]">Colaborador</TableHead>
-                            {/* O Dashboard é fixo, não pode ser desabilitado */}
                             {pagesForPermissions.map(page => (
                                 <TableHead key={page.href} className="text-center">{page.title}</TableHead>
                             ))}
@@ -87,65 +163,61 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
         
-        {/* Maintenance Mode Tab */}
-        <TabsContent value="maintenance">
-          <Card>
-            <CardHeader>
-                <div className="flex items-center gap-3">
-                    <SlidersHorizontal className="h-6 w-6 text-foreground" />
-                    <div>
+        {/* System Tab (Maintenance Mode & Audit) */}
+        <TabsContent value="system">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                    <CardHeader>
                         <CardTitle>Modo de Manutenção</CardTitle>
-                        <CardDescription>Ative para suspender o acesso, exceto para Super Admins e usuários autorizados.</CardDescription>
-                    </div>
-                </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <div className={`p-4 rounded-lg flex items-center justify-between ${isMaintenanceMode ? 'bg-orange-100 dark:bg-orange-900/30' : 'bg-green-100 dark:bg-green-900/30'}`}>
-                    <div>
-                        <h4 className={`font-semibold ${isMaintenanceMode ? 'text-orange-800 dark:text-orange-200' : 'text-green-800 dark:text-green-200'}`}>
-                            {isMaintenanceMode ? 'MANUTENÇÃO ATIVA' : 'MANUTENÇÃO INATIVA'}
-                        </h4>
-                        <p className={`text-sm ${isMaintenanceMode ? 'text-orange-700 dark:text-orange-300' : 'text-green-700 dark:text-green-300'}`}>
-                            {isMaintenanceMode ? 'Acesso limitado a usuários autorizados.' : 'Acesso liberado para todos os colaboradores.'}
-                        </p>
-                    </div>
-                    <Switch
-                        checked={isMaintenanceMode}
-                        onCheckedChange={setIsMaintenanceMode}
-                        aria-label="Ativar modo de manutenção"
-                    />
-                </div>
+                        <CardDescription>Ative para suspender o acesso, exceto para Admins.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className={`p-4 rounded-lg flex items-center justify-between ${isMaintenanceMode ? 'bg-orange-100 dark:bg-orange-900/30' : 'bg-green-100 dark:bg-green-900/30'}`}>
+                            <div className="space-y-1">
+                                <h4 className={`font-semibold ${isMaintenanceMode ? 'text-orange-800 dark:text-orange-200' : 'text-green-800 dark:text-green-200'}`}>
+                                    {isMaintenanceMode ? 'MANUTENÇÃO ATIVA' : 'SISTEMA OPERACIONAL'}
+                                </h4>
+                                <p className={`text-sm ${isMaintenanceMode ? 'text-orange-700 dark:text-orange-300' : 'text-green-700 dark:text-green-300'}`}>
+                                    {isMaintenanceMode ? 'Acesso limitado.' : 'Acesso liberado.'}
+                                </p>
+                            </div>
+                            <Switch
+                                checked={isMaintenanceMode}
+                                onCheckedChange={setIsMaintenanceMode}
+                                aria-label="Ativar modo de manutenção"
+                            />
+                        </div>
 
-                <div className="space-y-2">
-                    <Label htmlFor="maintenance-message">Mensagem de Manutenção</Label>
-                    <Textarea 
-                        id="maintenance-message"
-                        value={maintenanceMessage}
-                        onChange={(e) => setMaintenanceMessage(e.target.value)}
-                        placeholder="A plataforma está temporariamente indisponível..."
-                        rows={3}
-                    />
-                </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="maintenance-message">Mensagem de Manutenção</Label>
+                            <Textarea 
+                                id="maintenance-message"
+                                value={maintenanceMessage}
+                                onChange={(e) => setMaintenanceMessage(e.target.value)}
+                                placeholder="A plataforma está temporariamente indisponível..."
+                                rows={3}
+                            />
+                        </div>
 
-                <div className="space-y-2">
-                    <Label htmlFor="authorized-users">Usuários Autorizados na Manutenção</Label>
-                    <p className="text-sm text-muted-foreground">
-                       Estes usuários poderão acessar a plataforma mesmo com o modo de manutenção ativo. Super Admins sempre têm acesso.
-                    </p>
-                    <div className="border rounded-lg p-4 flex items-center justify-center text-sm text-muted-foreground bg-secondary/30">
-                        <UserX className="h-5 w-5 mr-3"/>
-                        Nenhum usuário extra autorizado.
-                    </div>
-                    {/* Placeholder for adding users */}
-                    <Button variant="outline" size="sm" className="mt-2">Adicionar Usuário</Button>
-                </div>
-
-                <div className="flex justify-end">
-                    <Button className="bg-teal-500 hover:bg-teal-600 text-white">Salvar Detalhes da Manutenção</Button>
-                </div>
-
-            </CardContent>
-          </Card>
+                        <div className="flex justify-end">
+                            <Button>Salvar</Button>
+                        </div>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Painel de Auditoria</CardTitle>
+                        <CardDescription>Monitore a atividade e o uso da plataforma.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="min-h-[300px] flex items-center justify-center text-center text-muted-foreground bg-secondary/20 rounded-lg">
+                        <div>
+                            <BarChartHorizontal className="w-12 h-12 mx-auto mb-4" />
+                            <h3 className="text-lg font-semibold text-foreground">Funcionalidade em Desenvolvimento</h3>
+                            <p>Aqui você poderá visualizar logs de login e outras atividades.</p>
+                        </div>
+                    </CardContent>
+                 </Card>
+            </div>
         </TabsContent>
       </Tabs>
     </div>

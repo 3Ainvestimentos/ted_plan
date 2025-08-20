@@ -1,17 +1,12 @@
 
 import type { NavItem, UserRole, Initiative, InitiativeStatus, InitiativePriority, ContentItem, ContentStatus } from '@/types';
-import { LayoutDashboard, ScrollText, ClipboardList, Target, TrendingUp, TrendingDown, Minus, CircleCheck, AlertTriangle, Clock, CheckCircle, ListTodo, User, CalendarDays, FileText, Lightbulb, Bug, Settings, LogOut, Calendar, CalendarClock, Shield, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Target, Calendar, CalendarClock, Settings, Shield, User, BarChart3, ListTodo, CircleCheck, AlertTriangle, Clock, CheckCircle, TrendingUp, TrendingDown, Minus, Lightbulb, FileText, Bug } from 'lucide-react';
 
 export const NAV_ITEMS_CONFIG: NavItem[] = [
   { title: 'Painel Estratégico', href: '/strategic-panel', icon: LayoutDashboard },
   { title: 'Iniciativas Estratégicas', href: '/strategic-initiatives', icon: Target },
   { title: 'Calendário de Conteúdo', href: '/content-calendar', icon: Calendar },
   { title: 'Agenda de Reuniões', href: '/meeting-agenda', icon: CalendarClock },
-  // Admin Section Divider (visual only)
-  { isDivider: true, title: 'Painéis de Controle' },
-  { title: 'Gerenciar Conteúdo', href: '/admin/content', icon: BarChart3, disabled: true },
-  { title: 'Gerenciar Usuários', href: '/admin/users', icon: User, disabled: true },
-  { title: 'Auditoria', href: '/audit', icon: Shield, disabled: true },
   { title: 'Configurações', href: '/settings', icon: Settings, isFooter: true },
 ];
 
