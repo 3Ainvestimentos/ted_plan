@@ -1,23 +1,22 @@
 
 "use client";
 
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
   DropdownMenuPortal,
-  DropdownMenuSubContent
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SidebarMenuButton } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/auth-context";
-import { LogOut, Monitor, Moon, Sun, Settings } from "lucide-react";
+import { LogOut, Monitor, Moon, Settings, Shield, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from 'next/link';
-import { SidebarMenuButton } from "@/components/ui/sidebar";
 
 export function UserNav() {
   const { logout } = useAuth();
@@ -56,8 +55,8 @@ export function UserNav() {
           </DropdownMenuPortal>
         </DropdownMenuSub>
          <DropdownMenuItem asChild>
-            <Link href="/settings">
-              <Settings className="mr-2 h-4 w-4" />
+            <Link href="/settings" className="text-[hsl(0,72%,51%)] focus:text-[hsl(0,72%,51%)]">
+              <Shield className="mr-2 h-4 w-4" />
               <span>Sistema</span>
             </Link>
          </DropdownMenuItem>
