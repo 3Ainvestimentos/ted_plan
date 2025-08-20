@@ -10,9 +10,9 @@ export const NAV_ITEMS_CONFIG: NavItem[] = [
   { title: 'Agenda de Reuniões', href: '/meeting-agenda', icon: CalendarClock },
   // Admin Section Divider (visual only)
   { isDivider: true, title: 'Painéis de Controle' },
-  { title: 'Gerenciar Conteúdo', href: '/admin/content', icon: BarChart3 },
-  { title: 'Gerenciar Usuários', href: '/admin/users', icon: User },
-  { title: 'Auditoria', href: '/audit', icon: Shield },
+  { title: 'Gerenciar Conteúdo', href: '/admin/content', icon: BarChart3, disabled: true },
+  { title: 'Gerenciar Usuários', href: '/admin/users', icon: User, disabled: true },
+  { title: 'Auditoria', href: '/audit', icon: Shield, disabled: true },
   { title: 'Configurações', href: '/settings', icon: Settings, isFooter: true },
 ];
 
