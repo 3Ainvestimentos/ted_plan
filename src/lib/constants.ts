@@ -6,8 +6,6 @@ export const NAV_ITEMS_CONFIG: NavItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { title: 'Iniciativas Estratégicas', href: '/initiatives', icon: Target },
   { title: 'Calendário de Conteúdo', href: '/content-calendar', icon: Calendar },
-  { title: 'Sumários Executivos', href: '/executive-summaries', icon: ScrollText },
-  { title: 'Pautas de Reunião', href: '/meeting-automation', icon: CalendarClock },
   { title: 'Configurações', href: '/settings', icon: Settings },
 ];
 
