@@ -5,61 +5,63 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DollarSign, Target, Briefcase, Users, BadgeCheck, ListChecks, TrendingUp } from 'lucide-react';
+import { DollarSign, Target, Briefcase, ListChecks, TrendingUp } from 'lucide-react';
 import { KpiChart } from '@/components/strategic-panel/kpi-chart';
+import { useStrategicPanel } from '@/contexts/strategic-panel-context';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { BusinessArea } from '@/types';
 
-const kpiSeriesData = [
-  { month: 'Jan', Previsto: 100, Realizado: 90, Projetado: 95 },
-  { month: 'Fev', Previsto: 110, Realizado: 105, Projetado: 108 },
-  { month: 'Mar', Previsto: 120, Realizado: 115, Projetado: 118 },
-  { month: 'Abr', Previsto: 130, Realizado: 135, Projetado: 132 },
-  { month: 'Mai', Previsto: 140, Realizado: 145, Projetado: 142 },
-  { month: 'Jun', Previsto: 150, Realizado: 155, Projetado: 158 },
-];
+// Map icon names from Firestore to Lucide components
+const iconMap: { [key: string]: React.ElementType } = {
+    DollarSign,
+    Target,
+    Briefcase,
+};
 
-
-const businessAreas = [
-  {
-    name: 'Financeiro',
-    icon: DollarSign,
-    kpis: [
-      { name: 'Receita (YTD)', series: kpiSeriesData.map(d => ({...d, Previsto: d.Previsto * 50000, Realizado: d.Realizado * 48000, Projetado: d.Projetado * 49000})), unit: 'R$' },
-      { name: 'Margem de Lucro', series: kpiSeriesData.map(d => ({...d, Previsto: 25, Realizado: 23 + (d.Realizado - 90)/20, Projetado: 24 + (d.Projetado - 95)/20})), unit: '%' },
-      { name: 'Custos Operacionais', series: kpiSeriesData.map(d => ({...d, Previsto: d.Previsto * 15000, Realizado: d.Realizado * 15500, Projetado: d.Projetado * 15200})), unit: 'R$' },
-    ],
-    okrs: [
-      { name: 'Reduzir custos operacionais em 10%', progress: 60, status: 'Em Dia' },
-      { name: 'Aumentar eficiência da cobrança em 15%', progress: 75, status: 'Em Dia' },
-    ]
-  },
-  {
-    name: 'Marketing & Vendas',
-    icon: Target,
-    kpis: [
-        { name: 'Novos Leads (Mês)', series: kpiSeriesData.map(d => ({...d, Previsto: d.Previsto * 12, Realizado: d.Realizado * 11, Projetado: d.Projetado * 11.5})), unit: '' },
-        { name: 'Taxa de Conversão', series: kpiSeriesData.map(d => ({...d, Previsto: 5, Realizado: 4.5 + (d.Realizado - 90)/25, Projetado: 4.8 + (d.Projetado - 95)/25})), unit: '%' },
-        { name: 'Custo por Aquisição (CAC)', series: kpiSeriesData.map(d => ({...d, Previsto: 120, Realizado: 125 - (d.Realizado - 90)/5, Projetado: 118 - (d.Projetado - 95)/5})), unit: 'R$' },
-    ],
-    okrs: [
-      { name: 'Expandir presença em 2 novos mercados LATAM', progress: 45, status: 'Em Risco' },
-      { name: 'Aumentar o engajamento nas redes sociais em 20%', progress: 65, status: 'Em Dia' },
-    ]
-  },
-  {
-    name: 'Operações & RH',
-    icon: Briefcase,
-    kpis: [
-      { name: 'Satisfação do Colaborador (eNPS)', series: kpiSeriesData.map(d => ({...d, Previsto: 50, Realizado: 48 + (d.Realizado - 90)/5, Projetado: 52 + (d.Projetado - 95)/5})), unit: 'pts' },
-      { name: 'Turnover (Anual)', series: kpiSeriesData.map(d => ({...d, Previsto: 15, Realizado: 16 - (d.Realizado - 90)/10, Projetado: 14 - (d.Projetado - 95)/10})), unit: '%' },
-    ],
-    okrs: [
-      { name: 'Implementar novo sistema de avaliação de desempenho', progress: 90, status: 'Concluído' },
-      { name: 'Digitalizar 100% dos processos de onboarding', progress: 82, status: 'Em Dia' },
-    ]
-  }
-];
+function PanelSkeleton() {
+    return (
+        <div className="space-y-6">
+            <div className="space-y-2">
+                 <Skeleton className="h-8 w-1/2" />
+                 <Skeleton className="h-4 w-3/4" />
+            </div>
+            <Skeleton className="h-10 w-full sm:w-1/2" />
+            <div className="space-y-6">
+                 <Skeleton className="h-6 w-1/3 mb-4" />
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <Skeleton className="h-64 w-full" />
+                    <Skeleton className="h-64 w-full" />
+                    <Skeleton className="h-64 w-full" />
+                 </div>
+                 <Skeleton className="h-48 w-full" />
+            </div>
+        </div>
+    )
+}
 
 export default function StrategicPanelPage() {
+    const { businessAreas, isLoading } = useStrategicPanel();
+
+    if (isLoading) {
+        return <PanelSkeleton />;
+    }
+
+    if (!businessAreas.length) {
+        return (
+            <div className="space-y-6">
+                <PageHeader
+                    title="Painel Estratégico"
+                    description="Visão consolidada dos OKRs e KPIs por área de negócio."
+                />
+                 <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg">
+                    <p className="text-muted-foreground">Nenhuma área de negócio encontrada.</p>
+                </div>
+            </div>
+        )
+    }
+
+    const defaultTab = businessAreas[0]?.name || '';
+
     return (
         <div className="space-y-6">
             <PageHeader
@@ -67,17 +69,20 @@ export default function StrategicPanelPage() {
                 description="Visão consolidada dos OKRs e KPIs por área de negócio."
             />
             
-            <Tabs defaultValue="Financeiro" className="w-full">
+            <Tabs defaultValue={defaultTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto">
-                    {businessAreas.map((area) => (
-                        <TabsTrigger key={area.name} value={area.name} className="py-2">
-                             <area.icon className="w-4 h-4 mr-2" />
-                            {area.name}
-                        </TabsTrigger>
-                    ))}
+                    {businessAreas.map((area: BusinessArea) => {
+                        const Icon = area.icon ? iconMap[area.icon] : Briefcase;
+                        return (
+                            <TabsTrigger key={area.name} value={area.name} className="py-2">
+                                <Icon className="w-4 h-4 mr-2" />
+                                {area.name}
+                            </TabsTrigger>
+                        )
+                    })}
                 </TabsList>
 
-                {businessAreas.map((area) => (
+                {businessAreas.map((area: BusinessArea) => (
                     <TabsContent key={area.name} value={area.name} className="mt-6">
                         <div className="space-y-6">
                             <section>
