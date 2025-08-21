@@ -4,15 +4,19 @@
 import type { Initiative, InitiativeStatus } from '@/types';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, query, orderBy, deleteDoc } from 'firebase/firestore';
+import type { InitiativeFormData } from '@/components/initiatives/initiative-form';
 
-type InitiativeData = Omit<Initiative, 'id' | 'lastUpdate' | 'topicNumber' | 'progress' | 'keyMetrics'>;
+
+type InitiativeData = Omit<Initiative, 'id' | 'lastUpdate' | 'topicNumber' | 'progress' | 'keyMetrics' | 'deadline'> & { deadline: Date };
 
 interface InitiativesContextType {
   initiatives: Initiative[];
   addInitiative: (initiative: InitiativeData) => void;
+  updateInitiative: (initiativeId: string, data: InitiativeFormData) => Promise<void>;
+  deleteInitiative: (initiativeId: string) => Promise<void>;
   updateInitiativeStatus: (initiativeId: string, newStatus: InitiativeStatus) => void;
-  bulkAddInitiatives: (newInitiatives: InitiativeData[]) => void;
+  bulkAddInitiatives: (newInitiatives: Omit<Initiative, 'id' | 'lastUpdate' | 'topicNumber' | 'progress' | 'keyMetrics' | 'deadline'>[]) => void;
   isLoading: boolean;
 }
 
@@ -56,6 +60,7 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
     
     const newInitiative = {
         ...initiativeData,
+        deadline: initiativeData.deadline.toISOString().split('T')[0],
         lastUpdate: new Date().toISOString(),
         topicNumber: nextTopicNumber,
         progress: 0, 
@@ -70,12 +75,17 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [initiatives, fetchInitiatives, initiativesCollectionRef]);
 
-  const bulkAddInitiatives = useCallback(async (newInitiativesData: InitiativeData[]) => {
+  const bulkAddInitiatives = useCallback(async (newInitiativesData: any[]) => {
     let nextTopicNumber = getNextMainTopicNumber(initiatives);
     try {
       for (const initiativeData of newInitiativesData) {
+        const deadline = initiativeData.deadline && !isNaN(new Date(initiativeData.deadline).getTime())
+          ? new Date(initiativeData.deadline).toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0];
+
         const newInitiative = {
           ...initiativeData,
+          deadline: deadline,
           lastUpdate: new Date().toISOString(),
           topicNumber: (nextTopicNumber++).toString(),
           progress: 0,
@@ -88,6 +98,31 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
         console.error("Error bulk adding initiatives: ", error);
     }
   }, [initiatives, fetchInitiatives, initiativesCollectionRef]);
+  
+  const updateInitiative = useCallback(async (initiativeId: string, data: InitiativeFormData) => {
+    const initiativeDocRef = doc(db, 'initiatives', initiativeId);
+    try {
+      const updatedData = {
+          ...data,
+          deadline: data.deadline.toISOString().split('T')[0],
+          lastUpdate: new Date().toISOString(),
+      };
+      await updateDoc(initiativeDocRef, updatedData);
+      fetchInitiatives();
+    } catch (error) {
+        console.error("Error updating initiative: ", error);
+    }
+  }, [fetchInitiatives]);
+
+  const deleteInitiative = useCallback(async (initiativeId: string) => {
+    const initiativeDocRef = doc(db, 'initiatives', initiativeId);
+    try {
+        await deleteDoc(initiativeDocRef);
+        fetchInitiatives();
+    } catch (error) {
+        console.error("Error deleting initiative: ", error);
+    }
+  }, [fetchInitiatives]);
 
   const updateInitiativeStatus = useCallback(async (initiativeId: string, newStatus: InitiativeStatus) => {
     const initiativeDocRef = doc(db, 'initiatives', initiativeId);
@@ -108,7 +143,7 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <InitiativesContext.Provider value={{ initiatives, addInitiative, bulkAddInitiatives, updateInitiativeStatus, isLoading }}>
+    <InitiativesContext.Provider value={{ initiatives, addInitiative, bulkAddInitiatives, updateInitiative, deleteInitiative, updateInitiativeStatus, isLoading }}>
       {children}
     </InitiativesContext.Provider>
   );

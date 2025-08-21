@@ -7,6 +7,7 @@ import { useInitiatives } from "@/contexts/initiatives-context";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import type { InitiativeFormData } from "./initiative-form";
+import { useState } from "react";
 
 interface CreateInitiativeModalProps {
     isOpen: boolean;
@@ -17,18 +18,13 @@ export function CreateInitiativeModal({ isOpen, onOpenChange }: CreateInitiative
     const { addInitiative } = useInitiatives();
     const { toast } = useToast();
     const router = useRouter();
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleFormSubmit = (data: InitiativeFormData) => {
-        const initiativeDataForContext = {
-          title: data.title,
-          owner: data.owner,
-          description: data.description,
-          status: data.status,
-          priority: data.priority,
-          // The context will handle id, lastUpdate, topicNumber, progress, and keyMetrics
-        };
-
-        addInitiative(initiativeDataForContext as any);
+    const handleFormSubmit = async (data: InitiativeFormData) => {
+        setIsLoading(true);
+        // The context will handle id, lastUpdate, topicNumber, progress, and keyMetrics
+        await addInitiative(data);
+        setIsLoading(false);
 
         toast({
             title: "Iniciativa Criada!",
@@ -47,7 +43,11 @@ export function CreateInitiativeModal({ isOpen, onOpenChange }: CreateInitiative
                         Preencha as informações abaixo para cadastrar uma nova iniciativa estratégica.
                     </DialogDescription>
                 </DialogHeader>
-                <InitiativeForm onSubmit={handleFormSubmit} onCancel={() => onOpenChange(false)} />
+                <InitiativeForm 
+                    onSubmit={handleFormSubmit} 
+                    onCancel={() => onOpenChange(false)} 
+                    isLoading={isLoading}
+                />
             </DialogContent>
         </Dialog>
     );

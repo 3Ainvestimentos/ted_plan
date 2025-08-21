@@ -12,6 +12,7 @@ export interface Initiative {
   lastUpdate: string; // Date string
   progress: number; // Percentage 0-100
   priority: InitiativePriority;
+  deadline: string; // ISO date string 'YYYY-MM-DD'
   keyMetrics: { name: string; value: string; trend: 'up' | 'down' | 'neutral' }[];
   icon?: React.ElementType; // Optional: for specific task icons
 }
