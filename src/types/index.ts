@@ -76,3 +76,8 @@ export interface Collaborator {
     cargo: string; // Role/Position
     powerBiLink?: string;
 }
+
+// Form data types for Strategic Panel Management
+export type BusinessAreaFormData = Omit<BusinessArea, 'id' | 'okrs' | 'kpis'>;
+export type OkrFormData = Omit<Okr, 'id' | 'areaId'>;
+export type KpiFormData = Omit<Kpi, 'id' | 'areaId' | 'series'>;

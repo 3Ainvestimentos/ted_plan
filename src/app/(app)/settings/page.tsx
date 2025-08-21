@@ -28,6 +28,7 @@ import { CollaboratorsTable } from '@/components/settings/collaborators-table';
 import { UpsertCollaboratorModal } from '@/components/settings/upsert-collaborator-modal';
 import { ImportCollaboratorsModal } from '@/components/settings/import-collaborators-modal';
 import type { Collaborator } from '@/types';
+import { BusinessAreasManager } from '@/components/settings/business-areas-manager';
 
 
 const getInitials = (name: string) => {
@@ -290,6 +291,20 @@ function CollaboratorsTabContent() {
     )
 }
 
+function ContentGoalsTabContent() {
+    return (
+        <Card className="shadow-lg mt-6">
+            <CardContent className="pt-6">
+                <div className="mb-4">
+                    <h3 className="text-lg font-medium">Conteúdo e Metas Estratégicas</h3>
+                    <p className="text-muted-foreground text-sm">Gerencie as áreas de negócio, OKRs e KPIs que alimentam o Painel Estratégico.</p>
+                </div>
+                <BusinessAreasManager />
+            </CardContent>
+        </Card>
+    )
+}
+
 
 const adminModules = [
     {
@@ -311,7 +326,7 @@ const adminModules = [
         title: "Conteúdo e Metas",
         description: "O painel para gerenciar áreas de negócio, OKRs e KPIs que alimentam o Painel Estratégico será implementado aqui.",
         icon: BarChart2,
-        component: <PlaceholderTabContent title="Conteúdo e Metas" description="O painel para gerenciar áreas de negócio, OKRs e KPIs que alimentam o Painel Estratégico será implementado aqui." icon={BarChart2} />
+        component: <ContentGoalsTabContent />
     },
     {
         name: "audit",

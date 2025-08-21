@@ -1,14 +1,24 @@
 
 "use client";
 
-import type { BusinessArea, Okr, Kpi } from '@/types';
+import type { BusinessArea, Okr, Kpi, BusinessAreaFormData, OkrFormData, KpiFormData } from '@/types';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, writeBatch, query, where } from 'firebase/firestore';
 
 interface StrategicPanelContextType {
   businessAreas: BusinessArea[];
   isLoading: boolean;
+  refetchData: () => void;
+  addBusinessArea: (areaData: BusinessAreaFormData) => Promise<string | undefined>;
+  updateBusinessArea: (areaId: string, areaData: BusinessAreaFormData) => Promise<void>;
+  deleteBusinessArea: (areaId: string) => Promise<void>;
+  addOkr: (areaId: string, okrData: OkrFormData) => Promise<void>;
+  updateOkr: (okrId: string, okrData: OkrFormData) => Promise<void>;
+  deleteOkr: (okrId: string) => Promise<void>;
+  addKpi: (areaId: string, kpiData: KpiFormData) => Promise<void>;
+  updateKpi: (kpiId: string, kpiData: KpiFormData) => Promise<void>;
+  deleteKpi: (kpiId: string) => Promise<void>;
 }
 
 const StrategicPanelContext = createContext<StrategicPanelContextType | undefined>(undefined);
@@ -20,18 +30,15 @@ export const StrategicPanelProvider = ({ children }: { children: ReactNode }) =>
   const fetchPanelData = useCallback(async () => {
     setIsLoading(true);
     try {
-      // 1. Fetch all business areas
       const areasSnapshot = await getDocs(collection(db, 'businessAreas'));
       const areasData = areasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BusinessArea));
 
-      // 2. Fetch all OKRs and KPIs
       const okrsSnapshot = await getDocs(collection(db, 'okrs'));
       const allOkrs = okrsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Okr));
       
       const kpisSnapshot = await getDocs(collection(db, 'kpis'));
       const allKpis = kpisSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Kpi));
 
-      // 3. Map OKRs and KPIs to their respective business areas
       const populatedAreas = areasData.map(area => ({
         ...area,
         okrs: allOkrs.filter(okr => okr.areaId === area.id),
@@ -39,20 +46,119 @@ export const StrategicPanelProvider = ({ children }: { children: ReactNode }) =>
       }));
       
       setBusinessAreas(populatedAreas);
-
     } catch (error) {
-        console.error("Error fetching strategic panel data: ", error);
+      console.error("Error fetching strategic panel data: ", error);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
     fetchPanelData();
   }, [fetchPanelData]);
+  
+  // CRUD functions
+  const addBusinessArea = async (areaData: BusinessAreaFormData) => {
+      try {
+          const docRef = await addDoc(collection(db, 'businessAreas'), areaData);
+          await fetchPanelData();
+          return docRef.id;
+      } catch (e) { console.error("Error adding document: ", e); }
+  }
+
+  const updateBusinessArea = async (areaId: string, areaData: BusinessAreaFormData) => {
+      try {
+          await updateDoc(doc(db, 'businessAreas', areaId), areaData as any);
+          await fetchPanelData();
+      } catch (e) { console.error("Error updating document: ", e); }
+  }
+
+  const deleteBusinessArea = async (areaId: string) => {
+      try {
+          const batch = writeBatch(db);
+          // Delete the business area
+          batch.delete(doc(db, 'businessAreas', areaId));
+
+          // Find and delete associated OKRs
+          const okrsQuery = query(collection(db, 'okrs'), where('areaId', '==', areaId));
+          const okrsSnapshot = await getDocs(okrsQuery);
+          okrsSnapshot.forEach(doc => batch.delete(doc.ref));
+
+          // Find and delete associated KPIs
+          const kpisQuery = query(collection(db, 'kpis'), where('areaId', '==', areaId));
+          const kpisSnapshot = await getDocs(kpisQuery);
+          kpisSnapshot.forEach(doc => batch.delete(doc.ref));
+          
+          await batch.commit();
+          await fetchPanelData();
+      } catch (e) { console.error("Error deleting document and subcollections: ", e); }
+  }
+  
+  const addOkr = async (areaId: string, okrData: OkrFormData) => {
+    try {
+        const dataToSave = { ...okrData, areaId };
+        await addDoc(collection(db, 'okrs'), dataToSave);
+        await fetchPanelData();
+    } catch (e) { console.error("Error adding OKR: ", e); }
+  }
+
+  const updateOkr = async (okrId: string, okrData: OkrFormData) => {
+      try {
+          await updateDoc(doc(db, 'okrs', okrId), okrData as any);
+          await fetchPanelData();
+      } catch (e) { console.error("Error updating OKR: ", e); }
+  }
+
+  const deleteOkr = async (okrId: string) => {
+      try {
+          await deleteDoc(doc(db, 'okrs', okrId));
+          await fetchPanelData();
+      } catch (e) { console.error("Error deleting OKR: ", e); }
+  }
+
+  const addKpi = async (areaId: string, kpiData: KpiFormData) => {
+      try {
+          const defaultSeries = Array.from({ length: 12 }, (_, i) => ({
+                month: new Date(0, i).toLocaleString('default', { month: 'short' }),
+                Previsto: 0,
+                Realizado: 0,
+                Projetado: 0,
+            }));
+          const dataToSave = { ...kpiData, series: defaultSeries, areaId };
+          await addDoc(collection(db, 'kpis'), dataToSave);
+          await fetchPanelData();
+      } catch (e) { console.error("Error adding KPI: ", e); }
+  }
+
+  const updateKpi = async (kpiId: string, kpiData: KpiFormData) => {
+       try {
+          await updateDoc(doc(db, 'kpis', kpiId), kpiData as any);
+          await fetchPanelData();
+      } catch (e) { console.error("Error updating KPI: ", e); }
+  }
+
+  const deleteKpi = async (kpiId: string) => {
+      try {
+          await deleteDoc(doc(db, 'kpis', kpiId));
+          await fetchPanelData();
+      } catch (e) { console.error("Error deleting KPI: ", e); }
+  }
 
   return (
-    <StrategicPanelContext.Provider value={{ businessAreas, isLoading }}>
+    <StrategicPanelContext.Provider value={{
+        businessAreas, 
+        isLoading,
+        refetchData: fetchPanelData,
+        addBusinessArea,
+        updateBusinessArea,
+        deleteBusinessArea,
+        addOkr,
+        updateOkr,
+        deleteOkr,
+        addKpi,
+        updateKpi,
+        deleteKpi,
+    }}>
       {children}
     </StrategicPanelContext.Provider>
   );
