@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 // Lista de e-mails com permissão de administrador
 const ADMIN_EMAILS = ['matheus@3ainvestimentos.com.br'];
 // Lista de domínios autorizados a fazer login
-const ALLOWED_DOMAINS = ['3ainvestimentos.com.br'];
+const ALLOWED_DOMAINS = ['3ainvestimentos.com.br', '3ariva.com.br'];
 
 interface User {
   uid: string;
