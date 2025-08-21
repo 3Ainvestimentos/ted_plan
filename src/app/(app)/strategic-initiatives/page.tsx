@@ -1,22 +1,90 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { PlusCircle, LayoutGrid, List } from "lucide-react";
+import { PlusCircle, LayoutGrid, List, Upload } from "lucide-react";
 import { useInitiatives } from "@/contexts/initiatives-context";
 import { InitiativesTable } from "@/components/initiatives/initiatives-table";
 import { InitiativesKanban } from "@/components/initiatives/initiatives-kanban";
 import { PageHeader } from "@/components/layout/page-header";
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import Papa from 'papaparse';
+import { useToast } from "@/hooks/use-toast";
+import type { Initiative, InitiativePriority, InitiativeStatus } from "@/types";
 
 type ViewMode = "table" | "kanban";
 
 export default function InitiativesPage() {
-  const { initiatives } = useInitiatives();
+  const { initiatives, bulkAddInitiatives } = useInitiatives();
   const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          try {
+            const requiredFields = ['title', 'owner', 'description', 'status', 'priority'];
+            const fileFields = results.meta.fields || [];
+            
+            if (!requiredFields.every(field => fileFields.includes(field))) {
+              throw new Error(`O arquivo CSV deve conter as colunas: ${requiredFields.join(', ')}.`);
+            }
+
+            const newInitiatives = results.data.map((row: any) => {
+               if (!row.title || !row.owner || !row.description || !row.status || !row.priority) {
+                  throw new Error(`Linha inválida encontrada no CSV. Todos os campos são obrigatórios. Linha: ${JSON.stringify(row)}`);
+                }
+              
+              return {
+                title: row.title,
+                owner: row.owner,
+                description: row.description,
+                status: row.status as InitiativeStatus,
+                priority: row.priority as InitiativePriority,
+                // Context will handle the rest
+              } as Omit<Initiative, 'id' | 'lastUpdate' | 'topicNumber' | 'progress' | 'keyMetrics'>;
+            });
+            
+            bulkAddInitiatives(newInitiatives as any);
+            toast({
+              title: "Importação bem-sucedida!",
+              description: `${newInitiatives.length} iniciativas foram adicionadas.`,
+            });
+          } catch (error: any) {
+             toast({
+              variant: "destructive",
+              title: "Erro na Importação",
+              description: error.message || "Não foi possível processar o arquivo CSV.",
+            });
+          }
+        },
+        error: (error: any) => {
+           toast({
+            variant: "destructive",
+            title: "Erro de Leitura",
+            description: `Falha ao ler o arquivo: ${error.message}`,
+          });
+        }
+      });
+    }
+     // Reset file input
+    if(fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+
+  const triggerFileUpload = () => {
+    fileInputRef.current?.click();
+  };
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -51,6 +119,16 @@ export default function InitiativesPage() {
               <Link href="/strategic-initiatives/new"> 
                 <PlusCircle className="mr-2 h-4 w-4" /> Criar
               </Link>
+            </Button>
+            <input 
+              type="file" 
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept=".csv"
+              className="hidden"
+            />
+             <Button variant="outline" onClick={triggerFileUpload}>
+              <Upload className="mr-2 h-4 w-4" /> Importar CSV
             </Button>
           </div>
         </div>
