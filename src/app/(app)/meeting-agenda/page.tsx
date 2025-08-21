@@ -2,33 +2,43 @@
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, PlusCircle } from 'lucide-react';
+import { PlusCircle, Link as LinkIcon } from 'lucide-react';
 
 export default function MeetingAgendaPage() {
+  const calendarUrl = "https://calendar.google.com/calendar/embed?src=primary&ctz=America/Sao_Paulo";
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+    <div className="space-y-6 flex flex-col h-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <PageHeader
             title="Agenda de Reuniões"
-            description="Gerencie suas reuniões, comitês e outros compromissos."
+            description="Visualize e gerencie seus compromissos e comitês."
         />
-        <Button>
-            <PlusCircle className="mr-2 h-4 w-4" /> Criar Novo Evento
-        </Button>
+        <div className="flex items-center gap-2">
+            <Button variant="outline">
+                <LinkIcon className="mr-2 h-4 w-4" /> Integrar Calendário
+            </Button>
+            <Button>
+                <PlusCircle className="mr-2 h-4 w-4" /> Criar Novo Evento
+            </Button>
+        </div>
       </div>
 
-      <Card>
+      <Card className="flex-grow flex flex-col shadow-lg">
         <CardHeader>
-            <CardTitle>Próximos Eventos</CardTitle>
-            <CardDescription>Visão geral das suas reuniões agendadas.</CardDescription>
+            <CardTitle>Google Calendar</CardTitle>
+            <CardDescription>Sua agenda integrada para visualização e planejamento.</CardDescription>
         </CardHeader>
-        <CardContent className="min-h-[400px] flex flex-col items-center justify-center text-center">
-            <Calendar className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold text-foreground">Nenhum evento agendado</h3>
-            <p className="text-muted-foreground mt-2">Crie um novo evento ou integre com seu calendário para começar.</p>
-            <Button variant="outline" className="mt-4">
-                Integrar com Google Calendar
-            </Button>
+        <CardContent className="flex-grow p-0 rounded-b-lg overflow-hidden">
+            <iframe
+                src={calendarUrl}
+                style={{ border: 0 }}
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                scrolling="no"
+                title="Google Calendar"
+            ></iframe>
         </CardContent>
       </Card>
     </div>
