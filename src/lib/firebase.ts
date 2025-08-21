@@ -16,7 +16,7 @@ const firebaseConfig = {
 
 // Dynamically set authDomain for local development to fix auth/unauthorized-domain error
 if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    firebaseConfig.authDomain = `${window.location.hostname}:${window.location.port}`;
+    firebaseConfig.authDomain = `${window.location.hostname}:9002`;
 }
 
 // Initialize Firebase
