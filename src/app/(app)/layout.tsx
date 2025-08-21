@@ -14,6 +14,38 @@ import { StrategicPanelProvider } from '@/contexts/strategic-panel-context';
 import { CollaboratorsProvider } from '@/contexts/collaborators-context';
 import { UserNav } from '@/components/layout/user-nav';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { SettingsProvider, useSettings } from '@/contexts/settings-context';
+
+function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
+    const { maintenanceSettings, isLoading: isSettingsLoading } = useSettings();
+    const { user, isAdmin, isLoading: isAuthLoading } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!isSettingsLoading && !isAuthLoading && maintenanceSettings?.isEnabled) {
+            const isMaintenanceAdmin = maintenanceSettings.adminEmails.includes(user?.email || '');
+            if (!isMaintenanceAdmin) {
+                router.replace('/maintenance');
+            }
+        }
+    }, [maintenanceSettings, isSettingsLoading, user, isAuthLoading, router]);
+
+    if (isSettingsLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-background">
+                <LoadingSpinner />
+            </div>
+        );
+    }
+    
+    if (maintenanceSettings?.isEnabled && !maintenanceSettings.adminEmails.includes(user?.email || '')) {
+       // Render nothing while redirecting
+       return null;
+    }
+
+    return <>{children}</>;
+}
+
 
 export default function AppLayout({
   children,
@@ -32,14 +64,10 @@ export default function AppLayout({
   }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {
-    // This effect handles logging user login/logout activity.
-    if (!isLoading && user && !loggedActivityRef.current) {
-        // User has just logged in
-        logActivity('login', `User ${user.email} logged in.`);
+    if (!isLoading && isAuthenticated && !loggedActivityRef.current) {
+        logActivity('login', `User ${user?.email} logged in.`);
         loggedActivityRef.current = true;
-    } else if (!isLoading && !user && loggedActivityRef.current) {
-        // User has just logged out
-        // Note: We can't get user email here as user is null. The logout function in auth-context should handle this if email is needed.
+    } else if (!isLoading && !isAuthenticated && loggedActivityRef.current) {
         logActivity('logout', `A user logged out.`);
         loggedActivityRef.current = false;
     }
@@ -55,36 +83,40 @@ export default function AppLayout({
   }
   
   return (
-      <CollaboratorsProvider>
-        <InitiativesProvider>
-          <MeetingsProvider>
-            <StrategicPanelProvider>
-              <SidebarProvider>
-                <div className="flex h-screen bg-background">
-                  <Sidebar>
-                    <SidebarContent>
-                      <SidebarNav />
-                    </SidebarContent>
-                    <SidebarFooter>
-                      <UserNav />
-                    </SidebarFooter>
-                  </Sidebar>
-                  <div className="flex flex-col flex-1 overflow-hidden">
-                    <header className="flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-lg sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-                      <SidebarTrigger className="sm:hidden" />
-                      <div className="ml-auto flex items-center gap-2">
-                        {/* Additional header items can go here */}
+      <SettingsProvider>
+        <MaintenanceWrapper>
+          <CollaboratorsProvider>
+            <InitiativesProvider>
+              <MeetingsProvider>
+                <StrategicPanelProvider>
+                  <SidebarProvider>
+                    <div className="flex h-screen bg-background">
+                      <Sidebar>
+                        <SidebarContent>
+                          <SidebarNav />
+                        </SidebarContent>
+                        <SidebarFooter>
+                          <UserNav />
+                        </SidebarFooter>
+                      </Sidebar>
+                      <div className="flex flex-col flex-1 overflow-hidden">
+                        <header className="flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-lg sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+                          <SidebarTrigger className="sm:hidden" />
+                          <div className="ml-auto flex items-center gap-2">
+                            {/* Additional header items can go here */}
+                          </div>
+                        </header>
+                        <main className="flex-1 overflow-auto p-4 md:p-6">
+                          {children}
+                        </main>
                       </div>
-                    </header>
-                    <main className="flex-1 overflow-auto p-4 md:p-6">
-                      {children}
-                    </main>
-                  </div>
-                </div>
-              </SidebarProvider>
-            </StrategicPanelProvider>
-          </MeetingsProvider>
-        </InitiativesProvider>
-      </CollaboratorsProvider>
+                    </div>
+                  </SidebarProvider>
+                </StrategicPanelProvider>
+              </MeetingsProvider>
+            </InitiativesProvider>
+          </CollaboratorsProvider>
+        </MaintenanceWrapper>
+      </SettingsProvider>
   );
 }

@@ -5,8 +5,7 @@
 import { PageHeader } from '@/components/layout/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users, GanttChartSquare, BarChart2, History, HardHat, PlusCircle, MoreVertical, ArrowLeft, Mail, X, BadgeAlert, CheckCircle, Upload, CalendarIcon } from 'lucide-react';
-import Link from 'next/link';
+import { Users, GanttChartSquare, BarChart2, History, HardHat, PlusCircle, MoreVertical, Upload, Mail, X, BadgeAlert, CheckCircle, CalendarIcon } from 'lucide-react';
 
 // Permissions Component (moved from its own page)
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -21,9 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CollaboratorsTable } from '@/components/settings/collaborators-table';
 import { UpsertCollaboratorModal } from '@/components/settings/upsert-collaborator-modal';
 import { ImportCollaboratorsModal } from '@/components/settings/import-collaborators-modal';
@@ -34,6 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
+import { MaintenanceModeManager } from '@/components/settings/maintenance-mode-manager';
 
 
 const getInitials = (name: string) => {
@@ -137,114 +135,11 @@ function PermissionsTabContent() {
 }
 
 function MaintenanceModeTabContent() {
-    const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
-    const [adminEmails, setAdminEmails] = useState<string[]>(['admin@tedapp.com', 'pmo@tedapp.com']);
-    const [newEmail, setNewEmail] = useState('');
-
-    const handleAddAdmin = () => {
-        if (newEmail && !adminEmails.includes(newEmail) && newEmail.includes('@')) {
-            setAdminEmails([...adminEmails, newEmail]);
-            setNewEmail('');
-        }
-    };
-
-    const handleRemoveAdmin = (emailToRemove: string) => {
-        setAdminEmails(adminEmails.filter(email => email !== emailToRemove));
-    };
-
     return (
         <Card className="shadow-lg mt-6">
-            <CardContent className="pt-6 grid gap-8 md:grid-cols-2">
-                <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Ativar Modo Manutenção</h3>
-                    <p className="text-sm text-muted-foreground">
-                        Quando ativado, apenas os administradores listados poderão acessar a plataforma. Todos os outros usuários serão redirecionados para uma página de aviso.
-                    </p>
-                    <div className="flex items-center space-x-2">
-                        <Switch
-                            id="maintenance-mode"
-                            checked={isMaintenanceMode}
-                            onCheckedChange={setIsMaintenanceMode}
-                        />
-                        <Label htmlFor="maintenance-mode">
-                           {isMaintenanceMode ? "Modo Manutenção Ativado" : "Modo Manutenção Desativado"}
-                        </Label>
-                    </div>
-                    {isMaintenanceMode ? (
-                         <Alert>
-                            <BadgeAlert className="h-4 w-4" />
-                            <AlertTitle>Plataforma em Manutenção!</AlertTitle>
-                            <AlertDescription>
-                                O acesso está restrito aos administradores.
-                            </AlertDescription>
-                        </Alert>
-                    ) : (
-                         <Alert variant="default" className="border-green-200 bg-green-50">
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                            <AlertTitle className="text-green-800">Plataforma Operacional</AlertTitle>
-                            <AlertDescription className="text-green-700">
-                                O acesso está liberado para todos os usuários.
-                            </AlertDescription>
-                        </Alert>
-                    )}
-                </div>
-                <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Gerenciar Administradores</h3>
-                    <p className="text-sm text-muted-foreground">
-                        Adicione ou remova os e-mails dos usuários que terão acesso durante o modo de manutenção.
-                    </p>
-                    <div className="flex gap-2">
-                        <Input
-                            type="email"
-                            placeholder="exemplo@empresa.com"
-                            value={newEmail}
-                            onChange={(e) => setNewEmail(e.target.value)}
-                        />
-                        <Button onClick={handleAddAdmin} disabled={!newEmail}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
-                        </Button>
-                    </div>
-                    <div className="space-y-2 rounded-md border p-2">
-                        <h4 className="text-sm font-medium px-2">Lista de Admins</h4>
-                        {adminEmails.length > 0 ? (
-                            <ul className="divide-y">
-                                {adminEmails.map(email => (
-                                    <li key={email} className="flex items-center justify-between p-2 hover:bg-accent rounded-md">
-                                        <div className="flex items-center gap-2">
-                                           <Mail className="h-4 w-4 text-muted-foreground" />
-                                           <span className="text-sm">{email}</span>
-                                        </div>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleRemoveAdmin(email)}>
-                                            <X className="h-4 w-4" />
-                                        </Button>
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                             <p className="text-sm text-muted-foreground p-2 text-center">Nenhum administrador adicionado.</p>
-                        )}
-                    </div>
-                </div>
-            </CardContent>
+            <MaintenanceModeManager />
         </Card>
     );
-}
-
-// Placeholder for other tabs
-function PlaceholderTabContent({ title, description, icon: Icon }: {title: string, description: string, icon: React.ElementType}) {
-    return (
-        <Card className="mt-6">
-            <CardContent className="pt-6">
-            <div className="flex flex-col items-center justify-center text-center p-12 border-2 border-dashed rounded-lg">
-                <Icon className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-xl font-semibold">Em Breve</h3>
-                <p className="text-muted-foreground mt-2 max-w-md">
-                    {description}
-                </p>
-            </div>
-            </CardContent>
-      </Card>
-    )
 }
 
 function CollaboratorsTabContent() {

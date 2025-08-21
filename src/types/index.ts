@@ -93,3 +93,9 @@ export interface AuditLog {
     timestamp: any; // Firestore Timestamp
     details: string;
 }
+
+// Types for Settings
+export interface MaintenanceSettings {
+    isEnabled: boolean;
+    adminEmails: string[];
+}
