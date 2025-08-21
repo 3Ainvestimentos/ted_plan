@@ -3,7 +3,6 @@
 
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { PlusCircle, LayoutGrid, List, Upload, Download } from "lucide-react";
 import { useInitiatives } from "@/contexts/initiatives-context";
 import { InitiativesTable } from "@/components/initiatives/initiatives-table";
@@ -14,6 +13,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import Papa from 'papaparse';
 import { useToast } from "@/hooks/use-toast";
 import type { Initiative, InitiativePriority, InitiativeStatus } from "@/types";
+import { CreateInitiativeModal } from "@/components/initiatives/create-initiative-modal";
 
 type ViewMode = "table" | "kanban";
 
@@ -22,6 +22,7 @@ export default function InitiativesPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -88,6 +89,7 @@ export default function InitiativesPage() {
 
   return (
     <DndProvider backend={HTML5Backend}>
+      <CreateInitiativeModal isOpen={isModalOpen} onOpenChange={setIsModalOpen} />
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <PageHeader
@@ -115,10 +117,8 @@ export default function InitiativesPage() {
                 <span className="ml-2 hidden sm:inline">Kanban</span>
               </Button>
             </div>
-             <Button asChild>
-              <Link href="/strategic-initiatives/new"> 
-                <PlusCircle className="mr-2 h-4 w-4" /> Criar
-              </Link>
+            <Button onClick={() => setIsModalOpen(true)}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Criar
             </Button>
             <input 
               type="file" 
