@@ -4,7 +4,7 @@
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { PlusCircle, LayoutGrid, List, Upload } from "lucide-react";
+import { PlusCircle, LayoutGrid, List, Upload, Download } from "lucide-react";
 import { useInitiatives } from "@/contexts/initiatives-context";
 import { InitiativesTable } from "@/components/initiatives/initiatives-table";
 import { InitiativesKanban } from "@/components/initiatives/initiatives-kanban";
@@ -94,7 +94,7 @@ export default function InitiativesPage() {
             title="Iniciativas Estratégicas"
             description="Acompanhe, gerencie e organize todas as suas iniciativas em um só lugar."
           />
-          <div className="flex items-center gap-2 self-end sm:self-center">
+          <div className="flex items-center gap-2 self-end sm:self-center flex-wrap">
             <div className="p-1 bg-muted rounded-lg flex items-center">
               <Button 
                 variant={viewMode === 'table' ? 'secondary' : 'ghost'} 
@@ -129,6 +129,12 @@ export default function InitiativesPage() {
             />
              <Button variant="outline" onClick={triggerFileUpload}>
               <Upload className="mr-2 h-4 w-4" /> Importar CSV
+            </Button>
+            <Button variant="link" size="sm" asChild>
+                <a href="/template_iniciativas.csv" download>
+                    <Download className="mr-2 h-4 w-4" />
+                    Baixar Modelo
+                </a>
             </Button>
           </div>
         </div>
