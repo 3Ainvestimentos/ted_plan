@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useEffect, useRef } from 'react';
@@ -29,47 +28,47 @@ function AppLayoutContent({
   // Settings and Maintenance
   const { maintenanceSettings, isLoading: isSettingsLoading } = useSettings();
   
-  useEffect(() => {
-    if (isAuthLoading || isSettingsLoading) {
-      return; // Wait for both auth and settings to load
-    }
+  // useEffect(() => {
+  //   if (isAuthLoading || isSettingsLoading) {
+  //     return; // Wait for both auth and settings to load
+  //   }
     
-    // 1. Check for maintenance mode first
-    if (maintenanceSettings?.isEnabled) {
-      const isMaintenanceAdmin = maintenanceSettings.adminEmails.includes(user?.email || '');
-      if (!isMaintenanceAdmin) {
-        router.replace('/maintenance');
-        return;
-      }
-    }
+  //   // 1. Check for maintenance mode first
+  //   if (maintenanceSettings?.isEnabled) {
+  //     const isMaintenanceAdmin = maintenanceSettings.adminEmails.includes(user?.email || '');
+  //     if (!isMaintenanceAdmin) {
+  //       router.replace('/maintenance');
+  //       return;
+  //     }
+  //   }
 
-    // 2. If not in maintenance or user is admin, check auth status
-    if (!isAuthenticated) {
-      router.replace('/login');
-    }
+  //   // 2. If not in maintenance or user is admin, check auth status
+  //   if (!isAuthenticated) {
+  //     router.replace('/login');
+  //   }
 
-  }, [isAuthenticated, isAuthLoading, user, maintenanceSettings, isSettingsLoading, router]);
+  // }, [isAuthenticated, isAuthLoading, user, maintenanceSettings, isSettingsLoading, router]);
   
-  // Log user activity
-  useEffect(() => {
-    if (!isAuthLoading && isAuthenticated && !loggedActivityRef.current) {
-        logActivity('login', `User ${user?.email} logged in.`);
-        loggedActivityRef.current = true;
-    } else if (!isAuthLoading && !isAuthenticated && loggedActivityRef.current) {
-        logActivity('logout', `A user logged out.`);
-        loggedActivityRef.current = false;
-    }
-  }, [isAuthenticated, isAuthLoading, user, logActivity]);
+  // // Log user activity
+  // useEffect(() => {
+  //   if (!isAuthLoading && isAuthenticated && !loggedActivityRef.current) {
+  //       logActivity('login', `User ${user?.email} logged in.`);
+  //       loggedActivityRef.current = true;
+  //   } else if (!isAuthLoading && !isAuthenticated && loggedActivityRef.current) {
+  //       logActivity('logout', `A user logged out.`);
+  //       loggedActivityRef.current = false;
+  //   }
+  // }, [isAuthenticated, isAuthLoading, user, logActivity]);
 
 
-  if (isAuthLoading || isSettingsLoading || !isAuthenticated) {
-    // Show spinner if loading or if user is not authenticated yet (to prevent flicker before redirect)
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <LoadingSpinner />
-      </div>
-    );
-  }
+  // if (isAuthLoading || isSettingsLoading || !isAuthenticated) {
+  //   // Show spinner if loading or if user is not authenticated yet (to prevent flicker before redirect)
+  //   return (
+  //     <div className="flex items-center justify-center min-h-screen bg-background">
+  //       <LoadingSpinner />
+  //     </div>
+  //   );
+  // }
   
   // Render layout only if everything is loaded and user is authenticated
   return (
