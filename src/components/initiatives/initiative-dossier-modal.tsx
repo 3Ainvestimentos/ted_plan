@@ -43,15 +43,18 @@ export function InitiativeDossierModal({ isOpen, onOpenChange, initiative }: Ini
                         <div>
                             <DialogTitle className="text-2xl font-headline text-foreground">{initiative.title}</DialogTitle>
                             <DialogDescription className="mt-1">
-                                <Badge variant={initiative.status === 'Concluído' ? 'default' : initiative.status === 'Em Risco' || initiative.status === 'Atrasado' ? 'destructive' : 'secondary'} className="capitalize">
-                                    <StatusIcon className="mr-1 h-4 w-4" />
-                                    {initiative.status}
-                                </Badge>
+                               Dossiê completo da iniciativa.
                             </DialogDescription>
                         </div>
                         <Button size="sm" onClick={() => setIsEditModalOpen(true)}>
                             <Edit3 className="mr-2 h-4 w-4" /> Editar Iniciativa
                         </Button>
+                    </div>
+                     <div className="mt-2">
+                        <Badge variant={initiative.status === 'Concluído' ? 'default' : initiative.status === 'Em Risco' || initiative.status === 'Atrasado' ? 'destructive' : 'secondary'} className="capitalize">
+                            <StatusIcon className="mr-1 h-4 w-4" />
+                            {initiative.status}
+                        </Badge>
                     </div>
                 </DialogHeader>
                 
