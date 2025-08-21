@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/auth-context';
 import { ThemeProvider } from '@/components/layout/theme-provider';
+import { AuditLogProvider } from '@/contexts/audit-log-context';
 
 export const metadata: Metadata = {
   title: 'Ted 1.0',
@@ -30,8 +31,10 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            {children}
-            <Toaster />
+            <AuditLogProvider>
+              {children}
+              <Toaster />
+            </AuditLogProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

@@ -81,3 +81,15 @@ export interface Collaborator {
 export type BusinessAreaFormData = Omit<BusinessArea, 'id' | 'okrs' | 'kpis'>;
 export type OkrFormData = Omit<Okr, 'id' | 'areaId'>;
 export type KpiFormData = Omit<Kpi, 'id' | 'areaId' | 'series'>;
+
+// Types for Audit Log
+export type AuditLogEvent = 'login' | 'logout' | 'view_page' | 'create_initiative' | 'update_initiative';
+
+export interface AuditLog {
+    id: string;
+    userId: string;
+    userEmail: string;
+    event: AuditLogEvent;
+    timestamp: any; // Firestore Timestamp
+    details: string;
+}

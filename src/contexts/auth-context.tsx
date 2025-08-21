@@ -8,7 +8,6 @@ import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signO
 import { app } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
-
 // Lista de e-mails com permissão de administrador
 const ADMIN_EMAILS = ['matheus@3ainvestimentos.com.br'];
 // Lista de domínios autorizados a fazer login
@@ -90,13 +89,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const userDomain = userEmail.split('@')[1];
 
           if (ALLOWED_DOMAINS.includes(userDomain)) {
-            const appUser: User = {
-                uid: firebaseUser.uid,
-                name: firebaseUser.displayName,
-                email: firebaseUser.email,
-                role: ADMIN_EMAILS.includes(userEmail) ? 'PMO' : 'Colaborador',
-            };
-            setUser(appUser);
             router.push('/strategic-panel');
           } else {
             // Se o domínio não for permitido, desloga o usuário imediatamente e exibe uma mensagem.
