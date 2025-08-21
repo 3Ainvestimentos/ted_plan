@@ -225,6 +225,22 @@ function PlaceholderTabContent({ title, description, icon: Icon }: {title: strin
     )
 }
 
+function CollaboratorsTabContent() {
+    return (
+        <Card className="mt-6">
+            <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center text-center p-12 border-2 border-dashed rounded-lg">
+                <Users className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold">Gerenciamento de Colaboradores</h3>
+                <p className="text-muted-foreground mt-2 max-w-md">
+                    A funcionalidade de gerenciamento de colaboradores, incluindo importação via CSV, adição, edição e configuração de links de Power BI, está sendo desenvolvida e estará disponível em breve.
+                </p>
+            </div>
+            </CardContent>
+      </Card>
+    )
+}
+
 
 const adminModules = [
     {
@@ -239,7 +255,7 @@ const adminModules = [
         title: "Gerenciamento de Colaboradores",
         description: "A funcionalidade de gerenciamento de colaboradores, incluindo importação via CSV e configuração de links de Power BI, está sendo desenvolvida.",
         icon: Users,
-        component: <PlaceholderTabContent title="Gerenciamento de Colaboradores" description="A funcionalidade de gerenciamento de colaboradores, incluindo importação via CSV e configuração de links de Power BI, está sendo desenvolvida." icon={Users} />
+        component: <CollaboratorsTabContent />
     },
     {
         name: "content",

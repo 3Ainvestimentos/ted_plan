@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
+import { MOCK_OWNERS } from "@/lib/constants";
 
 const initiativeSchema = z.object({
   title: z.string().min(5, "O título deve ter pelo menos 5 caracteres."),
@@ -26,9 +27,6 @@ const initiativeSchema = z.object({
 });
 
 export type InitiativeFormData = z.infer<typeof initiativeSchema>;
-
-// Mock owners for the select dropdown
-const MOCK_OWNERS = ["Alice W.", "Bob T.", "Charlie B.", "David C.", "Anne K.", "Fred L."];
 
 interface InitiativeFormProps {
     onSubmit: (data: InitiativeFormData) => void;

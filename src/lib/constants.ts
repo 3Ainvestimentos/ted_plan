@@ -33,7 +33,17 @@ export const MOCK_INITIATIVES: Initiative[] = [];
 export const MOCK_RECURRING_MEETINGS: RecurringMeeting[] = [];
 
 // Mock data for collaborators
-export const initialCollaborators: { id: number; name: string; email: string; area: string; cargo: string; }[] = [];
+export const initialCollaborators: { id: number; name: string; email: string; area: string; cargo: string; }[] = [
+    { id: 1, name: 'Alice W.', email: 'alice@example.com', area: 'Marketing', cargo: 'Gerente de Marketing' },
+    { id: 2, name: 'Bob T.', email: 'bob@example.com', area: 'Financeiro', cargo: 'Analista Financeiro' },
+    { id: 3, name: 'Charlie B.', email: 'charlie@example.com', area: 'Operações', cargo: 'Coordenador de Operações' },
+    { id: 4, name: 'David C.', email: 'david@example.com', area: 'Vendas', cargo: 'Executivo de Contas' },
+    { id: 5, name: 'Anne K.', email: 'anne@example.com', area: 'RH', cargo: 'Analista de RH' },
+    { id: 6, name: 'Fred L.', email: 'fred@example.com', area: 'Tecnologia', cargo: 'Desenvolvedor' },
+];
+
+export const MOCK_OWNERS = initialCollaborators.map(c => c.name);
+
 
 // Mock data for permissions
 export const initialPermissions = initialCollaborators.reduce((acc, user) => {
