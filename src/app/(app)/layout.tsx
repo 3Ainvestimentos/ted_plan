@@ -16,64 +16,54 @@ import { UserNav } from '@/components/layout/user-nav';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { SettingsProvider, useSettings } from '@/contexts/settings-context';
 
-function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
-    const { maintenanceSettings, isLoading: isSettingsLoading } = useSettings();
-    const { user, isAdmin, isLoading: isAuthLoading } = useAuth();
-    const router = useRouter();
-
-    useEffect(() => {
-        if (!isSettingsLoading && !isAuthLoading && maintenanceSettings?.isEnabled) {
-            const isMaintenanceAdmin = maintenanceSettings.adminEmails.includes(user?.email || '');
-            if (!isMaintenanceAdmin) {
-                router.replace('/maintenance');
-            }
-        }
-    }, [maintenanceSettings, isSettingsLoading, user, isAuthLoading, router]);
-
-    if (isSettingsLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-background">
-                <LoadingSpinner />
-            </div>
-        );
-    }
-    
-    if (maintenanceSettings?.isEnabled && !maintenanceSettings.adminEmails.includes(user?.email || '')) {
-       // Render nothing while redirecting
-       return null;
-    }
-
-    return <>{children}</>;
-}
-
 function AppLayoutContent({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { logActivity } = useAuditLog();
   const router = useRouter();
   const loggedActivityRef = useRef(false);
 
+  // Settings and Maintenance
+  const { maintenanceSettings, isLoading: isSettingsLoading } = useSettings();
+  
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push('/login');
+    if (isAuthLoading || isSettingsLoading) {
+      return; // Wait for both auth and settings to load
     }
-  }, [isAuthenticated, isLoading, router]);
+    
+    // 1. Check for maintenance mode first
+    if (maintenanceSettings?.isEnabled) {
+      const isMaintenanceAdmin = maintenanceSettings.adminEmails.includes(user?.email || '');
+      if (!isMaintenanceAdmin) {
+        router.replace('/maintenance');
+        return;
+      }
+    }
 
+    // 2. If not in maintenance or user is admin, check auth status
+    if (!isAuthenticated) {
+      router.replace('/login');
+    }
+
+  }, [isAuthenticated, isAuthLoading, user, maintenanceSettings, isSettingsLoading, router]);
+  
+  // Log user activity
   useEffect(() => {
-    if (!isLoading && isAuthenticated && !loggedActivityRef.current) {
+    if (!isAuthLoading && isAuthenticated && !loggedActivityRef.current) {
         logActivity('login', `User ${user?.email} logged in.`);
         loggedActivityRef.current = true;
-    } else if (!isLoading && !isAuthenticated && loggedActivityRef.current) {
+    } else if (!isAuthLoading && !isAuthenticated && loggedActivityRef.current) {
         logActivity('logout', `A user logged out.`);
         loggedActivityRef.current = false;
     }
-  }, [isAuthenticated, isLoading, user, logActivity]);
+  }, [isAuthenticated, isAuthLoading, user, logActivity]);
 
 
-  if (isLoading || !isAuthenticated) {
+  if (isAuthLoading || isSettingsLoading || !isAuthenticated) {
+    // Show spinner if loading or if user is not authenticated yet (to prevent flicker before redirect)
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <LoadingSpinner />
@@ -81,6 +71,7 @@ function AppLayoutContent({
     );
   }
   
+  // Render layout only if everything is loaded and user is authenticated
   return (
       <CollaboratorsProvider>
         <InitiativesProvider>
@@ -121,11 +112,10 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // SettingsProvider must wrap the content that uses its context.
   return (
     <SettingsProvider>
-      <MaintenanceWrapper>
-        <AppLayoutContent>{children}</AppLayoutContent>
-      </MaintenanceWrapper>
+      <AppLayoutContent>{children}</AppLayoutContent>
     </SettingsProvider>
   );
 }
