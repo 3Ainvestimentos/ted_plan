@@ -5,112 +5,97 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFo
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { CalendarIcon, Users, Clock } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useMeetings } from "@/contexts/meetings-context";
+import { Loader2 } from "lucide-react";
+import type { RecurringMeeting } from "@/types";
 
 interface CreateEventSheetProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
 }
 
-const meetingTypes = ["1:1", "Comitê", "Reunião Pontual", "Follow-up", "Alinhamento", "Workshop"];
-const recurrenceOptions = ["Não se repete", "Diariamente", "Semanalmente", "Mensalmente"];
+const recurrenceUnits = ["dias", "semanas", "meses"];
 
 export function CreateEventSheet({ isOpen, onOpenChange }: CreateEventSheetProps) {
-  const [date, setDate] = useState<Date | undefined>(new Date());
   const { toast } = useToast();
+  const { addMeeting } = useMeetings();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleCreateEvent = () => {
-    // Lógica para criar evento será adicionada aqui.
+  // Form state
+  const [name, setName] = useState('');
+  const [recurrenceValue, setRecurrenceValue] = useState<number>(1);
+  const [recurrenceUnit, setRecurrenceUnit] = useState<'dias' | 'semanas' | 'meses'>('semanas');
+
+  const handleCreateEvent = async () => {
+    if (!name || recurrenceValue <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Campos Inválidos",
+        description: "Por favor, preencha o nome e um valor de recorrência válido.",
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+
+    const newMeetingData = {
+        name,
+        recurrence: {
+            unit: recurrenceUnit,
+            value: recurrenceValue
+        },
+    };
+
+    await addMeeting(newMeetingData as Omit<RecurringMeeting, 'id' | 'lastOccurrence'>);
+
     toast({
-      title: "Evento Criado (Simulação)",
-      description: "O evento foi adicionado à fila para ser criado no Google Calendar.",
+      title: "Comitê Recorrente Criado!",
+      description: `O comitê "${name}" foi adicionado ao controle de recorrência.`,
     });
+    
+    // Reset form and close
+    setName('');
+    setRecurrenceValue(1);
+    setRecurrenceUnit('semanas');
     onOpenChange(false);
+    setIsLoading(false);
   };
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full max-w-lg overflow-y-auto">
+      <SheetContent className="w-full max-w-md overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Criar Novo Evento</SheetTitle>
+          <SheetTitle>Criar Novo Comitê Recorrente</SheetTitle>
           <SheetDescription>
-            Preencha os detalhes abaixo para agendar um novo evento no Google Calendar.
+            Configure um novo tipo de reunião para aparecer na sua tabela de controle de recorrência.
           </SheetDescription>
         </SheetHeader>
         <div className="grid gap-6 py-6">
           <div className="space-y-2">
-            <Label htmlFor="title">Título do Evento</Label>
-            <Input id="title" placeholder="Ex: Reunião de Sincronização Semanal" />
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <div className="space-y-2">
-                <Label>Data</Label>
-                <Popover>
-                    <PopoverTrigger asChild>
-                    <Button
-                        variant={"outline"}
-                        className="w-full justify-start text-left font-normal"
-                    >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date ? format(date, "dd/MM/yyyy") : <span>Selecione uma data</span>}
-                    </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                        <Calendar
-                            mode="single"
-                            selected={date}
-                            onSelect={setDate}
-                            initialFocus
-                        />
-                    </PopoverContent>
-                </Popover>
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="time">Horário</Label>
-                <Input id="time" type="time" defaultValue="10:00" />
-            </div>
+            <Label htmlFor="title">Nome do Comitê/Reunião</Label>
+            <Input id="title" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Comitê de Riscos" />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="participants">Participantes (E-mails)</Label>
-            <Textarea 
-                id="participants"
-                placeholder="Separe os e-mails por vírgula. ex: usuario1@exemplo.com, usuario2@exemplo.com"
-                rows={3}
-             />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <div className="space-y-2">
-                <Label htmlFor="type">Tipo de Reunião</Label>
-                <Select>
+            <Label>Recorrência</Label>
+            <div className="flex gap-2">
+                <Input 
+                    type="number" 
+                    value={recurrenceValue}
+                    onChange={(e) => setRecurrenceValue(Number(e.target.value))}
+                    min="1"
+                    className="w-1/3"
+                />
+                <Select value={recurrenceUnit} onValueChange={(value) => setRecurrenceUnit(value as any)}>
                     <SelectTrigger>
-                        <SelectValue placeholder="Selecione um tipo" />
+                        <SelectValue placeholder="Selecione a unidade" />
                     </SelectTrigger>
                     <SelectContent>
-                        {meetingTypes.map(type => (
-                            <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="recurrence">Recorrência</Label>
-                <Select>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Selecione a recorrência" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {recurrenceOptions.map(option => (
-                           <SelectItem key={option} value={option}>{option}</SelectItem>
+                        {recurrenceUnits.map(unit => (
+                           <SelectItem key={unit} value={unit} className="capitalize">{unit}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>
@@ -119,10 +104,11 @@ export function CreateEventSheet({ isOpen, onOpenChange }: CreateEventSheetProps
         </div>
         <SheetFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleCreateEvent}>Criar Evento</Button>
+          <Button onClick={handleCreateEvent} disabled={isLoading}>
+             {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Salvando...</> : "Criar Comitê"}
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>
   );
 }
-

@@ -8,12 +8,13 @@ import { PlusCircle, Link as LinkIcon } from 'lucide-react';
 import { useState } from 'react';
 import { CreateEventSheet } from '@/components/meetings/create-event-sheet';
 import { RecurringMeetingsTable } from '@/components/meetings/recurring-meetings-table';
-import type { RecurringMeeting } from '@/types';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useMeetings } from '@/contexts/meetings-context';
 
 export default function MeetingAgendaPage() {
   const calendarUrl = "https://calendar.google.com/calendar/embed?src=primary&ctz=America/Sao_Paulo";
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [meetings, setMeetings] = useState<RecurringMeeting[]>([]);
+  const { isLoading } = useMeetings();
 
   return (
     <div className="space-y-6 flex flex-col h-full">
@@ -27,14 +28,27 @@ export default function MeetingAgendaPage() {
                 <LinkIcon className="mr-2 h-4 w-4" /> Integrar Calendário
             </Button>
             <Button onClick={() => setIsSheetOpen(true)}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Criar Novo Evento
+                <PlusCircle className="mr-2 h-4 w-4" /> Criar Comitê Recorrente
             </Button>
         </div>
       </div>
 
       <CreateEventSheet isOpen={isSheetOpen} onOpenChange={setIsSheetOpen} />
+      
+      {isLoading ? (
+        <Card>
+            <CardHeader>
+                <Skeleton className="h-6 w-1/2" />
+                <Skeleton className="h-4 w-3/4" />
+            </CardHeader>
+            <CardContent>
+                <Skeleton className="h-32 w-full" />
+            </CardContent>
+        </Card>
+      ) : (
+        <RecurringMeetingsTable />
+      )}
 
-      <RecurringMeetingsTable meetings={meetings} setMeetings={setMeetings} />
 
       <Card className="flex-grow flex flex-col shadow-lg">
         <CardHeader>
