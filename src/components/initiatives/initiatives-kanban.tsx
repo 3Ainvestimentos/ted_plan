@@ -39,16 +39,13 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
                 groupedTasks[task.status].push(task);
             }
         });
-        
-        const combinedInProgress = [...groupedTasks['Em Dia'], ...groupedTasks['Em Risco'], ...groupedTasks['Atrasado']];
 
-        const displayColumns: Column[] = [
-            { id: 'A Fazer', title: 'A Fazer', tasks: groupedTasks['A Fazer'] },
-            { id: 'Em Dia', title: 'Em Progresso', tasks: combinedInProgress },
-            { id: 'Concluído', title: 'Concluído', tasks: groupedTasks['Concluído'] }
-        ];
-
-        return displayColumns;
+        // Use the order defined in constants to create the columns
+        return KANBAN_COLUMNS_ORDER.map(status => ({
+            id: status,
+            title: status,
+            tasks: groupedTasks[status] || [],
+        }));
 
     }, [initiatives]);
 
