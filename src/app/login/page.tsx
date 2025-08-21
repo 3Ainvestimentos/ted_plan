@@ -11,7 +11,7 @@ import {
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -37,7 +37,7 @@ export default function LoginPage() {
   if (isLoading || isAuthenticated) {
     return (
         <div className="flex items-center justify-center min-h-screen bg-background">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <LoadingSpinner className="h-8 w-8" />
         </div>
     );
   }

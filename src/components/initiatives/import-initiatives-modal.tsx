@@ -4,11 +4,12 @@
 import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Upload, FileText, Loader2 } from "lucide-react";
+import { Download, Upload, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useInitiatives } from "@/contexts/initiatives-context";
 import Papa from "papaparse";
 import type { Initiative, InitiativePriority, InitiativeStatus } from "@/types";
+import { LoadingSpinner } from "../ui/loading-spinner";
 
 interface ImportInitiativesModalProps {
     isOpen: boolean;
@@ -158,7 +159,7 @@ export function ImportInitiativesModal({ isOpen, onOpenChange }: ImportInitiativ
                     <Button onClick={handleImport} disabled={!selectedFile || isImporting}>
                         {isImporting ? (
                             <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                <LoadingSpinner className="mr-2 h-4 w-4" />
                                 Importando...
                             </>
                         ) : (

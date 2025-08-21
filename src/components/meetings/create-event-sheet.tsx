@@ -9,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useMeetings } from "@/contexts/meetings-context";
-import { Loader2 } from "lucide-react";
 import type { RecurringMeeting } from "@/types";
+import { LoadingSpinner } from "../ui/loading-spinner";
 
 interface CreateEventSheetProps {
   isOpen: boolean;
@@ -105,7 +105,7 @@ export function CreateEventSheet({ isOpen, onOpenChange }: CreateEventSheetProps
         <SheetFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={handleCreateEvent} disabled={isLoading}>
-             {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Salvando...</> : "Criar Comitê"}
+             {isLoading ? <><LoadingSpinner className="mr-2 h-4 w-4"/> Salvando...</> : "Criar Comitê"}
           </Button>
         </SheetFooter>
       </SheetContent>

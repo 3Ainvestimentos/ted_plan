@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -10,8 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { generateMeetingMinutes } from "@/ai/flows/meeting-minutes";
 import type { MeetingMinutesOutput } from "@/ai/flows/meeting-minutes";
-import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { LoadingSpinner } from "../ui/loading-spinner";
 
 const FormSchema = z.object({
   cardUpdates: z.string().min(30, "As atualizações dos cartões devem ter pelo menos 30 caracteres.").max(3000, "Máximo de 3000 caracteres."),
@@ -98,7 +99,7 @@ export function MeetingMinutesForm() {
               <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <LoadingSpinner className="mr-2 h-4 w-4" />
                     Gerando...
                   </>
                 ) : (

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -11,8 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { generateExecutiveSummary } from "@/ai/flows/executive-summary";
 import type { ExecutiveSummaryOutput } from "@/ai/flows/executive-summary";
-import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { LoadingSpinner } from "../ui/loading-spinner";
 
 const FormSchema = z.object({
   projectDescription: z.string().min(30, "A descrição deve ter pelo menos 30 caracteres.").max(2000, "Máximo de 2000 caracteres."),
@@ -118,7 +119,7 @@ export function ExecutiveSummaryForm() {
               <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <LoadingSpinner className="mr-2 h-4 w-4" />
                     Gerando...
                   </>
                 ) : (
