@@ -12,6 +12,7 @@ import Link from "next/link";
 
 interface KanbanTaskCardProps {
   task: Initiative;
+  onClick: () => void;
 }
 
 function getInitials(name: string) {
@@ -21,7 +22,7 @@ function getInitials(name: string) {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
-export function KanbanTaskCard({ task }: KanbanTaskCardProps) {
+export function KanbanTaskCard({ task, onClick }: KanbanTaskCardProps) {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'task',
     item: { id: task.id },
@@ -45,8 +46,7 @@ export function KanbanTaskCard({ task }: KanbanTaskCardProps) {
   }
 
   return (
-    <div ref={drag} style={{ opacity: isDragging ? 0.5 : 1 }} className="cursor-grab active:cursor-grabbing">
-      <Link href={`/strategic-initiatives/${task.id}`} className="block">
+    <div ref={drag} style={{ opacity: isDragging ? 0.5 : 1 }} className="cursor-grab active:cursor-grabbing" onClick={onClick}>
         <Card className={cn(
             "shadow-sm hover:shadow-md transition-shadow duration-200 bg-card border-border",
             task.status === 'Em Risco' ? 'border-l-4 border-l-orange-500' : '',
@@ -76,7 +76,6 @@ export function KanbanTaskCard({ task }: KanbanTaskCardProps) {
             </div>
         </CardContent>
         </Card>
-      </Link>
     </div>
   );
 }

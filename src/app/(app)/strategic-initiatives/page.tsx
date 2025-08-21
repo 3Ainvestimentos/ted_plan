@@ -15,6 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import type { Initiative, InitiativePriority, InitiativeStatus } from "@/types";
 import { CreateInitiativeModal } from "@/components/initiatives/create-initiative-modal";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InitiativeDossierModal } from "@/components/initiatives/initiative-dossier-modal";
+
 
 type ViewMode = "table" | "kanban";
 
@@ -23,7 +25,8 @@ export default function InitiativesPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedInitiative, setSelectedInitiative] = useState<Initiative | null>(null);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -88,9 +91,24 @@ export default function InitiativesPage() {
     fileInputRef.current?.click();
   };
 
+  const openDossier = (initiative: Initiative) => {
+    setSelectedInitiative(initiative);
+  }
+
+  const closeDossier = () => {
+    setSelectedInitiative(null);
+  }
+
   return (
     <DndProvider backend={HTML5Backend}>
-      <CreateInitiativeModal isOpen={isModalOpen} onOpenChange={setIsModalOpen} />
+      <CreateInitiativeModal isOpen={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
+      {selectedInitiative && (
+        <InitiativeDossierModal
+          isOpen={!!selectedInitiative}
+          onOpenChange={(isOpen) => !isOpen && closeDossier()}
+          initiative={selectedInitiative}
+        />
+      )}
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <PageHeader
@@ -118,7 +136,7 @@ export default function InitiativesPage() {
                 <span className="ml-2 hidden sm:inline">Kanban</span>
               </Button>
             </div>
-            <Button onClick={() => setIsModalOpen(true)}>
+            <Button onClick={() => setIsCreateModalOpen(true)}>
               <PlusCircle className="mr-2 h-4 w-4" /> Criar
             </Button>
             <input 
@@ -146,9 +164,9 @@ export default function InitiativesPage() {
                 <Skeleton className="h-48 w-full" />
             </div>
         ) : viewMode === 'table' ? (
-          <InitiativesTable initiatives={initiatives} />
+          <InitiativesTable initiatives={initiatives} onInitiativeClick={openDossier} />
         ) : (
-          <InitiativesKanban initiatives={initiatives} />
+          <InitiativesKanban initiatives={initiatives} onInitiativeClick={openDossier} />
         )}
       </div>
     </DndProvider>

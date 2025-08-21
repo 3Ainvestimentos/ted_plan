@@ -9,6 +9,7 @@ import { KANBAN_COLUMNS_ORDER } from '@/lib/constants';
 
 interface InitiativesKanbanProps {
     initiatives: Initiative[];
+    onInitiativeClick: (initiative: Initiative) => void;
 }
 
 interface Column {
@@ -17,7 +18,7 @@ interface Column {
   tasks: Initiative[];
 }
 
-export function InitiativesKanban({ initiatives }: InitiativesKanbanProps) {
+export function InitiativesKanban({ initiatives, onInitiativeClick }: InitiativesKanbanProps) {
     const { updateInitiativeStatus } = useInitiatives();
 
     const handleDropTask = (taskId: string, newStatus: InitiativeStatus) => {
@@ -56,7 +57,7 @@ export function InitiativesKanban({ initiatives }: InitiativesKanbanProps) {
         <div className="flex-grow overflow-x-auto pb-4">
             <div className="flex gap-4 h-full">
                 {columns.map((column) => (
-                    <KanbanColumn key={column.id} column={column} onDropTask={handleDropTask} />
+                    <KanbanColumn key={column.id} column={column} onDropTask={handleDropTask} onInitiativeClick={onInitiativeClick} />
                 ))}
             </div>
         </div>

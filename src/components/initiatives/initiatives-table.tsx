@@ -17,9 +17,10 @@ import { cn } from "@/lib/utils";
 
 interface InitiativesTableProps {
     initiatives: Initiative[];
+    onInitiativeClick: (initiative: Initiative) => void;
 }
 
-export function InitiativesTable({ initiatives }: InitiativesTableProps) {
+export function InitiativesTable({ initiatives, onInitiativeClick }: InitiativesTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   
@@ -140,10 +141,8 @@ export function InitiativesTable({ initiatives }: InitiativesTableProps) {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                       <Button variant="outline" size="sm" asChild>
-                         <Link href={`/strategic-initiatives/${initiative.id}`}>
+                       <Button variant="outline" size="sm" onClick={() => onInitiativeClick(initiative)}>
                            Ver Dossiê <ExternalLink className="ml-2 h-4 w-4" />
-                         </Link>
                        </Button>
                     </TableCell>
                   </TableRow>
