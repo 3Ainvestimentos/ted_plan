@@ -1,5 +1,5 @@
 
-import type { NavItem, UserRole, Initiative, InitiativeStatus, InitiativePriority } from '@/types';
+import type { NavItem, UserRole, Initiative, InitiativeStatus, InitiativePriority, RecurringMeeting } from '@/types';
 import { LayoutDashboard, Target, CalendarClock, Settings, Shield, User, BarChart3, ListTodo, CircleCheck, AlertTriangle, Clock, CheckCircle, TrendingUp, TrendingDown, Minus, Lightbulb, FileText, Bug } from 'lucide-react';
 
 export const NAV_ITEMS_CONFIG: NavItem[] = [
@@ -201,6 +201,30 @@ export const MOCK_INITIATIVES: Initiative[] = [
     progress: 100,
     priority: 'P1',
     keyMetrics: [],
+  },
+];
+
+export const MOCK_RECURRING_MEETINGS: RecurringMeeting[] = [
+  {
+    id: 'rec-1',
+    name: 'Comitê de Arquitetura',
+    recurrence: { unit: 'meses', value: 1 },
+    lastOccurrence: '2024-05-15',
+    isDone: false,
+  },
+  {
+    id: 'rec-2',
+    name: 'Reunião de Sincronia Semanal',
+    recurrence: { unit: 'semanas', value: 1 },
+    lastOccurrence: '2024-05-27',
+    isDone: false,
+  },
+  {
+    id: 'rec-3',
+    name: '1:1 com Liderança Técnica',
+    recurrence: { unit: 'semanas', value: 2 },
+    lastOccurrence: '2024-05-20',
+    isDone: false,
   },
 ];
 

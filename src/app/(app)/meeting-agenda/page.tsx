@@ -7,10 +7,13 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle, Link as LinkIcon } from 'lucide-react';
 import { useState } from 'react';
 import { CreateEventSheet } from '@/components/meetings/create-event-sheet';
+import { RecurringMeetingsTable } from '@/components/meetings/recurring-meetings-table';
+import { MOCK_RECURRING_MEETINGS } from '@/lib/constants';
 
 export default function MeetingAgendaPage() {
   const calendarUrl = "https://calendar.google.com/calendar/embed?src=primary&ctz=America/Sao_Paulo";
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [meetings, setMeetings] = useState(MOCK_RECURRING_MEETINGS);
 
   return (
     <div className="space-y-6 flex flex-col h-full">
@@ -30,6 +33,8 @@ export default function MeetingAgendaPage() {
       </div>
 
       <CreateEventSheet isOpen={isSheetOpen} onOpenChange={setIsSheetOpen} />
+
+      <RecurringMeetingsTable meetings={meetings} setMeetings={setMeetings} />
 
       <Card className="flex-grow flex flex-col shadow-lg">
         <CardHeader>

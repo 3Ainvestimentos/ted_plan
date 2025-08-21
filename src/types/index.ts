@@ -27,3 +27,15 @@ export interface NavItem {
   isFooter?: boolean;
   onClick?: () => void;
 }
+
+export interface RecurringMeeting {
+  id: string;
+  name: string;
+  recurrence: {
+    unit: 'dias' | 'semanas' | 'meses';
+    value: number;
+  };
+  lastOccurrence: string; // ISO date string 'YYYY-MM-DD'
+  executedDate?: string; // ISO date string 'YYYY-MM-DD', for the current cycle
+  isDone: boolean;
+}
