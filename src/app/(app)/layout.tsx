@@ -10,53 +10,21 @@ import { StrategicPanelProvider } from '@/contexts/strategic-panel-context';
 import { CollaboratorsProvider } from '@/contexts/collaborators-context';
 import { UserNav } from '@/components/layout/user-nav';
 import { useAuth } from '@/contexts/auth-context';
-import { useSettings } from '@/contexts/settings-context';
 import { usePathname, useRouter } from 'next/navigation';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 function AppContent({ children }: { children: React.ReactNode }) {
-  const { maintenanceSettings, isLoading: isSettingsLoading } = useSettings();
-  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
-  const isLoading = isSettingsLoading || isAuthLoading;
-
   useEffect(() => {
-    if (isLoading) {
-      return;
-    }
-
-    if (!isAuthenticated && pathname !== '/login') {
+    if (!isLoading && !isAuthenticated) {
       router.replace('/login');
-      return;
     }
+  }, [isLoading, isAuthenticated, router]);
 
-    if (
-      maintenanceSettings?.isEnabled &&
-      !maintenanceSettings.adminEmails.includes(user?.email || '')
-    ) {
-      if (pathname !== '/maintenance') {
-        router.replace('/maintenance');
-      }
-      return;
-    }
-  }, [isLoading, isAuthenticated, maintenanceSettings, user, pathname, router]);
-
-  if (isLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <LoadingSpinner className="h-12 w-12" />
-      </div>
-    );
-  }
-
-  if (
-    !isAuthenticated ||
-    (maintenanceSettings?.isEnabled &&
-      !maintenanceSettings.adminEmails.includes(user?.email || ''))
-  ) {
-    // Render a spinner or null while redirecting
+  if (isLoading || !isAuthenticated) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <LoadingSpinner className="h-12 w-12" />
