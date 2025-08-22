@@ -5,13 +5,12 @@ import type { UserRole } from '@/types';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
-import { app } from '@/lib/firebase';
+import { app, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 
 // Lista de e-mails com permissão de administrador
 const ADMIN_EMAILS = ['matheus@3ainvestimentos.com.br'];
-// Lista de domínios autorizados a fazer login
-const ALLOWED_DOMAINS = ['3ainvestimentos.com.br', '3ariva.com.br'];
 
 interface User {
   uid: string;
@@ -43,23 +42,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = !!user;
   const isAdmin = user ? ADMIN_EMAILS.includes(user.email || '') : false;
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
-      if (firebaseUser) {
-        const userEmail = firebaseUser.email || '';
-        const userDomain = userEmail.split('@')[1];
+  const isUserAuthorized = async (email: string): Promise<boolean> => {
+    try {
+        const collaboratorsRef = collection(db, 'collaborators');
+        const q = query(collaboratorsRef, where('email', '==', email));
+        const querySnapshot = await getDocs(q);
+        return !querySnapshot.empty;
+    } catch (error) {
+        console.error("Erro ao verificar autorização do usuário:", error);
+        return false;
+    }
+  };
 
-        if (ALLOWED_DOMAINS.includes(userDomain)) {
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      if (firebaseUser && firebaseUser.email) {
+        const isAuthorized = await isUserAuthorized(firebaseUser.email);
+
+        if (isAuthorized) {
           const appUser: User = {
             uid: firebaseUser.uid,
             name: firebaseUser.displayName,
             email: firebaseUser.email,
-            role: ADMIN_EMAILS.includes(userEmail) ? 'PMO' : 'Colaborador',
+            role: ADMIN_EMAILS.includes(firebaseUser.email) ? 'PMO' : 'Colaborador',
           };
           setUser(appUser);
         } else {
-          // Se o usuário logado não for de um domínio permitido, desloga-o.
-          signOut(auth);
+          toast({
+              variant: 'destructive',
+              title: 'Acesso Negado',
+              description: 'Seu e-mail não está autorizado a acessar esta aplicação.',
+          });
+          await signOut(auth);
           setUser(null);
         }
       } else {
@@ -75,7 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       await signInWithPopup(auth, provider);
-      // onAuthStateChanged will handle the redirect
+      // onAuthStateChanged will handle the rest
     } catch (error) {
       console.error("Falha na autenticação com o Google", error);
        toast({

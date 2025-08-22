@@ -82,7 +82,6 @@ export interface Collaborator {
     name: string;
     email: string;
     cargo: string; // Role/Position
-    powerBiLink?: string;
 }
 
 // Form data types for Strategic Panel Management

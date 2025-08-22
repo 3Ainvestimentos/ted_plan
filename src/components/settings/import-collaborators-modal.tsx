@@ -41,7 +41,7 @@ export function ImportCollaboratorsModal({ isOpen, onOpenChange }: ImportCollabo
     };
     
     const handleDownloadTemplate = () => {
-        const csvContent = "name,email,cargo,powerBiLink\n";
+        const csvContent = "name,email,cargo\n";
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         if (link.download !== undefined) {
@@ -82,7 +82,6 @@ export function ImportCollaboratorsModal({ isOpen, onOpenChange }: ImportCollabo
                             name: row.name,
                             email: row.email,
                             cargo: row.cargo,
-                            powerBiLink: row.powerBiLink || '',
                         } as Omit<Collaborator, 'id'>;
                     }).filter(Boolean); // Remove nulls
                     
@@ -141,7 +140,6 @@ export function ImportCollaboratorsModal({ isOpen, onOpenChange }: ImportCollabo
                         <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
                             <li>O arquivo deve ser no formato .csv.</li>
                             <li>Colunas obrigatórias: <code className="bg-muted px-1 py-0.5 rounded">name</code>, <code className="bg-muted px-1 py-0.5 rounded">email</code>, <code className="bg-muted px-1 py-0.5 rounded">cargo</code>.</li>
-                             <li>Coluna opcional: <code className="bg-muted px-1 py-0.5 rounded">powerBiLink</code>.</li>
                         </ul>
                     </div>
 

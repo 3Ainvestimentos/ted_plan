@@ -18,7 +18,6 @@ const collaboratorSchema = z.object({
   name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres."),
   email: z.string().email("Por favor, insira um e-mail válido."),
   cargo: z.string().min(2, "O cargo é obrigatório."),
-  powerBiLink: z.string().url("Por favor, insira uma URL válida.").optional().or(z.literal('')),
 });
 
 type CollaboratorFormData = z.infer<typeof collaboratorSchema>;
@@ -52,7 +51,6 @@ export function UpsertCollaboratorModal({ isOpen, onOpenChange, collaborator }: 
                 name: '',
                 email: '',
                 cargo: '',
-                powerBiLink: '',
             });
         }
     }, [collaborator, reset, isOpen]);
@@ -109,11 +107,6 @@ export function UpsertCollaboratorModal({ isOpen, onOpenChange, collaborator }: 
                         <Label htmlFor="cargo">Cargo</Label>
                         <Input id="cargo" {...register("cargo")} />
                         {errors.cargo && <p className="text-sm text-destructive">{errors.cargo.message}</p>}
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="powerBiLink">Link do Power BI (Opcional)</Label>
-                        <Input id="powerBiLink" {...register("powerBiLink")} />
-                        {errors.powerBiLink && <p className="text-sm text-destructive">{errors.powerBiLink.message}</p>}
                     </div>
                     <DialogFooter className="pt-4">
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>Cancelar</Button>
