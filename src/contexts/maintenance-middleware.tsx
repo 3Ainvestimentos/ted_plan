@@ -28,14 +28,26 @@ export function MaintenanceMiddleware({ children }: { children: React.ReactNode 
             const isAdmin = user && maintenanceSettings.adminEmails.includes(user.email || '');
             if (!isAdmin && !isMaintenancePage) {
                 router.replace('/maintenance');
-                return; // Stop further checks
+                return; 
             }
         }
         
         // 2. Check for authentication
-        if (!isAuthenticated && !isLoginPage && !isMaintenancePage) {
-            router.replace('/login');
-            return; // Stop further checks
+        if (isAuthenticated) {
+            // User is authenticated
+            if (isLoginPage) {
+                // If user is on login page, redirect to the main app
+                 router.replace('/strategic-panel');
+                 return;
+            }
+            // Otherwise, they can access the requested page (if not under maintenance for non-admins)
+        } else {
+            // User is not authenticated
+            if (!isLoginPage && !isMaintenancePage) {
+                 // If not on login or maintenance page, redirect to login
+                router.replace('/login');
+                return;
+            }
         }
 
     }, [isLoading, isAuthenticated, maintenanceSettings, user, pathname, router]);
