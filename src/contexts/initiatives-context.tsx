@@ -18,7 +18,7 @@ interface InitiativesContextType {
   deleteInitiative: (initiativeId: string) => Promise<void>;
   updateInitiativeStatus: (initiativeId: string, newStatus: InitiativeStatus) => void;
   updateSubItem: (initiativeId: string, subItemId: string, completed: boolean) => Promise<void>;
-  bulkAddInitiatives: (newInitiatives: Omit<Initiative, 'id' | 'lastUpdate' | 'topicNumber' | 'progress' | 'keyMetrics' | 'deadline'>[]) => void;
+  bulkAddInitiatives: (newInitiatives: Omit<Initiative, 'id' | 'lastUpdate' | 'topicNumber' | 'progress' | 'keyMetrics' | 'subItems' | 'deadline'>[]) => void;
   isLoading: boolean;
 }
 
@@ -38,7 +38,7 @@ const calculateProgress = (initiative: Initiative, allInitiatives: Initiative[])
         return Math.round((completedCount / initiative.subItems.length) * 100);
     }
     
-    return initiative.progress;
+    return initiative.progress || 0;
 };
 
 

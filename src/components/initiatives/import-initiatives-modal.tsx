@@ -69,7 +69,7 @@ export function ImportInitiativesModal({ isOpen, onOpenChange }: ImportInitiativ
                             status: row.status as InitiativeStatus,
                             priority: row.priority as InitiativePriority,
                             deadline: row.deadline // Pass deadline if available
-                        } as Omit<Initiative, 'id' | 'lastUpdate' | 'topicNumber' | 'progress' | 'keyMetrics'>;
+                        } as Omit<Initiative, 'id' | 'lastUpdate' | 'topicNumber' | 'progress' | 'keyMetrics' | 'subItems'>;
                     });
                     
                     bulkAddInitiatives(newInitiatives as any);
