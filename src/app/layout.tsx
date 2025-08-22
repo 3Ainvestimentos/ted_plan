@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/auth-context';
 import { ThemeProvider } from '@/components/layout/theme-provider';
 import { AuditLogProvider } from '@/contexts/audit-log-context';
+import { SettingsProvider } from '@/contexts/settings-context';
 
 export const metadata: Metadata = {
   title: 'Ted 1.0',
@@ -32,8 +33,10 @@ export default function RootLayout({
         >
           <AuthProvider>
             <AuditLogProvider>
-              {children}
-              <Toaster />
+              <SettingsProvider>
+                {children}
+                <Toaster />
+              </SettingsProvider>
             </AuditLogProvider>
           </AuthProvider>
         </ThemeProvider>

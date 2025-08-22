@@ -12,25 +12,33 @@ import { StrategicPanelProvider } from '@/contexts/strategic-panel-context';
 import { CollaboratorsProvider } from '@/contexts/collaborators-context';
 import { UserNav } from '@/components/layout/user-nav';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { SettingsProvider } from '@/contexts/settings-context';
+import { useSettings } from '@/contexts/settings-context';
 
 
-function AppLayoutContent({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+export default function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isAuthLoading && !isAuthenticated) {
       router.replace('/login');
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isAuthLoading, router]);
 
-  if (isLoading || !isAuthenticated) {
+  if (isAuthLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <LoadingSpinner />
       </div>
     );
+  }
+
+  if (!isAuthenticated) {
+      return null;
   }
 
   return (
@@ -65,18 +73,5 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         </MeetingsProvider>
       </InitiativesProvider>
     </CollaboratorsProvider>
-  );
-}
-
-
-export default function AppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <SettingsProvider>
-      <AppLayoutContent>{children}</AppLayoutContent>
-    </SettingsProvider>
   );
 }
