@@ -11,6 +11,8 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 
 // Lista de e-mails com permissão de administrador
 const ADMIN_EMAILS = ['matheus@3ainvestimentos.com.br'];
+const ALLOWED_DOMAINS = ['3ainvestimentos.com.br'];
+
 
 interface User {
   uid: string;
@@ -43,6 +45,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isAdmin = user ? ADMIN_EMAILS.includes(user.email || '') : false;
 
   const isUserAuthorized = async (email: string): Promise<boolean> => {
+    if (!email) return false;
+
+    // 1. Admins always have access
+    if (ADMIN_EMAILS.includes(email)) {
+        return true;
+    }
+
+    // 2. Check for allowed domains
+    const domain = email.split('@')[1];
+    if (ALLOWED_DOMAINS.includes(domain)) {
+        return true;
+    }
+    
+    // 3. Check for individual email in collaborators list (as an exception)
     try {
         const collaboratorsRef = collection(db, 'collaborators');
         const q = query(collaboratorsRef, where('email', '==', email));
