@@ -35,7 +35,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  const pathname = usePathname();
   const { toast } = useToast();
   
   const auth = getAuth(app);
@@ -71,36 +70,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     return () => unsubscribe();
   }, [auth]);
-  
-  
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated && pathname !== '/login') {
-        router.push('/login');
-    }
-  }, [isAuthenticated, isLoading, router, pathname]);
-
 
   const login = async () => {
+    setIsLoading(true);
     try {
-      const result = await signInWithPopup(auth, provider);
-      const firebaseUser = result.user;
-       if (firebaseUser) {
-          const userEmail = firebaseUser.email || '';
-          const userDomain = userEmail.split('@')[1];
-
-          if (ALLOWED_DOMAINS.includes(userDomain)) {
-            router.push('/strategic-panel');
-          } else {
-            // Se o domínio não for permitido, desloga o usuário imediatamente e exibe uma mensagem.
-            await signOut(auth);
-            setUser(null);
-            toast({
-                variant: 'destructive',
-                title: 'Acesso Negado',
-                description: 'O seu domínio de e-mail não tem permissão para acessar esta aplicação.',
-            });
-          }
-       }
+      await signInWithPopup(auth, provider);
+      // onAuthStateChanged will handle the redirect
     } catch (error) {
       console.error("Falha na autenticação com o Google", error);
        toast({
@@ -108,13 +83,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           title: 'Erro de Autenticação',
           description: 'Não foi possível fazer o login. Por favor, tente novamente.',
       });
+       setIsLoading(false);
     }
   };
 
   const logout = async () => {
     try {
       await signOut(auth);
-      setUser(null);
       router.push('/login');
     } catch (error) {
       console.error("Falha ao fazer logout", error);
