@@ -12,6 +12,8 @@ import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { HardHat } from "lucide-react";
 
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -25,16 +27,25 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 
 export default function LoginPage() {
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const { login, isAuthenticated, isLoading, isUnderMaintenance, setIsUnderMaintenance } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
+    // This effect only handles redirection *after* auth state is confirmed.
     if (!isLoading && isAuthenticated) {
         router.replace('/strategic-panel');
     }
   }, [isLoading, isAuthenticated, router]);
+  
+  // This effect ensures the maintenance message is cleared if the user navigates away
+  useEffect(() => {
+    return () => {
+        setIsUnderMaintenance(false);
+    }
+  }, [setIsUnderMaintenance]);
 
-  if (isLoading || isAuthenticated) {
+
+  if (isLoading) {
     return (
         <div className="flex items-center justify-center min-h-screen bg-background">
             <LoadingSpinner className="h-8 w-8" />
@@ -48,7 +59,17 @@ export default function LoginPage() {
         <CardHeader className="space-y-4 text-center">
           <CardTitle className="text-2xl font-headline mt-6">Bem-vindo ao Ted 1.0</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {isUnderMaintenance && (
+             <Alert variant="destructive" className="bg-orange-50 border-orange-200 text-orange-800">
+                <HardHat className="h-4 w-4 !text-orange-600" />
+                <AlertTitle className="font-semibold">Plataforma em Manutenção</AlertTitle>
+                <AlertDescription className="text-orange-700">
+                    A plataforma está temporariamente indisponível para manutenção. Voltaremos em breve!
+                </AlertDescription>
+            </Alert>
+          )}
+
           <div className="flex justify-center py-4">
             <Button onClick={login} variant="outline" className="w-full max-w-xs h-12 text-base hover:bg-card">
                 <GoogleIcon className="mr-3"/>

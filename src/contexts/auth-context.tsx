@@ -7,7 +7,9 @@ import { useRouter, usePathname } from 'next/navigation';
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
 import { app, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
+import type { MaintenanceSettings } from '@/types';
+
 
 // Lista de e-mails com permissão de administrador
 const ADMIN_EMAILS = ['matheus@3ainvestimentos.com.br'];
@@ -28,6 +30,8 @@ interface AuthContextType {
   login: () => Promise<void>;
   logout: () => Promise<void>;
   isLoading: boolean;
+  isUnderMaintenance: boolean;
+  setIsUnderMaintenance: (isUnder: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,6 +39,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUnderMaintenance, setIsUnderMaintenance] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   
@@ -72,7 +77,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      setIsLoading(true);
+      
+      const maintenanceDocRef = doc(db, 'settings', 'maintenance');
+      const maintenanceSnap = await getDoc(maintenanceDocRef);
+      const maintenanceSettings = maintenanceSnap.exists() ? (maintenanceSnap.data() as MaintenanceSettings) : { isEnabled: false, adminEmails: [] };
+
       if (firebaseUser && firebaseUser.email) {
+        
+        // Maintenance Mode Check
+        if(maintenanceSettings.isEnabled && !maintenanceSettings.adminEmails.includes(firebaseUser.email)) {
+            setIsUnderMaintenance(true);
+            await signOut(auth);
+            setUser(null);
+            setIsLoading(false);
+            return;
+        }
+
+        setIsUnderMaintenance(false);
         const isAuthorized = await isUserAuthorized(firebaseUser.email);
 
         if (isAuthorized) {
@@ -127,7 +149,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
   
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, isAdmin, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, isAdmin, login, logout, isLoading, isUnderMaintenance, setIsUnderMaintenance }}>
       {children}
     </AuthContext.Provider>
   );

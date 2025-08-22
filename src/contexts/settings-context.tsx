@@ -18,40 +18,40 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   const [maintenanceSettings, setMaintenanceSettings] = useState<MaintenanceSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // const settingsDocRef = doc(db, 'settings', 'maintenance');
+  const settingsDocRef = doc(db, 'settings', 'maintenance');
 
   const fetchSettings = useCallback(async () => {
-    setIsLoading(false);
-    // try {
-    //   const docSnap = await getDoc(settingsDocRef);
-    //   if (docSnap.exists()) {
-    //     setMaintenanceSettings(docSnap.data() as MaintenanceSettings);
-    //   } else {
-    //     // If settings don't exist, create them with default values
-    //     const defaultSettings: MaintenanceSettings = { isEnabled: false, adminEmails: [] };
-    //     await setDoc(settingsDocRef, defaultSettings);
-    //     setMaintenanceSettings(defaultSettings);
-    //   }
-    // } catch (error) {
-    //   console.error("Error fetching settings: ", error);
-    // } finally {
-    //   setIsLoading(false);
-    // }
-  }, []);
+    setIsLoading(true);
+    try {
+      const docSnap = await getDoc(settingsDocRef);
+      if (docSnap.exists()) {
+        setMaintenanceSettings(docSnap.data() as MaintenanceSettings);
+      } else {
+        // If settings don't exist, create them with default values
+        const defaultSettings: MaintenanceSettings = { isEnabled: false, adminEmails: [] };
+        await setDoc(settingsDocRef, defaultSettings);
+        setMaintenanceSettings(defaultSettings);
+      }
+    } catch (error) {
+      console.error("Error fetching settings: ", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [settingsDocRef]);
 
   useEffect(() => {
     fetchSettings();
   }, [fetchSettings]);
   
   const updateMaintenanceSettings = useCallback(async (newSettings: Partial<MaintenanceSettings>) => {
-    // try {
-    //     await updateDoc(settingsDocRef, newSettings);
-    //     setMaintenanceSettings(prev => prev ? { ...prev, ...newSettings } : null);
-    // } catch (error) {
-    //     console.error("Error updating maintenance settings: ", error);
-    //     throw error;
-    // }
-  }, []);
+    try {
+        await updateDoc(settingsDocRef, newSettings);
+        setMaintenanceSettings(prev => prev ? { ...prev, ...newSettings } : null);
+    } catch (error) {
+        console.error("Error updating maintenance settings: ", error);
+        throw error;
+    }
+  }, [settingsDocRef]);
 
   return (
     <SettingsContext.Provider value={{ maintenanceSettings, isLoading, updateMaintenanceSettings }}>

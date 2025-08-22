@@ -14,24 +14,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 function AppContent({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, isLoading } = useAuth();
-  const router = useRouter();
-  const pathname = usePathname();
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace('/login');
-    }
-  }, [isLoading, isAuthenticated, router]);
-
-  if (isLoading || !isAuthenticated) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <LoadingSpinner className="h-12 w-12" />
-      </div>
-    );
-  }
-
   return (
     <SidebarProvider>
       <div className="flex h-screen bg-background">
@@ -65,6 +47,23 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [isLoading, isAuthenticated, router]);
+
+  if (isLoading || !isAuthenticated) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <LoadingSpinner className="h-12 w-12" />
+      </div>
+    );
+  }
+
   return (
     <CollaboratorsProvider>
       <InitiativesProvider>
