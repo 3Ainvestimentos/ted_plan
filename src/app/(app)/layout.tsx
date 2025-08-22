@@ -12,8 +12,6 @@ import { StrategicPanelProvider } from '@/contexts/strategic-panel-context';
 import { CollaboratorsProvider } from '@/contexts/collaborators-context';
 import { UserNav } from '@/components/layout/user-nav';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { useSettings } from '@/contexts/settings-context';
-
 
 export default function AppLayout({
   children,
@@ -29,6 +27,8 @@ export default function AppLayout({
     }
   }, [isAuthenticated, isAuthLoading, router]);
 
+  // The main loading spinner is now in the MaintenanceMiddleware,
+  // but we keep one here for the auth-check phase for this specific layout.
   if (isAuthLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -37,6 +37,8 @@ export default function AppLayout({
     );
   }
 
+  // If not authenticated, we return null and the useEffect will handle the redirect.
+  // This prevents rendering the layout for non-authed users.
   if (!isAuthenticated) {
       return null;
   }

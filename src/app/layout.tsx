@@ -6,6 +6,7 @@ import { AuthProvider } from '@/contexts/auth-context';
 import { ThemeProvider } from '@/components/layout/theme-provider';
 import { AuditLogProvider } from '@/contexts/audit-log-context';
 import { SettingsProvider } from '@/contexts/settings-context';
+import { MaintenanceMiddleware } from '@/contexts/maintenance-middleware';
 
 export const metadata: Metadata = {
   title: 'Ted 1.0',
@@ -34,7 +35,9 @@ export default function RootLayout({
           <AuthProvider>
             <AuditLogProvider>
               <SettingsProvider>
-                {children}
+                <MaintenanceMiddleware>
+                  {children}
+                </MaintenanceMiddleware>
                 <Toaster />
               </SettingsProvider>
             </AuditLogProvider>
