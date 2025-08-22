@@ -1,10 +1,11 @@
 
+
 "use client";
 
-import type { Initiative, InitiativeStatus } from '@/types';
+import type { Initiative, InitiativeStatus, SubItem } from '@/types';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, query, orderBy, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, query, orderBy, deleteDoc, writeBatch } from 'firebase/firestore';
 import type { InitiativeFormData } from '@/components/initiatives/initiative-form';
 
 
@@ -12,15 +13,34 @@ type InitiativeData = Omit<Initiative, 'id' | 'lastUpdate' | 'topicNumber' | 'pr
 
 interface InitiativesContextType {
   initiatives: Initiative[];
-  addInitiative: (initiative: InitiativeData) => void;
+  addInitiative: (initiative: InitiativeFormData) => Promise<void>;
   updateInitiative: (initiativeId: string, data: InitiativeFormData) => Promise<void>;
   deleteInitiative: (initiativeId: string) => Promise<void>;
   updateInitiativeStatus: (initiativeId: string, newStatus: InitiativeStatus) => void;
+  updateSubItem: (initiativeId: string, subItemId: string, completed: boolean) => Promise<void>;
   bulkAddInitiatives: (newInitiatives: Omit<Initiative, 'id' | 'lastUpdate' | 'topicNumber' | 'progress' | 'keyMetrics' | 'deadline'>[]) => void;
   isLoading: boolean;
 }
 
 const InitiativesContext = createContext<InitiativesContextType | undefined>(undefined);
+
+const calculateProgress = (initiative: Initiative, allInitiatives: Initiative[]): number => {
+    // Check if it's a parent initiative (has sub-items in the data structure)
+    const children = allInitiatives.filter(i => i.parentId === initiative.id);
+    if (children.length > 0) {
+        const completedChildren = children.filter(child => child.status === 'Concluído').length;
+        return children.length > 0 ? Math.round((completedChildren / children.length) * 100) : 0;
+    }
+
+    // Check for checklist-style sub-items
+    if (initiative.subItems && initiative.subItems.length > 0) {
+        const completedCount = initiative.subItems.filter(item => item.completed).length;
+        return Math.round((completedCount / initiative.subItems.length) * 100);
+    }
+    
+    return initiative.progress;
+};
+
 
 export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
   const [initiatives, setInitiatives] = useState<Initiative[]>([]);
@@ -33,11 +53,17 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
     try {
         const q = query(initiativesCollectionRef, orderBy('topicNumber'));
         const querySnapshot = await getDocs(q);
-        const initiativesData = querySnapshot.docs.map(doc => ({
+        const rawInitiatives = querySnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
         } as Initiative));
-        setInitiatives(initiativesData);
+
+        const initiativesWithCalculatedProgress = rawInitiatives.map(init => ({
+            ...init,
+            progress: calculateProgress(init, rawInitiatives),
+        }));
+        
+        setInitiatives(initiativesWithCalculatedProgress);
     } catch (error) {
         console.error("Error fetching initiatives: ", error);
     } finally {
@@ -55,7 +81,7 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
       return mainTopics.length > 0 ? (Math.max(...mainTopics.map(i => parseInt(i.topicNumber))) + 1) : 1;
   };
 
-  const addInitiative = useCallback(async (initiativeData: InitiativeData) => {
+  const addInitiative = useCallback(async (initiativeData: InitiativeFormData) => {
     const nextTopicNumber = getNextMainTopicNumber(initiatives).toString();
     
     const newInitiative = {
@@ -65,11 +91,13 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
         topicNumber: nextTopicNumber,
         progress: 0, 
         keyMetrics: [],
+        parentId: null,
+        subItems: initiativeData.subItems?.map(si => ({...si, id: doc(collection(db, 'dummy')).id})) || [],
     };
 
     try {
         await addDoc(initiativesCollectionRef, newInitiative);
-        fetchInitiatives(); // Refetch to get the new list with the created ID
+        fetchInitiatives(); 
     } catch (error) {
         console.error("Error adding initiative: ", error);
     }
@@ -77,8 +105,8 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
 
   const bulkAddInitiatives = useCallback(async (newInitiativesData: any[]) => {
     let nextTopicNumber = getNextMainTopicNumber(initiatives);
-    try {
-      for (const initiativeData of newInitiativesData) {
+    const batch = writeBatch(db);
+    newInitiativesData.forEach(initiativeData => {
         const deadline = initiativeData.deadline && !isNaN(new Date(initiativeData.deadline).getTime())
           ? new Date(initiativeData.deadline).toISOString().split('T')[0]
           : new Date().toISOString().split('T')[0];
@@ -90,9 +118,15 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
           topicNumber: (nextTopicNumber++).toString(),
           progress: 0,
           keyMetrics: [],
+          parentId: null,
+          subItems: [],
         };
-        await addDoc(initiativesCollectionRef, newInitiative);
-      }
+        const docRef = doc(initiativesCollectionRef);
+        batch.set(docRef, newInitiative);
+    });
+
+    try {
+      await batch.commit();
       fetchInitiatives();
     } catch (error) {
         console.error("Error bulk adding initiatives: ", error);
@@ -106,8 +140,9 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
           ...data,
           deadline: data.deadline.toISOString().split('T')[0],
           lastUpdate: new Date().toISOString(),
+          subItems: data.subItems?.map(si => ({...si, id: si.id || doc(collection(db, 'dummy')).id})) || [],
       };
-      await updateDoc(initiativeDocRef, updatedData);
+      await updateDoc(initiativeDocRef, updatedData as any);
       fetchInitiatives();
     } catch (error) {
         console.error("Error updating initiative: ", error);
@@ -131,19 +166,31 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
             status: newStatus,
             lastUpdate: new Date().toISOString(),
         });
-        // Optimistic update
-        setInitiatives(prev => 
-          prev.map(init => 
-            init.id === initiativeId ? { ...init, status: newStatus, lastUpdate: new Date().toISOString() } : init
-          )
-        );
+        await fetchInitiatives(); // Refetch to recalculate parent progress if needed
     } catch (error) {
         console.error("Error updating initiative status: ", error);
     }
-  }, []);
+  }, [fetchInitiatives]);
+
+  const updateSubItem = useCallback(async (initiativeId: string, subItemId: string, completed: boolean) => {
+    const initiative = initiatives.find(i => i.id === initiativeId);
+    if (!initiative || !initiative.subItems) return;
+
+    const updatedSubItems = initiative.subItems.map(si => 
+        si.id === subItemId ? { ...si, completed } : si
+    );
+    
+    const initiativeDocRef = doc(db, 'initiatives', initiativeId);
+    try {
+        await updateDoc(initiativeDocRef, { subItems: updatedSubItems, lastUpdate: new Date().toISOString() });
+        await fetchInitiatives();
+    } catch(error) {
+        console.error("Error updating subitem:", error);
+    }
+  }, [initiatives, fetchInitiatives]);
 
   return (
-    <InitiativesContext.Provider value={{ initiatives, addInitiative, bulkAddInitiatives, updateInitiative, deleteInitiative, updateInitiativeStatus, isLoading }}>
+    <InitiativesContext.Provider value={{ initiatives, addInitiative, bulkAddInitiatives, updateInitiative, deleteInitiative, updateInitiativeStatus, updateSubItem, isLoading }}>
       {children}
     </InitiativesContext.Provider>
   );

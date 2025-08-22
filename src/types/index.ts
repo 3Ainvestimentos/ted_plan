@@ -1,11 +1,18 @@
 
 
 export type InitiativeStatus = 'A Fazer' | 'Em Dia' | 'Em Risco' | 'Atrasado' | 'Concluído';
-export type InitiativePriority = 'P0' | 'P1' | 'P2' | 'P3' | 'P4';
+export type InitiativePriority = 'Baixa' | 'Média' | 'Alta';
+
+export interface SubItem {
+  id: string;
+  title: string;
+  completed: boolean;
+}
 
 export interface Initiative {
   id: string;
   topicNumber: string; // "1", "1.1", "2", etc.
+  parentId?: string | null; // ID of the parent initiative
   title: string;
   status: InitiativeStatus;
   owner: string; // Assignee
@@ -16,6 +23,7 @@ export interface Initiative {
   deadline?: string; // ISO date string 'YYYY-MM-DD'
   keyMetrics: { name: string; value: string; trend: 'up' | 'down' | 'neutral' }[];
   icon?: React.ElementType; // Optional: for specific task icons
+  subItems?: SubItem[];
 }
 
 export type UserRole = 'PMO' | 'Líder' | 'Colaborador';

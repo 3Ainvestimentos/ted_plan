@@ -3,17 +3,18 @@
 
 import { STATUS_ICONS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { ExternalLink, ChevronDown, ChevronRight, Filter } from "lucide-react";
+import { ExternalLink, ChevronDown, ChevronRight, Filter, CornerDownRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import React, { useState, useMemo } from "react";
-import type { Initiative } from "@/types";
+import type { Initiative, InitiativePriority } from "@/types";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "../ui/checkbox";
+import { useInitiatives } from "@/contexts/initiatives-context";
 
 interface InitiativesTableProps {
     initiatives: Initiative[];
@@ -21,53 +22,39 @@ interface InitiativesTableProps {
 }
 
 export function InitiativesTable({ initiatives, onInitiativeClick }: InitiativesTableProps) {
+  const { updateSubItem } = useInitiatives();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   
-  // Expand all parent topics by default
   const [expandedTopics, setExpandedTopics] = useState<Set<string>>(() => 
-    new Set(initiatives.filter(i => !i.topicNumber.includes('.')).map(i => i.topicNumber))
+    new Set(initiatives.filter(i => (i.subItems && i.subItems.length > 0)).map(i => i.id))
   );
 
-  const toggleTopic = (topicNumber: string) => {
+  const toggleTopic = (topicId: string) => {
     setExpandedTopics(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(topicNumber)) {
-        newSet.delete(topicNumber);
+      if (newSet.has(topicId)) {
+        newSet.delete(topicId);
       } else {
-        newSet.add(topicNumber);
+        newSet.add(topicId);
       }
       return newSet;
     });
   };
 
   const filteredInitiatives = useMemo(() => {
-    const baseFiltered = initiatives.filter(initiative => {
+    return initiatives.filter(initiative => {
       const matchesSearch = initiative.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             initiative.owner.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             initiative.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "all" || initiative.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
+  }, [searchTerm, statusFilter, initiatives]);
 
-    // Now, filter based on expansion state
-    return baseFiltered.filter(initiative => {
-        if (!initiative.topicNumber.includes('.')) {
-            return true; // Always show parent topics
-        }
-        const parentTopic = initiative.topicNumber.split('.')[0];
-        return expandedTopics.has(parentTopic); // Show sub-topic only if parent is expanded
-    });
-
-  }, [searchTerm, statusFilter, expandedTopics, initiatives]);
-
-  const initiativeStatuses = ["all", ...new Set(initiatives.map(i => i.status))] as const;
+  const initiativeStatuses: (string | InitiativeStatus)[] = ["all", "A Fazer", "Em Dia", "Em Risco", "Atrasado", "Concluído"];
+  const initiativePriorities: (string | InitiativePriority)[] = ["all", "Alta", "Média", "Baixa"];
   
-  const parentTopics = useMemo(() => 
-      new Set(initiatives.filter(i => i.topicNumber.includes('.')).map(i => i.topicNumber.split('.')[0]))
-  , [initiatives]);
-
-
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg bg-card shadow-sm">
@@ -108,25 +95,29 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
             {filteredInitiatives.length > 0 ? (
               filteredInitiatives.map((initiative: Initiative) => {
                 const StatusIcon = STATUS_ICONS[initiative.status];
-                const isSubTopic = initiative.topicNumber.includes('.');
-                const isParent = parentTopics.has(initiative.topicNumber);
-                const isExpanded = expandedTopics.has(initiative.topicNumber);
+                const hasSubItems = initiative.subItems && initiative.subItems.length > 0;
+                const isExpanded = expandedTopics.has(initiative.id);
 
                 return (
-                  <TableRow key={initiative.id}>
-                    <TableCell className={cn("font-medium", isSubTopic && "pl-8")}>
+                  <React.Fragment key={initiative.id}>
+                  <TableRow>
+                    <TableCell className="font-medium">
                         <div className="flex items-center gap-1">
-                        {isParent && (
-                            <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2" onClick={() => toggleTopic(initiative.topicNumber)}>
-                                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                            </Button>
-                        )}
-                         <span className={cn("font-body", isParent && "cursor-pointer")} onClick={() => isParent && toggleTopic(initiative.topicNumber)}>
-                            {initiative.topicNumber}
-                         </span>
+                         {initiative.topicNumber}
                         </div>
                     </TableCell>
-                    <TableCell className="font-medium font-body">{initiative.title}</TableCell>
+                    <TableCell className="font-medium font-body">
+                       <div className="flex items-center gap-1">
+                          {hasSubItems && (
+                            <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2" onClick={() => toggleTopic(initiative.id)}>
+                                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            </Button>
+                          )}
+                          <span className={cn(hasSubItems && "cursor-pointer")} onClick={() => hasSubItems && toggleTopic(initiative.id)}>
+                            {initiative.title}
+                         </span>
+                       </div>
+                    </TableCell>
                     <TableCell className="font-body">{initiative.owner}</TableCell>
                     <TableCell>
                       <Badge variant={initiative.status === 'Concluído' ? 'default' : initiative.status === 'Em Risco' || initiative.status === 'Atrasado' ? 'destructive' : 'secondary'} className="capitalize flex items-center w-fit">
@@ -146,6 +137,26 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
                        </Button>
                     </TableCell>
                   </TableRow>
+                   {isExpanded && hasSubItems && initiative.subItems.map(subItem => (
+                      <TableRow key={subItem.id} className="bg-muted/50 hover:bg-muted/80">
+                        <TableCell></TableCell>
+                        <TableCell colSpan={4} className="pl-12">
+                           <div className="flex items-center gap-2">
+                                <CornerDownRight className="h-4 w-4 text-muted-foreground" />
+                                <Checkbox 
+                                    id={`subitem-${subItem.id}`} 
+                                    checked={subItem.completed}
+                                    onCheckedChange={(checked) => updateSubItem(initiative.id, subItem.id, !!checked)}
+                                />
+                                <label htmlFor={`subitem-${subItem.id}`} className={cn("text-sm", subItem.completed && "line-through text-muted-foreground")}>
+                                  {subItem.title}
+                                </label>
+                           </div>
+                        </TableCell>
+                        <TableCell></TableCell>
+                      </TableRow>
+                   ))}
+                  </React.Fragment>
                 )
               })
             ) : (

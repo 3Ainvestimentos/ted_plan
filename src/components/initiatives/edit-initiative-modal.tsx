@@ -58,16 +58,14 @@ export function EditInitiativeModal({ isOpen, onOpenChange, initiative }: EditIn
         });
         
         onOpenChange(false);
-        router.push('/strategic-initiatives');
+        // Do not redirect, just close the modal.
     }
 
     const getDeadlineDate = () => {
         if (initiative.deadline) {
-            // Fix for "Invalid time value" by parsing date string correctly
             const [year, month, day] = initiative.deadline.split('-').map(Number);
             return new Date(year, month - 1, day);
         }
-        // Return a default date if deadline is not set, to prevent crash
         return new Date();
     }
 
@@ -107,7 +105,7 @@ export function EditInitiativeModal({ isOpen, onOpenChange, initiative }: EditIn
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleDelete}>Continuar</AlertDialogAction>
+                          <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Continuar</AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>

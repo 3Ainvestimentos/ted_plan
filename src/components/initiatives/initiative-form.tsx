@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, PlusCircle, Trash2 } from "lucide-react";
 import { MOCK_OWNERS } from "@/lib/constants";
+import { Checkbox } from "../ui/checkbox";
+import { cn } from "@/lib/utils";
+import type { InitiativePriority } from "@/types";
+
+const subItemSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().min(3, "O título do subitem deve ter pelo menos 3 caracteres."),
+  completed: z.boolean(),
+});
 
 const initiativeSchema = z.object({
   title: z.string().min(5, "O título deve ter pelo menos 5 caracteres."),
@@ -23,7 +32,8 @@ const initiativeSchema = z.object({
   deadline: z.date({
     required_error: "A data de prazo é obrigatória.",
   }),
-  priority: z.enum(['P0', 'P1', 'P2', 'P3', 'P4'])
+  priority: z.enum(['Baixa', 'Média', 'Alta']),
+  subItems: z.array(subItemSchema).optional(),
 });
 
 export type InitiativeFormData = z.infer<typeof initiativeSchema>;
@@ -40,14 +50,24 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
     register,
     handleSubmit,
     control,
+    watch,
     formState: { errors },
   } = useForm<InitiativeFormData>({
     resolver: zodResolver(initiativeSchema),
     defaultValues: initialData || {
       status: 'A Fazer',
-      priority: 'P3',
+      priority: 'Baixa',
+      subItems: [],
     }
   });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "subItems",
+  });
+
+  const watchSubItems = watch("subItems");
+  const hasSubItems = watchSubItems && watchSubItems.length > 0;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-4">
@@ -71,7 +91,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                           className="w-full justify-start text-left font-normal"
                       >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione uma data</span>}
+                          {field.value ? format(new Date(field.value), "dd/MM/yyyy") : <span>Selecione uma data</span>}
                       </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -143,11 +163,9 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                               <SelectValue placeholder="Selecione a prioridade" />
                           </SelectTrigger>
                           <SelectContent>
-                              <SelectItem value="P0">P0 (Crítica)</SelectItem>
-                              <SelectItem value="P1">P1 (Alta)</SelectItem>
-                              <SelectItem value="P2">P2 (Média)</SelectItem>
-                              <SelectItem value="P3">P3 (Baixa)</SelectItem>
-                              <SelectItem value="P4">P4 (Mais Baixa)</SelectItem>
+                              <SelectItem value="Alta">Alta</SelectItem>
+                              <SelectItem value="Média">Média</SelectItem>
+                              <SelectItem value="Baixa">Baixa</SelectItem>
                           </SelectContent>
                       </Select>
                   )}
@@ -160,6 +178,58 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
         <Label htmlFor="description">Observações (Descrição)</Label>
         <Textarea id="description" {...register("description")} placeholder="Descreva o objetivo principal, escopo e os resultados esperados desta iniciativa." rows={5} />
         {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
+      </div>
+
+      <div className="space-y-4 rounded-lg border p-4">
+        <div className="flex justify-between items-center">
+            <Label>Subitens (Checklist)</Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => append({ title: "", completed: false })}
+            >
+              <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Subitem
+            </Button>
+        </div>
+         {hasSubItems ? (
+          <div className="space-y-3">
+            {fields.map((field, index) => (
+              <div key={field.id} className="flex items-center gap-2">
+                <Controller
+                  name={`subItems.${index}.completed`}
+                  control={control}
+                  render={({ field: checkboxField }) => (
+                    <Checkbox
+                      checked={checkboxField.value}
+                      onCheckedChange={checkboxField.onChange}
+                      aria-label={`Completar subitem ${index + 1}`}
+                    />
+                  )}
+                />
+                <Input
+                  {...register(`subItems.${index}.title`)}
+                  placeholder={`Subitem ${index + 1}`}
+                  className={cn(errors.subItems?.[index]?.title && "border-destructive")}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => remove(index)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            {errors.subItems && <p className="text-sm text-destructive">Verifique os erros na lista de subitens.</p>}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-2">
+            Nenhum subitem adicionado. Adicione subitens para um controle detalhado do progresso.
+          </p>
+        )}
       </div>
 
       <div className="flex justify-end gap-2">

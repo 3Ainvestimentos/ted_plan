@@ -5,10 +5,10 @@ import type { Initiative } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { FileText, AlertTriangle, Clock, Lightbulb, Bug } from "lucide-react";
+import { FileText, AlertTriangle, Clock, Lightbulb, Bug, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDrag } from 'react-dnd';
-import Link from "next/link";
+import { Progress } from "../ui/progress";
 
 interface KanbanTaskCardProps {
   task: Initiative;
@@ -31,12 +31,15 @@ export function KanbanTaskCard({ task, onClick }: KanbanTaskCardProps) {
     }),
   }));
   
-  const TaskIcon = task.icon || FileText;
+  const hasSubItems = task.subItems && task.subItems.length > 0;
+  const TaskIcon = hasSubItems ? CheckSquare : (task.icon || FileText);
   
-  let priorityColorClass = "bg-gray-200 text-gray-700";
-  if (task.priority === "P0" || task.priority === "P1") priorityColorClass = "bg-red-100 text-red-700";
-  else if (task.priority === "P2") priorityColorClass = "bg-yellow-100 text-yellow-700";
-  else if (task.priority === "P3") priorityColorClass = "bg-blue-100 text-blue-700";
+  const priorityColorMapping: Record<typeof task.priority, string> = {
+    'Alta': 'bg-red-100 text-red-700',
+    'Média': 'bg-yellow-100 text-yellow-700',
+    'Baixa': 'bg-blue-100 text-blue-700'
+  };
+  const priorityColorClass = priorityColorMapping[task.priority] || "bg-gray-200 text-gray-700";
 
   let statusIndicator = null;
   if (task.status === 'Em Risco') {
@@ -52,28 +55,38 @@ export function KanbanTaskCard({ task, onClick }: KanbanTaskCardProps) {
             task.status === 'Em Risco' ? 'border-l-4 border-l-orange-500' : '',
             task.status === 'Atrasado' ? 'border-l-4 border-l-red-500' : ''
         )}>
-        <CardContent className="p-3 space-y-2">
-            <div className="flex items-center space-x-2">
-            {TaskIcon && <TaskIcon className="h-4 w-4 text-muted-foreground" />}
-            <h4 className="text-sm font-medium text-card-foreground flex-grow truncate font-body" title={task.title}>
-                {task.title}
-            </h4>
-            {statusIndicator}
-            </div>
-            
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <Badge variant="outline" className={cn("text-xs px-1.5 py-0.5", priorityColorClass)}>
-                {task.priority}
-            </Badge>
-            <span>{new Date(task.lastUpdate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+        <CardContent className="p-3 space-y-3">
+            <div className="flex items-start space-x-2">
+                {TaskIcon && <TaskIcon className="h-4 w-4 text-muted-foreground mt-0.5" />}
+                <h4 className="text-sm font-medium text-card-foreground flex-grow" title={task.title}>
+                    {task.title}
+                </h4>
+                {statusIndicator}
             </div>
 
-            <div className="flex items-center justify-end">
-            <Avatar className="h-6 w-6">
-                <AvatarImage src={`https://placehold.co/24x24.png?text=${getInitials(task.owner)}`} alt={task.owner} data-ai-hint="assignee avatar" />
-                <AvatarFallback className="text-xs">{getInitials(task.owner)}</AvatarFallback>
-            </Avatar>
+            {hasSubItems && (
+                <div className="space-y-1">
+                    <div className="flex justify-between items-center text-xs text-muted-foreground">
+                        <span>Progresso</span>
+                        <span>{task.progress}%</span>
+                    </div>
+                    <Progress value={task.progress} className="h-1" />
+                </div>
+            )}
+            
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <Badge variant="outline" className={cn("text-xs px-1.5 py-0.5", priorityColorClass)}>
+                    {task.priority}
+                </Badge>
+                <div className="flex items-center gap-2">
+                     <span>{new Date(task.lastUpdate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+                     <Avatar className="h-6 w-6">
+                        <AvatarImage src={`https://placehold.co/24x24.png?text=${getInitials(task.owner)}`} alt={task.owner} data-ai-hint="assignee avatar" />
+                        <AvatarFallback className="text-xs">{getInitials(task.owner)}</AvatarFallback>
+                    </Avatar>
+                </div>
             </div>
+
         </CardContent>
         </Card>
     </div>
