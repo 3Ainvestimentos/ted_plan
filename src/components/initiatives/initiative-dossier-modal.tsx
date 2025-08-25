@@ -138,16 +138,12 @@ export function InitiativeDossierModal({ isOpen, onOpenChange, initiative }: Ini
                         <p><strong className="text-foreground/80">Prioridade:</strong> {initiative.priority}</p>
                         <p><strong className="text-foreground/80">Responsável:</strong> {initiative.owner}</p>
                         <p><strong className="text-foreground/80">Última Atualização:</strong> {new Date(initiative.lastUpdate).toLocaleDateString()}</p>
-                        <p><strong className="text-foreground/80">Membros da Equipe:</strong> <span className="text-muted-foreground">John D., Jane S., Mike L.</span></p>
                         <p><strong className="text-foreground/80">Conclusão Alvo:</strong> <span className="text-muted-foreground">{initiative.deadline ? new Date(initiative.deadline).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : 'N/D'}</span></p>
                       </CardContent>
                     </Card>
                     
                     <div className="space-y-2">
-                        <Button variant="outline" className="w-full justify-start"><Users className="mr-2 h-4 w-4" /> Equipe e Partes Interessadas</Button>
-                        <Button variant="outline" className="w-full justify-start"><BarChart3 className="mr-2 h-4 w-4" /> Relatórios Detalhados</Button>
                         <Button variant="outline" className="w-full justify-start"><Paperclip className="mr-2 h-4 w-4" /> Documentos (3)</Button>
-                        <Button variant="outline" className="w-full justify-start"><MessageSquare className="mr-2 h-4 w-4" /> Discussões (12)</Button>
                     </div>
                   </aside>
                 </div>
