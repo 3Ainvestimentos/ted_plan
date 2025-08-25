@@ -6,14 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Link as LinkIcon } from 'lucide-react';
 import { useState } from 'react';
-import { CreateEventSheet } from '@/components/meetings/create-event-sheet';
 import { RecurringMeetingsTable } from '@/components/meetings/recurring-meetings-table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useMeetings } from '@/contexts/meetings-context';
+import { UpsertMeetingModal } from '@/components/meetings/upsert-meeting-modal';
 
 export default function MeetingAgendaPage() {
   const calendarUrl = "https://calendar.google.com/calendar/embed?src=primary&ctz=America/Sao_Paulo";
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { isLoading } = useMeetings();
 
   return (
@@ -27,13 +27,16 @@ export default function MeetingAgendaPage() {
             <Button variant="outline">
                 <LinkIcon className="mr-2 h-4 w-4" /> Integrar Calendário
             </Button>
-            <Button onClick={() => setIsSheetOpen(true)}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Criar Comitê Recorrente
+            <Button onClick={() => setIsModalOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Nova Reunião Recorrente
             </Button>
         </div>
       </div>
 
-      <CreateEventSheet isOpen={isSheetOpen} onOpenChange={setIsSheetOpen} />
+      <UpsertMeetingModal 
+        isOpen={isModalOpen}
+        onOpenChange={setIsModalOpen}
+      />
       
       {isLoading ? (
         <Card>

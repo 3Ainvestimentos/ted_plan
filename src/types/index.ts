@@ -38,6 +38,12 @@ export interface NavItem {
   onClick?: () => void;
 }
 
+export interface AgendaItem {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
 export interface RecurringMeeting {
   id: string;
   name: string;
@@ -45,9 +51,10 @@ export interface RecurringMeeting {
     unit: 'dias' | 'semanas' | 'meses';
     value: number;
   };
+  agenda: { id: string; title: string }[]; // Template da pauta
   lastOccurrence: string; // ISO date string 'YYYY-MM-DD'
-  executedDate?: string; // ISO date string 'YYYY-MM-DD', for the current cycle
-  isDone: boolean;
+  scheduledDate: string | null; // ISO date string 'YYYY-MM-DD', for the current cycle
+  currentOccurrenceAgenda: AgendaItem[];
 }
 
 
