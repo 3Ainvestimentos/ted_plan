@@ -58,8 +58,15 @@ export const MeetingsProvider = ({ children }: { children: ReactNode }) => {
   
   const updateMeeting = useCallback(async (meetingId: string, data: Partial<RecurringMeeting>) => {
     const meetingDocRef = doc(db, 'recurringMeetings', meetingId);
+    
+    // Ensure executedDate is null if not provided, preventing 'undefined' error
+    const dataToUpdate = { ...data };
+    if (dataToUpdate.executedDate === undefined) {
+        dataToUpdate.executedDate = null;
+    }
+
     try {
-      await updateDoc(meetingDocRef, data);
+      await updateDoc(meetingDocRef, dataToUpdate);
       fetchMeetings(); // Refetch to get updated data
     } catch (error) {
         console.error("Error updating meeting: ", error);

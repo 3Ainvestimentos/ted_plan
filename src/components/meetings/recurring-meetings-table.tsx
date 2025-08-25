@@ -59,9 +59,8 @@ export function RecurringMeetingsTable() {
 
     const nextDueDate = calculateNextDueDate(meeting);
     const updatedMeeting = {
-      ...meeting,
       lastOccurrence: meeting.executedDate,
-      executedDate: undefined,
+      executedDate: null,
     };
     updateMeeting(meetingId, updatedMeeting);
 
