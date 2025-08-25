@@ -66,6 +66,8 @@ export default {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))',
         },
+        'spinner-gold': '#DFB87F',
+        'spinner-background': '#E0E0E0',
       },
       borderRadius: {
         lg: 'var(--radius)',
