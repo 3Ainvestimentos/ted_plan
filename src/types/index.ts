@@ -1,5 +1,5 @@
 
-export type InitiativeStatus = 'Pendente' | 'Em execução' | 'Etapa concluída' | 'Concluído' | 'Suspenso' | 'A Fazer' | 'Em Dia' | 'Em Risco' | 'Atrasado';
+export type InitiativeStatus = 'Pendente' | 'Em execução' | 'Concluído' | 'Suspenso' | 'A Fazer' | 'Em Dia' | 'Em Risco' | 'Atrasado';
 export type InitiativePriority = 'Baixa' | 'Média' | 'Alta';
 
 export interface SubItem {

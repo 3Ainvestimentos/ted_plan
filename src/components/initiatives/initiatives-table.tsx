@@ -21,6 +21,20 @@ interface InitiativesTableProps {
     onInitiativeClick: (initiative: Initiative) => void;
 }
 
+const sortInitiatives = (initiatives: Initiative[]) => {
+    return initiatives.sort((a, b) => {
+        const aParts = a.topicNumber.split('.').map(Number);
+        const bParts = b.topicNumber.split('.').map(Number);
+        const len = Math.max(aParts.length, bParts.length);
+        for (let i = 0; i < len; i++) {
+            const aVal = aParts[i] || 0;
+            const bVal = bParts[i] || 0;
+            if (aVal !== bVal) return aVal - bVal;
+        }
+        return 0;
+    });
+};
+
 export function InitiativesTable({ initiatives, onInitiativeClick }: InitiativesTableProps) {
   const { updateSubItem } = useInitiatives();
   const [searchTerm, setSearchTerm] = useState("");
@@ -43,16 +57,17 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
   };
 
   const filteredInitiatives = useMemo(() => {
-    return initiatives.filter(initiative => {
+    const filtered = initiatives.filter(initiative => {
       const matchesSearch = initiative.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             initiative.owner.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             initiative.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "all" || initiative.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
+    return sortInitiatives(filtered);
   }, [searchTerm, statusFilter, initiatives]);
 
-  const initiativeStatuses: (string | InitiativeStatus)[] = ["all", "Pendente", "Em execução", "Etapa concluída", "Concluído", "Suspenso"];
+  const initiativeStatuses: (string | InitiativeStatus)[] = ["all", "Pendente", "Em execução", "Concluído", "Suspenso"];
   const initiativePriorities: (string | InitiativePriority)[] = ["all", "Alta", "Média", "Baixa"];
   
   return (

@@ -19,7 +19,6 @@ export const STATUS_ICONS: Record<InitiativeStatus, React.ElementType> = {
   'Concluído': CheckCircle,
   'Pendente': ListTodo,
   'Em execução': PlayCircle,
-  'Etapa concluída': CheckSquare,
   'Suspenso': PauseCircle
 };
 
@@ -29,7 +28,7 @@ export const TREND_ICONS = {
   neutral: Minus,
 };
 
-export const KANBAN_COLUMNS_ORDER: InitiativeStatus[] = ['Pendente', 'Em execução', 'Etapa concluída', 'Suspenso', 'Concluído'];
+export const KANBAN_COLUMNS_ORDER: InitiativeStatus[] = ['Pendente', 'Em execução', 'Concluído', 'Suspenso'];
 
 
 export const MOCK_INITIATIVES: Initiative[] = [];

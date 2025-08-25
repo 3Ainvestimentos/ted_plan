@@ -27,7 +27,7 @@ const initiativeSchema = z.object({
   title: z.string().min(5, "O título deve ter pelo menos 5 caracteres."),
   owner: z.string().min(2, "O nome do responsável é obrigatório."),
   description: z.string().min(10, "A descrição deve ter pelo menos 10 caracteres."),
-  status: z.enum(['Pendente', 'Em execução', 'Etapa concluída', 'Concluído', 'Suspenso']),
+  status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso']),
   deadline: z.date().optional(),
   priority: z.enum(['Baixa', 'Média', 'Alta']),
   subItems: z.array(subItemSchema).optional(),
@@ -126,7 +126,6 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                           <SelectContent>
                               <SelectItem value="Pendente">Pendente</SelectItem>
                               <SelectItem value="Em execução">Em execução</SelectItem>
-                              <SelectItem value="Etapa concluída">Etapa concluída</SelectItem>
                               <SelectItem value="Concluído">Concluído</SelectItem>
                               <SelectItem value="Suspenso">Suspenso</SelectItem>
                           </SelectContent>
