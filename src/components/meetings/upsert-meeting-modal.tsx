@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Textarea } from "../ui/textarea";
 
 const agendaItemSchema = z.object({
     id: z.string().optional(),
@@ -35,6 +36,7 @@ const agendaItemSchema = z.object({
     action: z.string().optional(),
     owner: z.string().optional(),
     deadline: z.string().optional(),
+    observations: z.string().optional(),
 });
 
 const meetingSchema = z.object({
@@ -196,25 +198,30 @@ export function UpsertMeetingModal({ isOpen, onOpenChange, meeting }: UpsertMeet
                  {fields.length > 0 ? (
                 <div className="space-y-4">
                     {fields.map((field, index) => (
-                    <div key={field.id} className="grid grid-cols-12 gap-2 items-start p-2 border rounded-md relative">
+                    <div key={field.id} className="grid grid-cols-12 gap-x-4 gap-y-2 items-start p-3 border rounded-md relative">
                         <div className="col-span-12">
-                            <Label>Item {index+1}</Label>
+                            <Label htmlFor={`agenda.${index}.title`}>Item {index+1}</Label>
                             <Input
+                                id={`agenda.${index}.title`}
                                 {...register(`agenda.${index}.title`)}
                                 placeholder="Título do item da pauta"
                             />
                         </div>
                         <div className="col-span-12 md:col-span-5">
-                             <Label className="text-xs">Ação</Label>
-                             <Input {...register(`agenda.${index}.action`)} placeholder="Ex: Validar proposta"/>
+                             <Label htmlFor={`agenda.${index}.action`} className="text-xs">Ação</Label>
+                             <Input id={`agenda.${index}.action`} {...register(`agenda.${index}.action`)} placeholder="Ex: Validar proposta"/>
                         </div>
                         <div className="col-span-6 md:col-span-4">
-                            <Label className="text-xs">Responsável</Label>
-                            <Input {...register(`agenda.${index}.owner`)} placeholder="Ex: João"/>
+                            <Label htmlFor={`agenda.${index}.owner`} className="text-xs">Responsável</Label>
+                            <Input id={`agenda.${index}.owner`} {...register(`agenda.${index}.owner`)} placeholder="Ex: João"/>
                         </div>
                         <div className="col-span-6 md:col-span-3">
-                            <Label className="text-xs">Prazo</Label>
-                            <Input type="date" {...register(`agenda.${index}.deadline`)} />
+                            <Label htmlFor={`agenda.${index}.deadline`} className="text-xs">Prazo</Label>
+                            <Input id={`agenda.${index}.deadline`} type="date" {...register(`agenda.${index}.deadline`)} />
+                        </div>
+                         <div className="col-span-12">
+                            <Label htmlFor={`agenda.${index}.observations`} className="text-xs">Observações</Label>
+                            <Textarea id={`agenda.${index}.observations`} {...register(`agenda.${index}.observations`)} placeholder="Detalhes, links ou notas adicionais..."/>
                         </div>
                         <Button
                             type="button"

@@ -1,5 +1,4 @@
 
-
 export type InitiativeStatus = 'Pendente' | 'Em execução' | 'Etapa concluída' | 'Concluído' | 'Suspenso' | 'A Fazer' | 'Em Dia' | 'Em Risco' | 'Atrasado';
 export type InitiativePriority = 'Baixa' | 'Média' | 'Alta';
 
@@ -45,6 +44,7 @@ export interface AgendaItem {
   action?: string;
   owner?: string;
   deadline?: string;
+  observations?: string;
 }
 
 export interface MeetingOccurrence {

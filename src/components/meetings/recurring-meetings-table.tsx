@@ -156,9 +156,9 @@ export function RecurringMeetingsTable() {
                         )}
                         <Button
                             size="sm"
-                            variant="secondary"
                             onClick={() => handleMarkAsDone(meeting)}
                             disabled={!meeting.scheduledDate}
+                            className="bg-green-600 hover:bg-green-700 text-white"
                         >
                             <CheckCircle2 className="mr-2 h-4 w-4" />
                             Reunião Realizada

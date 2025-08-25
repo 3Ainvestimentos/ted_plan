@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -11,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { ListChecks } from "lucide-react";
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
 
 interface CurrentAgendaModalProps {
   isOpen: boolean;
@@ -45,7 +47,7 @@ export function CurrentAgendaModal({ isOpen, onOpenChange, meeting }: CurrentAge
   
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ListChecks className="h-6 w-6" /> Pauta da Reunião
@@ -57,7 +59,7 @@ export function CurrentAgendaModal({ isOpen, onOpenChange, meeting }: CurrentAge
         <div className="py-4 space-y-4">
              {localAgenda && localAgenda.length > 0 ? (
                 localAgenda.map(item => (
-                    <div key={item.id} className="flex flex-col gap-2 rounded-md border p-4 hover:bg-muted/50">
+                    <div key={item.id} className="flex flex-col gap-3 rounded-md border p-4 hover:bg-muted/50">
                         <div className="flex items-start gap-3">
                             <Checkbox
                                 id={`agenda-${meeting.id}-${item.id}`}
@@ -72,7 +74,7 @@ export function CurrentAgendaModal({ isOpen, onOpenChange, meeting }: CurrentAge
                                 {item.title}
                             </label>
                         </div>
-                        <div className="pl-7 grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div className="pl-7 grid grid-cols-1 md:grid-cols-3 gap-3">
                             <div>
                                 <Label htmlFor={`action-${item.id}`} className="text-xs">Ação</Label>
                                 <Input 
@@ -102,6 +104,12 @@ export function CurrentAgendaModal({ isOpen, onOpenChange, meeting }: CurrentAge
                                 />
                             </div>
                         </div>
+                        {item.observations && (
+                           <div className="pl-7">
+                               <Label className="text-xs">Observações</Label>
+                               <p className="text-sm text-muted-foreground whitespace-pre-wrap">{item.observations}</p>
+                           </div>
+                        )}
                     </div>
                 ))
             ) : (
