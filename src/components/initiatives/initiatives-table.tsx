@@ -3,7 +3,7 @@
 
 import { STATUS_ICONS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, ChevronDown, ChevronRight, Filter, CornerDownRight } from "lucide-react";
+import { ExternalLink, ChevronDown, ChevronRight, Filter, CornerDownRight, ChevronsUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import React, { useState, useMemo } from "react";
@@ -40,9 +40,22 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   
-  const [expandedTopics, setExpandedTopics] = useState<Set<string>>(() => 
-    new Set(initiatives.filter(i => (i.subItems && i.subItems.length > 0)).map(i => i.id))
-  );
+  const parentInitiativeIds = useMemo(() => 
+    new Set(initiatives.filter(i => i.subItems && i.subItems.length > 0).map(i => i.id))
+  , [initiatives]);
+
+  const [expandedTopics, setExpandedTopics] = useState<Set<string>>(() => new Set(parentInitiativeIds));
+  const [areAllExpanded, setAreAllExpanded] = useState(true);
+
+  const toggleAllTopics = () => {
+    if (areAllExpanded) {
+        setExpandedTopics(new Set());
+    } else {
+        setExpandedTopics(new Set(parentInitiativeIds));
+    }
+    setAreAllExpanded(prev => !prev);
+  };
+
 
   const toggleTopic = (topicId: string) => {
     setExpandedTopics(prev => {
@@ -91,6 +104,10 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
               ))}
             </SelectContent>
           </Select>
+           <Button variant="outline" size="sm" onClick={toggleAllTopics} disabled={parentInitiativeIds.size === 0}>
+                <ChevronsUpDown className="mr-2 h-4 w-4" />
+                {areAllExpanded ? "Recolher" : "Expandir"}
+            </Button>
         </div>
       </div>
       
