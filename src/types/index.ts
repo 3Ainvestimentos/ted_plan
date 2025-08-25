@@ -1,4 +1,5 @@
 
+
 export type InitiativeStatus = 'Pendente' | 'Em execução' | 'Concluído' | 'Suspenso' | 'A Fazer' | 'Em Dia' | 'Em Risco' | 'Atrasado';
 export type InitiativePriority = 'Baixa' | 'Média' | 'Alta';
 
@@ -37,6 +38,12 @@ export interface NavItem {
   onClick?: () => void;
 }
 
+export interface Participant {
+    id?: string;
+    name: string;
+    email: string;
+}
+
 export interface AgendaItem {
   id: string;
   title: string;
@@ -59,6 +66,7 @@ export interface RecurringMeeting {
     unit: 'dias' | 'semanas' | 'meses';
     value: number;
   };
+  participants: Participant[];
   agenda: Omit<AgendaItem, 'completed'>[]; // Template da pauta
   lastOccurrence: string; // ISO date string 'YYYY-MM-DD'
   scheduledDate: string | null; // ISO date string 'YYYY-MM-DD', for the current cycle

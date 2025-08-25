@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -15,12 +16,14 @@ import { useToast } from '@/hooks/use-toast';
 import { useMeetings } from '@/contexts/meetings-context';
 import { UpsertMeetingModal } from './upsert-meeting-modal';
 import { CurrentAgendaModal } from './current-agenda-modal';
+import { MeetingHistoryModal } from './meeting-history-modal';
 
 export function RecurringMeetingsTable() {
   const { toast } = useToast();
   const { meetings, updateMeeting, markMeetingAsDone } = useMeetings();
   const [editingMeeting, setEditingMeeting] = useState<RecurringMeeting | null>(null);
   const [agendaMeeting, setAgendaMeeting] = useState<RecurringMeeting | null>(null);
+  const [historyMeeting, setHistoryMeeting] = useState<RecurringMeeting | null>(null);
 
   const handleDateChange = (meetingId: string, newDate: Date | undefined) => {
     if (!newDate) return;
@@ -83,6 +86,13 @@ export function RecurringMeetingsTable() {
             meeting={agendaMeeting}
         />
     )}
+    {historyMeeting && (
+        <MeetingHistoryModal
+            isOpen={!!historyMeeting}
+            onOpenChange={() => setHistoryMeeting(null)}
+            meeting={historyMeeting}
+        />
+    )}
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle>Controle de Reuniões Recorrentes</CardTitle>
@@ -111,6 +121,7 @@ export function RecurringMeetingsTable() {
               }
 
               const hasAgenda = meeting.agenda && meeting.agenda.length > 0;
+              const hasHistory = meeting.occurrenceHistory && meeting.occurrenceHistory.length > 0;
 
               return (
                 <React.Fragment key={meeting.id}>
@@ -156,12 +167,19 @@ export function RecurringMeetingsTable() {
                         )}
                         <Button
                             size="sm"
+                            variant="default"
                             onClick={() => handleMarkAsDone(meeting)}
                             disabled={!meeting.scheduledDate}
+                            className="bg-green-600 hover:bg-green-700"
                         >
                             <CheckCircle2 className="mr-2 h-4 w-4" />
                             Reunião Realizada
                         </Button>
+                         {hasHistory && (
+                            <Button size="sm" variant="outline" onClick={() => setHistoryMeeting(meeting)}>
+                               <History className="mr-2 h-4 w-4" /> Histórico
+                            </Button>
+                         )}
                          <Button
                             size="sm"
                             variant="outline"

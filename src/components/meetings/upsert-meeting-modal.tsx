@@ -30,6 +30,12 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Textarea } from "../ui/textarea";
 
+const participantSchema = z.object({
+    id: z.string().optional(),
+    name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres."),
+    email: z.string().email("E-mail inválido."),
+});
+
 const agendaItemSchema = z.object({
     id: z.string().optional(),
     title: z.string().min(3, "A pauta deve ter pelo menos 3 caracteres."),
@@ -43,6 +49,7 @@ const meetingSchema = z.object({
     name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres."),
     recurrenceValue: z.number().min(1, "O valor deve ser ao menos 1."),
     recurrenceUnit: z.enum(['dias', 'semanas', 'meses']),
+    participants: z.array(participantSchema),
     agenda: z.array(agendaItemSchema),
 });
 
@@ -69,13 +76,19 @@ export function UpsertMeetingModal({ isOpen, onOpenChange, meeting }: UpsertMeet
       name: '',
       recurrenceValue: 1,
       recurrenceUnit: 'semanas',
+      participants: [],
       agenda: [],
     }
   });
   
-  const { fields, append, remove } = useFieldArray({
+  const { fields: agendaFields, append: appendAgenda, remove: removeAgenda } = useFieldArray({
     control,
     name: "agenda"
+  });
+
+  const { fields: participantFields, append: appendParticipant, remove: removeParticipant } = useFieldArray({
+    control,
+    name: "participants"
   });
 
   useEffect(() => {
@@ -84,6 +97,7 @@ export function UpsertMeetingModal({ isOpen, onOpenChange, meeting }: UpsertMeet
             name: meeting.name,
             recurrenceValue: meeting.recurrence.value,
             recurrenceUnit: meeting.recurrence.unit,
+            participants: meeting.participants || [],
             agenda: meeting.agenda || [],
         });
     } else if (isOpen && !meeting) {
@@ -91,6 +105,7 @@ export function UpsertMeetingModal({ isOpen, onOpenChange, meeting }: UpsertMeet
             name: '',
             recurrenceValue: 1,
             recurrenceUnit: 'semanas',
+            participants: [],
             agenda: [],
         });
     }
@@ -105,6 +120,7 @@ export function UpsertMeetingModal({ isOpen, onOpenChange, meeting }: UpsertMeet
             value: data.recurrenceValue,
             unit: data.recurrenceUnit,
         },
+        participants: data.participants.map(item => ({...item, id: item.id || crypto.randomUUID() })),
         agenda: data.agenda.map(item => ({...item, id: item.id || crypto.randomUUID() })),
     };
 
@@ -185,19 +201,43 @@ export function UpsertMeetingModal({ isOpen, onOpenChange, meeting }: UpsertMeet
 
             <div className="space-y-4 rounded-lg border p-4">
                 <div className="flex justify-between items-center">
+                    <Label>Participantes</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={() => appendParticipant({ name: "", email: "" })}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Participante
+                    </Button>
+                </div>
+                {participantFields.length > 0 ? (
+                    <div className="space-y-2">
+                        {participantFields.map((field, index) => (
+                            <div key={field.id} className="flex gap-2 items-center">
+                                <Input {...register(`participants.${index}.name`)} placeholder="Nome" />
+                                <Input {...register(`participants.${index}.email`)} placeholder="Email" />
+                                <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => removeParticipant(index)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-muted-foreground text-center py-2">Nenhum participante adicionado.</p>
+                )}
+            </div>
+
+            <div className="space-y-4 rounded-lg border p-4">
+                <div className="flex justify-between items-center">
                     <Label>Pauta Padrão</Label>
                     <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => append({ title: "", action: "", owner: "", deadline: "" })}
+                    onClick={() => appendAgenda({ title: "", action: "", owner: "", deadline: "", observations: "" })}
                     >
                     <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Item
                     </Button>
                 </div>
-                 {fields.length > 0 ? (
+                 {agendaFields.length > 0 ? (
                 <div className="space-y-4">
-                    {fields.map((field, index) => (
+                    {agendaFields.map((field, index) => (
                     <div key={field.id} className="grid grid-cols-12 gap-x-4 gap-y-2 items-start p-3 border rounded-md relative">
                         <div className="col-span-12">
                             <Label htmlFor={`agenda.${index}.title`}>Item {index+1}</Label>
@@ -228,7 +268,7 @@ export function UpsertMeetingModal({ isOpen, onOpenChange, meeting }: UpsertMeet
                             variant="ghost"
                             size="icon"
                             className="text-destructive hover:text-destructive absolute top-1 right-1 h-6 w-6"
-                            onClick={() => remove(index)}
+                            onClick={() => removeAgenda(index)}
                         >
                             <Trash2 className="h-4 w-4" />
                         </Button>

@@ -2,7 +2,7 @@
 
 "use client";
 
-import type { RecurringMeeting, AgendaItem, MeetingOccurrence } from '@/types';
+import type { RecurringMeeting, AgendaItem, MeetingOccurrence, Participant } from '@/types';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, query, orderBy, deleteDoc, arrayUnion } from 'firebase/firestore';
