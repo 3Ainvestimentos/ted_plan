@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, CheckCircle2, ListChecks, Settings } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckCircle2, ListChecks, Settings, History } from 'lucide-react';
 import { format, addDays, addMonths, addWeeks } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -18,7 +18,7 @@ import { CurrentAgendaModal } from './current-agenda-modal';
 
 export function RecurringMeetingsTable() {
   const { toast } = useToast();
-  const { meetings, updateMeeting } = useMeetings();
+  const { meetings, updateMeeting, markMeetingAsDone } = useMeetings();
   const [editingMeeting, setEditingMeeting] = useState<RecurringMeeting | null>(null);
   const [agendaMeeting, setAgendaMeeting] = useState<RecurringMeeting | null>(null);
 
@@ -31,6 +31,25 @@ export function RecurringMeetingsTable() {
     updateMeeting(meetingId, updatedMeeting);
   };
 
+  const handleMarkAsDone = (meeting: RecurringMeeting) => {
+    if (!meeting.scheduledDate) {
+      toast({
+        variant: "destructive",
+        title: "Data não selecionada",
+        description: "Por favor, selecione a data em que a reunião foi realizada.",
+      });
+      return;
+    }
+
+    markMeetingAsDone(meeting);
+    
+    const nextDueDate = calculateNextDueDate(meeting);
+    toast({
+        title: "Reunião Concluída!",
+        description: `A reunião "${meeting.name}" foi marcada como feita. Próxima data prevista: ${format(nextDueDate, 'dd/MM/yyyy')}`,
+    });
+  };
+  
   const calculateNextDueDate = (meeting: RecurringMeeting): Date => {
     const lastDate = new Date(meeting.lastOccurrence);
     const lastDateLocal = new Date(lastDate.valueOf() + lastDate.getTimezoneOffset() * 60 * 1000);
@@ -47,32 +66,6 @@ export function RecurringMeetingsTable() {
     }
   };
 
-  const handleMarkAsDone = (meetingId: string) => {
-    const meeting = meetings.find(m => m.id === meetingId);
-    if (!meeting) return;
-
-    if (!meeting.scheduledDate) {
-      toast({
-        variant: "destructive",
-        title: "Data não selecionada",
-        description: "Por favor, selecione a data em que a reunião foi realizada.",
-      });
-      return;
-    }
-
-    const nextDueDate = calculateNextDueDate(meeting);
-    const updatedMeeting = {
-      lastOccurrence: meeting.scheduledDate,
-      scheduledDate: null,
-      currentOccurrenceAgenda: meeting.agenda.map(item => ({ ...item, completed: false })), // Reset agenda for next occurrence
-    };
-    updateMeeting(meetingId, updatedMeeting);
-
-    toast({
-        title: "Reunião Concluída!",
-        description: `A reunião "${meeting.name}" foi marcada como feita. Próxima data: ${format(nextDueDate, 'dd/MM/yyyy')}`,
-    });
-  };
 
   return (
     <>
@@ -162,13 +155,13 @@ export function RecurringMeetingsTable() {
                             </Button>
                         )}
                         <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleMarkAsDone(meeting.id)}
-                        disabled={!meeting.scheduledDate}
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleMarkAsDone(meeting)}
+                            disabled={!meeting.scheduledDate}
                         >
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        Concluir
+                            <CheckCircle2 className="mr-2 h-4 w-4" />
+                            Reunião Realizada
                         </Button>
                          <Button
                             size="sm"

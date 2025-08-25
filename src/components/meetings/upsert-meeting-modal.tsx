@@ -32,6 +32,9 @@ import {
 const agendaItemSchema = z.object({
     id: z.string().optional(),
     title: z.string().min(3, "A pauta deve ter pelo menos 3 caracteres."),
+    action: z.string().optional(),
+    owner: z.string().optional(),
+    deadline: z.string().optional(),
 });
 
 const meetingSchema = z.object({
@@ -105,7 +108,7 @@ export function UpsertMeetingModal({ isOpen, onOpenChange, meeting }: UpsertMeet
 
     try {
         if (isEditing && meeting) {
-            await updateMeeting(meeting.id, meetingData);
+            await updateMeeting(meeting.id, meetingData as Partial<RecurringMeeting>);
             toast({ title: "Reunião Atualizada!", description: `A reunião "${data.name}" foi atualizada.` });
         } else {
             await addMeeting(meetingData as any);
@@ -135,7 +138,7 @@ export function UpsertMeetingModal({ isOpen, onOpenChange, meeting }: UpsertMeet
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Gerenciar Reunião Recorrente' : 'Nova Reunião Recorrente'}</DialogTitle>
           <DialogDescription>
@@ -185,27 +188,42 @@ export function UpsertMeetingModal({ isOpen, onOpenChange, meeting }: UpsertMeet
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => append({ title: "" })}
+                    onClick={() => append({ title: "", action: "", owner: "", deadline: "" })}
                     >
                     <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Item
                     </Button>
                 </div>
                  {fields.length > 0 ? (
-                <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
+                <div className="space-y-4">
                     {fields.map((field, index) => (
-                    <div key={field.id} className="flex items-center gap-2">
-                        <Input
-                        {...register(`agenda.${index}.title`)}
-                        placeholder={`Item da pauta ${index + 1}`}
-                        />
+                    <div key={field.id} className="grid grid-cols-12 gap-2 items-start p-2 border rounded-md relative">
+                        <div className="col-span-12">
+                            <Label>Item {index+1}</Label>
+                            <Input
+                                {...register(`agenda.${index}.title`)}
+                                placeholder="Título do item da pauta"
+                            />
+                        </div>
+                        <div className="col-span-12 md:col-span-5">
+                             <Label className="text-xs">Ação</Label>
+                             <Input {...register(`agenda.${index}.action`)} placeholder="Ex: Validar proposta"/>
+                        </div>
+                        <div className="col-span-6 md:col-span-4">
+                            <Label className="text-xs">Responsável</Label>
+                            <Input {...register(`agenda.${index}.owner`)} placeholder="Ex: João"/>
+                        </div>
+                        <div className="col-span-6 md:col-span-3">
+                            <Label className="text-xs">Prazo</Label>
+                            <Input type="date" {...register(`agenda.${index}.deadline`)} />
+                        </div>
                         <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => remove(index)}
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive absolute top-1 right-1 h-6 w-6"
+                            onClick={() => remove(index)}
                         >
-                        <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                         </Button>
                     </div>
                     ))}

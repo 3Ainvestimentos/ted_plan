@@ -2,17 +2,18 @@
 
 "use client";
 
-import type { RecurringMeeting, AgendaItem } from '@/types';
+import type { RecurringMeeting, AgendaItem, MeetingOccurrence } from '@/types';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, query, orderBy, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, query, orderBy, deleteDoc, arrayUnion } from 'firebase/firestore';
 
 interface MeetingsContextType {
   meetings: RecurringMeeting[];
-  addMeeting: (meeting: Omit<RecurringMeeting, 'id' | 'lastOccurrence' | 'currentOccurrenceAgenda'>) => Promise<void>;
+  addMeeting: (meeting: Omit<RecurringMeeting, 'id' | 'lastOccurrence' | 'currentOccurrenceAgenda' | 'occurrenceHistory'>) => Promise<void>;
   updateMeeting: (meetingId: string, data: Partial<RecurringMeeting>) => Promise<void>;
   deleteMeeting: (meetingId: string) => Promise<void>;
-  updateAgendaItemStatus: (meetingId: string, agendaItemId: string, completed: boolean) => Promise<void>;
+  updateAgendaItem: (meetingId: string, agenda: AgendaItem[]) => Promise<void>;
+  markMeetingAsDone: (meeting: RecurringMeeting) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -45,11 +46,12 @@ export const MeetingsProvider = ({ children }: { children: ReactNode }) => {
     fetchMeetings();
   }, [fetchMeetings]);
 
-  const addMeeting = useCallback(async (meetingData: Omit<RecurringMeeting, 'id' | 'lastOccurrence' | 'currentOccurrenceAgenda'>) => {
+  const addMeeting = useCallback(async (meetingData: Omit<RecurringMeeting, 'id' | 'lastOccurrence' | 'currentOccurrenceAgenda' | 'occurrenceHistory'>) => {
     const newMeeting = {
         ...meetingData,
         lastOccurrence: new Date().toISOString().split('T')[0], // Sets today as the first "last occurrence"
-        currentOccurrenceAgenda: meetingData.agenda.map(item => ({ ...item, completed: false })),
+        currentOccurrenceAgenda: meetingData.agenda.map(item => ({ ...item, completed: false, id: item.id || crypto.randomUUID() })),
+        occurrenceHistory: [],
     };
 
     try {
@@ -86,21 +88,40 @@ export const MeetingsProvider = ({ children }: { children: ReactNode }) => {
         throw error;
     }
   }, [fetchMeetings]);
+  
+  const markMeetingAsDone = useCallback(async (meeting: RecurringMeeting) => {
+      if (!meeting.scheduledDate) return;
+      
+      const newHistoryItem: MeetingOccurrence = {
+          executedDate: meeting.scheduledDate,
+          agenda: meeting.currentOccurrenceAgenda
+      };
 
-  const updateAgendaItemStatus = useCallback(async (meetingId: string, agendaItemId: string, completed: boolean) => {
+      const meetingDocRef = doc(db, 'recurringMeetings', meeting.id);
+      try {
+        await updateDoc(meetingDocRef, {
+            lastOccurrence: meeting.scheduledDate,
+            scheduledDate: null,
+            currentOccurrenceAgenda: meeting.agenda.map(item => ({ ...item, completed: false, id: item.id || crypto.randomUUID() })), // Reset agenda for next occurrence
+            occurrenceHistory: arrayUnion(newHistoryItem)
+        });
+        fetchMeetings();
+      } catch (error) {
+        console.error("Error marking meeting as done: ", error);
+      }
+  }, [fetchMeetings]);
+
+
+  const updateAgendaItem = useCallback(async (meetingId: string, agenda: AgendaItem[]) => {
       const meeting = meetings.find(m => m.id === meetingId);
       if (!meeting) return;
 
-      const updatedAgenda = meeting.currentOccurrenceAgenda.map(item => 
-          item.id === agendaItemId ? { ...item, completed } : item
-      );
-
-      await updateMeeting(meetingId, { currentOccurrenceAgenda: updatedAgenda });
+      await updateMeeting(meetingId, { currentOccurrenceAgenda: agenda });
   }, [meetings, updateMeeting]);
 
 
   return (
-    <MeetingsContext.Provider value={{ meetings, addMeeting, updateMeeting, deleteMeeting, updateAgendaItemStatus, isLoading }}>
+    <MeetingsContext.Provider value={{ meetings, addMeeting, updateMeeting, deleteMeeting, updateAgendaItem, markMeetingAsDone, isLoading }}>
       {children}
     </MeetingsContext.Provider>
   );

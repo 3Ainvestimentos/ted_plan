@@ -42,6 +42,14 @@ export interface AgendaItem {
   id: string;
   title: string;
   completed: boolean;
+  action?: string;
+  owner?: string;
+  deadline?: string;
+}
+
+export interface MeetingOccurrence {
+    executedDate: string; // 'YYYY-MM-DD'
+    agenda: AgendaItem[];
 }
 
 export interface RecurringMeeting {
@@ -51,10 +59,11 @@ export interface RecurringMeeting {
     unit: 'dias' | 'semanas' | 'meses';
     value: number;
   };
-  agenda: { id: string; title: string }[]; // Template da pauta
+  agenda: Omit<AgendaItem, 'completed'>[]; // Template da pauta
   lastOccurrence: string; // ISO date string 'YYYY-MM-DD'
   scheduledDate: string | null; // ISO date string 'YYYY-MM-DD', for the current cycle
   currentOccurrenceAgenda: AgendaItem[];
+  occurrenceHistory?: MeetingOccurrence[];
 }
 
 
