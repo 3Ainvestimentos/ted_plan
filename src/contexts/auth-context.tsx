@@ -11,8 +11,6 @@ import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firesto
 import type { MaintenanceSettings } from '@/types';
 
 
-// Lista de e-mails com permissão de administrador
-const ADMIN_EMAILS = ['matheus@3ainvestimentos.com.br'];
 const ALLOWED_DOMAINS = ['3ainvestimentos.com.br'];
 
 
@@ -40,6 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUnderMaintenance, setIsUnderMaintenance] = useState(false);
+  const [adminEmails, setAdminEmails] = useState<string[]>([]);
   const router = useRouter();
   const { toast } = useToast();
   
@@ -47,13 +46,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const provider = new GoogleAuthProvider();
 
   const isAuthenticated = !!user;
-  const isAdmin = user ? ADMIN_EMAILS.includes(user.email || '') : false;
+  const isAdmin = user ? adminEmails.includes(user.email || '') : false;
 
-  const isUserAuthorized = async (email: string): Promise<boolean> => {
+  const isUserAuthorized = async (email: string, currentAdminEmails: string[]): Promise<boolean> => {
     if (!email) return false;
 
     // 1. Admins always have access
-    if (ADMIN_EMAILS.includes(email)) {
+    if (currentAdminEmails.includes(email)) {
         return true;
     }
 
@@ -81,7 +80,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       const maintenanceDocRef = doc(db, 'settings', 'maintenance');
       const maintenanceSnap = await getDoc(maintenanceDocRef);
-      const maintenanceSettings = maintenanceSnap.exists() ? (maintenanceSnap.data() as MaintenanceSettings) : { isEnabled: false, adminEmails: ADMIN_EMAILS };
+      const maintenanceSettings = maintenanceSnap.exists() ? (maintenanceSnap.data() as MaintenanceSettings) : { isEnabled: false, adminEmails: [] };
+      setAdminEmails(maintenanceSettings.adminEmails);
 
       if (firebaseUser && firebaseUser.email) {
         
@@ -96,14 +96,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         setIsUnderMaintenance(false);
-        const isAuthorized = await isUserAuthorized(firebaseUser.email);
+        const isAuthorized = await isUserAuthorized(firebaseUser.email, maintenanceSettings.adminEmails);
 
         if (isAuthorized) {
           const appUser: User = {
             uid: firebaseUser.uid,
             name: firebaseUser.displayName,
             email: firebaseUser.email,
-            role: ADMIN_EMAILS.includes(firebaseUser.email) ? 'PMO' : 'Colaborador',
+            role: maintenanceSettings.adminEmails.includes(firebaseUser.email) ? 'PMO' : 'Colaborador',
           };
           setUser(appUser);
         } else {
