@@ -57,37 +57,37 @@ export function BusinessAreaAccordion({ area }: BusinessAreaAccordionProps) {
                 area={area}
             />
             <AccordionItem value={area.id}>
-                <AccordionTrigger className="hover:no-underline hover:bg-accent/50 px-4 rounded-md">
-                    <div className="flex justify-between items-center w-full">
+                <div className="flex justify-between items-center w-full hover:bg-accent/50 px-4 rounded-md">
+                    <AccordionTrigger className="hover:no-underline flex-grow py-0">
                         <span className="text-lg font-medium">{area.name}</span>
-                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                             <Button variant="ghost" size="sm" onClick={() => setIsEditModalOpen(true)}>
-                                <Edit className="h-4 w-4" />
-                            </Button>
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Esta ação removerá permanentemente a área de negócio e todos os seus OKRs e KPIs associados.
-                                    </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-                                        Remover
-                                    </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </div>
+                    </AccordionTrigger>
+                    <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => setIsEditModalOpen(true)}>
+                            <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Esta ação removerá permanentemente a área de negócio e todos os seus OKRs e KPIs associados.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                                    Remover
+                                </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     </div>
-                </AccordionTrigger>
+                </div>
                 <AccordionContent className="p-4 space-y-8">
                    <section>
                         <h4 className="text-xl font-semibold mb-4">Objetivos e Resultados-Chave (OKRs)</h4>
