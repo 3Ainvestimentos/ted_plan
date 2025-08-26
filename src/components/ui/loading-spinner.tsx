@@ -5,10 +5,11 @@ import { cn } from '@/lib/utils';
 export function LoadingSpinner({ className }: { className?: string }) {
   return (
     <svg 
-      className={cn("animate-spin h-10 w-10 text-primary", className)} 
+      className={cn("animate-spin h-10 w-10", className)} 
       xmlns="http://www.w3.org/2000/svg" 
       fill="none" 
       viewBox="0 0 24 24"
+      style={{ color: 'hsl(30 39% 46%)' }}
     >
       <circle 
         className="opacity-25" 
