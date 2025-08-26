@@ -76,9 +76,7 @@ export interface RecurringMeeting {
 
 export interface KpiSeriesData {
     month: string; 
-    Previsto: number; 
-    Realizado: number; 
-    Projetado: number;
+    Realizado: number | null;
 }
 
 // Types for Strategic Panel
@@ -87,6 +85,7 @@ export interface Kpi {
     areaId: string;
     name: string;
     unit: string;
+    targetValue: number;
     series: KpiSeriesData[];
     startDate?: string;
     endDate?: string;

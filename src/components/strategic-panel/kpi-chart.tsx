@@ -3,24 +3,21 @@
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { ChartContainer, ChartTooltipContent, ChartConfig, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
+import type { KpiSeriesData } from "@/types";
 
 const chartConfig = {
-  Previsto: {
-    label: "Previsto",
+  Meta: {
+    label: "Meta",
     color: "hsl(var(--chart-2))",
   },
   Realizado: {
     label: "Realizado",
     color: "hsl(var(--chart-1))",
   },
-  Projetado: {
-    label: "Projetado",
-    color: "hsl(var(--chart-3))",
-  },
 } satisfies ChartConfig;
 
 interface KpiChartProps {
-  data: { month: string; Previsto: number; Realizado: number; Projetado: number; }[];
+  data: (KpiSeriesData & { Meta: number | null })[];
   unit?: string;
 }
 
@@ -84,9 +81,8 @@ export function KpiChart({ data, unit }: KpiChartProps) {
                         }
                     />
                      <ChartLegend content={<ChartLegendContent />} />
-                    <Line type="monotone" dataKey="Previsto" stroke="var(--color-Previsto)" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="Realizado" stroke="var(--color-Realizado)" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="Projetado" stroke="var(--color-Projetado)" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                    <Line type="monotone" dataKey="Meta" stroke="var(--color-Meta)" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                    <Line type="monotone" dataKey="Realizado" stroke="var(--color-Realizado)" strokeWidth={2} dot={false} connectNulls />
                 </LineChart>
             </ResponsiveContainer>
         </ChartContainer>

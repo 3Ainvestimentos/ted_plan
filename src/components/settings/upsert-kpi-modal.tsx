@@ -24,14 +24,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 
 const seriesSchema = z.object({
   month: z.string(),
-  Previsto: z.number(),
-  Realizado: z.number(),
-  Projetado: z.number(),
+  Realizado: z.number().nullable(),
 });
 
 const formSchema = z.object({
   name: z.string().min(5, "O nome do KPI deve ter pelo menos 5 caracteres."),
   unit: z.enum(['R$', '%', 'unidades']),
+  targetValue: z.number().min(0, "A meta deve ser um valor positivo."),
   startDate: z.date().optional(),
   endDate: z.date().optional(),
   series: z.array(seriesSchema),
@@ -48,9 +47,7 @@ interface UpsertKpiModalProps {
 
 const defaultSeries: KpiSeriesData[] = Array.from({ length: 12 }, (_, i) => ({
     month: new Date(0, i).toLocaleString('default', { month: 'short' }),
-    Previsto: 0,
-    Realizado: 0,
-    Projetado: 0,
+    Realizado: null,
 }));
 
 
@@ -65,6 +62,7 @@ export function UpsertKpiModal({ isOpen, onOpenChange, areaId, kpi }: UpsertKpiM
         defaultValues: {
             name: '',
             unit: 'R$',
+            targetValue: 0,
             series: defaultSeries,
         }
     });
@@ -80,14 +78,16 @@ export function UpsertKpiModal({ isOpen, onOpenChange, areaId, kpi }: UpsertKpiM
                 reset({
                     name: kpi.name,
                     unit: kpi.unit as any,
+                    targetValue: kpi.targetValue,
                     startDate: kpi.startDate ? new Date(kpi.startDate) : undefined,
                     endDate: kpi.endDate ? new Date(kpi.endDate) : undefined,
-                    series: kpi.series && kpi.series.length === 12 ? kpi.series : defaultSeries,
+                    series: kpi.series && kpi.series.length === 12 ? kpi.series.map(s => ({...s, Realizado: s.Realizado ?? null})) : defaultSeries,
                 });
             } else {
                 reset({
                     name: '',
                     unit: 'R$',
+                    targetValue: 0,
                     startDate: undefined,
                     endDate: undefined,
                     series: defaultSeries,
@@ -99,15 +99,13 @@ export function UpsertKpiModal({ isOpen, onOpenChange, areaId, kpi }: UpsertKpiM
     const onSubmit = async (data: UpsertKpiFormData) => {
         setIsLoading(true);
 
-        const dataToSave = {
+        const dataToSave: KpiFormData = {
             ...data,
             startDate: data.startDate?.toISOString().split('T')[0],
             endDate: data.endDate?.toISOString().split('T')[0],
             series: data.series.map(s => ({
                 ...s,
-                Previsto: Number(s.Previsto),
-                Realizado: Number(s.Realizado),
-                Projetado: Number(s.Projetado),
+                Realizado: s.Realizado === null ? null : Number(s.Realizado),
             }))
         };
 
@@ -116,7 +114,7 @@ export function UpsertKpiModal({ isOpen, onOpenChange, areaId, kpi }: UpsertKpiM
                 await updateKpi(kpi.id, dataToSave);
                 toast({ title: "KPI Atualizado!", description: `O KPI "${data.name}" foi atualizado.` });
             } else {
-                await addKpi(areaId, dataToSave as KpiFormData);
+                await addKpi(areaId, dataToSave);
                 toast({ title: "KPI Adicionado!", description: `O KPI "${data.name}" foi criado.` });
             }
             onOpenChange(false);
@@ -137,14 +135,14 @@ export function UpsertKpiModal({ isOpen, onOpenChange, areaId, kpi }: UpsertKpiM
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2 md:col-span-2">
                             <Label htmlFor="name">Nome do KPI</Label>
                             <Input id="name" {...register("name")} />
                             {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="unit">Unidade de Medida</Label>
+                         <div className="space-y-2">
+                            <Label htmlFor="unit">Unidade</Label>
                             <Controller
                                 name="unit"
                                 control={control}
@@ -163,6 +161,8 @@ export function UpsertKpiModal({ isOpen, onOpenChange, areaId, kpi }: UpsertKpiM
                             />
                             {errors.unit && <p className="text-sm text-destructive">{errors.unit.message}</p>}
                         </div>
+                    </div>
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                          <div className="space-y-2">
                             <Label>Prazo de Início</Label>
                              <Controller
@@ -199,27 +199,34 @@ export function UpsertKpiModal({ isOpen, onOpenChange, areaId, kpi }: UpsertKpiM
                                 )}
                             />
                         </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="targetValue">Meta (Valor Final)</Label>
+                             <Input id="targetValue" type="number" {...register("targetValue", { valueAsNumber: true })} />
+                            {errors.targetValue && <p className="text-sm text-destructive">{errors.targetValue.message}</p>}
+                        </div>
                     </div>
                     
                     <div className="space-y-2">
-                        <Label>Valores Mensais</Label>
+                        <Label>Valores Mensais Realizados</Label>
                         <div className="rounded-md border">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[100px]">Mês</TableHead>
-                                        <TableHead>Previsto</TableHead>
-                                        <TableHead>Realizado</TableHead>
-                                        <TableHead>Projetado</TableHead>
+                                        <TableHead className="w-1/2">Mês</TableHead>
+                                        <TableHead className="w-1/2">Realizado</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {fields.map((field, index) => (
                                         <TableRow key={field.id}>
                                             <TableCell className="font-medium">{field.month}</TableCell>
-                                            <TableCell><Input type="number" {...register(`series.${index}.Previsto` as const)} /></TableCell>
-                                            <TableCell><Input type="number" {...register(`series.${index}.Realizado` as const)} /></TableCell>
-                                            <TableCell><Input type="number" {...register(`series.${index}.Projetado` as const)} /></TableCell>
+                                            <TableCell>
+                                                <Input 
+                                                    type="number" 
+                                                    {...register(`series.${index}.Realizado` as const, { valueAsNumber: true })}
+                                                    placeholder="-"
+                                                />
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>

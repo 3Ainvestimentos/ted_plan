@@ -88,8 +88,14 @@ export default function StrategicPanelPage() {
                             <section>
                                 <h2 className="font-headline text-2xl font-semibold mb-4 text-foreground/90">Indicadores Chave de Performance (KPIs)</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {area.kpis.map(kpi => (
-                                        <Card key={kpi.name} className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
+                                    {area.kpis.map(kpi => {
+                                        const chartData = kpi.series.map(seriesItem => ({
+                                            ...seriesItem,
+                                            Meta: kpi.targetValue,
+                                        }));
+
+                                        return (
+                                        <Card key={kpi.id} className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
                                             <CardHeader>
                                                 <CardTitle className="font-headline text-lg flex items-center gap-2">
                                                    <TrendingUp className="w-5 h-5 text-primary" />
@@ -97,10 +103,10 @@ export default function StrategicPanelPage() {
                                                 </CardTitle>
                                             </CardHeader>
                                             <CardContent className="flex-grow">
-                                                <KpiChart data={kpi.series} unit={kpi.unit} />
+                                                <KpiChart data={chartData} unit={kpi.unit} />
                                             </CardContent>
                                         </Card>
-                                    ))}
+                                    )})}
                                 </div>
                             </section>
                             
@@ -115,7 +121,7 @@ export default function StrategicPanelPage() {
                                     </CardHeader>
                                     <CardContent className="space-y-4">
                                         {area.okrs.map(okr => (
-                                            <div key={okr.name}>
+                                            <div key={okr.id}>
                                                 <div className="flex justify-between items-center mb-1">
                                                     <p className="text-sm font-body font-medium text-foreground/90">{okr.name}</p>
                                                     <div className="flex items-center gap-2">
