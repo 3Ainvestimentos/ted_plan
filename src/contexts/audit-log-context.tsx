@@ -21,8 +21,7 @@ export const AuditLogProvider = ({ children }: { children: ReactNode }) => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
-  const auditLogsCollectionRef = collection(db, 'auditLogs');
-
+  
   const getLogsCount = useCallback(async (options: { filterType?: string, filterStartDate?: Date | null, filterEndDate?: Date | null } = {}) => {
       const { filterType, filterStartDate, filterEndDate } = options;
       let constraints = [];
@@ -30,10 +29,10 @@ export const AuditLogProvider = ({ children }: { children: ReactNode }) => {
       if(filterStartDate) constraints.push(where('timestamp', '>=', Timestamp.fromDate(filterStartDate)));
       if(filterEndDate) constraints.push(where('timestamp', '<=', Timestamp.fromDate(filterEndDate)));
       
-      const q = query(auditLogsCollectionRef, ...constraints);
+      const q = query(collection(db, 'auditLogs'), ...constraints);
       const snapshot = await getCountFromServer(q);
       return snapshot.data().count;
-  }, [auditLogsCollectionRef]);
+  }, []);
 
 
   const fetchLogs = useCallback(async (options: { lastVisible?: any, pageLimit?: number, filterType?: string, filterStartDate?: Date | null, filterEndDate?: Date | null } = {}) => {
@@ -48,6 +47,7 @@ export const AuditLogProvider = ({ children }: { children: ReactNode }) => {
     if(lastVisible) constraints.push(startAfter(lastVisible));
     
     try {
+      const auditLogsCollectionRef = collection(db, 'auditLogs');
       const q = query(auditLogsCollectionRef, ...constraints as any);
       const querySnapshot = await getDocs(q);
       const logsData = querySnapshot.docs.map(doc => ({
@@ -63,7 +63,7 @@ export const AuditLogProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [auditLogsCollectionRef]);
+  }, []);
 
   const logActivity = useCallback(async (event: AuditLogEvent, details: string) => {
     if (!user) return; // Don't log if user is not authenticated
@@ -77,11 +77,11 @@ export const AuditLogProvider = ({ children }: { children: ReactNode }) => {
     };
 
     try {
-      await addDoc(auditLogsCollectionRef, newLog);
+      await addDoc(collection(db, 'auditLogs'), newLog);
     } catch (error) {
       console.error("Error logging activity: ", error);
     }
-  }, [user, auditLogsCollectionRef]);
+  }, [user]);
 
   // Initial fetch is now handled by the component itself
   useEffect(() => {
