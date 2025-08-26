@@ -18,8 +18,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
+import { format, eachMonthOfInterval, startOfMonth, endOfMonth, isValid } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
+import { ptBR } from 'date-fns/locale';
 
 
 const seriesSchema = z.object({
@@ -31,9 +32,12 @@ const formSchema = z.object({
   name: z.string().min(5, "O nome do KPI deve ter pelo menos 5 caracteres."),
   unit: z.enum(['R$', '%', 'unidades']),
   targetValue: z.number().min(0, "A meta deve ser um valor positivo."),
-  startDate: z.date().optional(),
-  endDate: z.date().optional(),
+  startDate: z.date({ required_error: "A data de início é obrigatória."}),
+  endDate: z.date({ required_error: "A data de fim é obrigatória."}),
   series: z.array(seriesSchema),
+}).refine(data => data.endDate >= data.startDate, {
+    message: "A data de fim deve ser posterior à data de início.",
+    path: ["endDate"],
 });
 
 type UpsertKpiFormData = z.infer<typeof formSchema>;
@@ -45,43 +49,35 @@ interface UpsertKpiModalProps {
     kpi?: Kpi | null;
 }
 
-const defaultSeries: KpiSeriesData[] = Array.from({ length: 12 }, (_, i) => ({
-    month: new Date(0, i).toLocaleString('default', { month: 'short' }),
-    Realizado: null,
-}));
-
-
 export function UpsertKpiModal({ isOpen, onOpenChange, areaId, kpi }: UpsertKpiModalProps) {
     const { addKpi, updateKpi } = useStrategicPanel();
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const isEditing = !!kpi;
 
-    const { register, handleSubmit, reset, control, formState: { errors } } = useForm<UpsertKpiFormData>({
+    const { register, handleSubmit, reset, control, watch, setValue, formState: { errors } } = useForm<UpsertKpiFormData>({
         resolver: zodResolver(formSchema),
-        defaultValues: {
-            name: '',
-            unit: 'R$',
-            targetValue: 0,
-            series: defaultSeries,
-        }
     });
-
-    const { fields } = useFieldArray({
+    
+    const { fields, replace } = useFieldArray({
         control,
         name: "series"
     });
+    
+    const startDate = watch('startDate');
+    const endDate = watch('endDate');
+    const currentSeries = watch('series');
 
     useEffect(() => {
         if (isOpen) {
-            if (kpi) {
+             if (kpi) {
                 reset({
                     name: kpi.name,
                     unit: kpi.unit as any,
                     targetValue: kpi.targetValue,
                     startDate: kpi.startDate ? new Date(kpi.startDate) : undefined,
                     endDate: kpi.endDate ? new Date(kpi.endDate) : undefined,
-                    series: kpi.series && kpi.series.length === 12 ? kpi.series.map(s => ({...s, Realizado: s.Realizado ?? null})) : defaultSeries,
+                    series: kpi.series,
                 });
             } else {
                 reset({
@@ -90,11 +86,32 @@ export function UpsertKpiModal({ isOpen, onOpenChange, areaId, kpi }: UpsertKpiM
                     targetValue: 0,
                     startDate: undefined,
                     endDate: undefined,
-                    series: defaultSeries,
+                    series: [],
                 });
             }
         }
     }, [kpi, reset, isOpen]);
+
+    useEffect(() => {
+        if (startDate && endDate && isValid(startDate) && isValid(endDate) && endDate >= startDate) {
+            const intervalMonths = eachMonthOfInterval({
+                start: startOfMonth(startDate),
+                end: endOfMonth(endDate)
+            });
+
+            const newSeries = intervalMonths.map(monthDate => {
+                const monthStr = format(monthDate, 'MMM', { locale: ptBR });
+                const existingMonth = currentSeries.find(s => s.month === monthStr);
+                return {
+                    month: monthStr,
+                    Realizado: existingMonth ? existingMonth.Realizado : null
+                };
+            });
+            replace(newSeries);
+        } else {
+            replace([]);
+        }
+    }, [startDate, endDate, replace]);
     
     const onSubmit = async (data: UpsertKpiFormData) => {
         setIsLoading(true);
@@ -105,7 +122,7 @@ export function UpsertKpiModal({ isOpen, onOpenChange, areaId, kpi }: UpsertKpiM
             endDate: data.endDate?.toISOString().split('T')[0],
             series: data.series.map(s => ({
                 ...s,
-                Realizado: s.Realizado === null ? null : Number(s.Realizado),
+                Realizado: s.Realizado === null || s.Realizado === undefined ? null : Number(s.Realizado),
             }))
         };
 
@@ -180,6 +197,7 @@ export function UpsertKpiModal({ isOpen, onOpenChange, areaId, kpi }: UpsertKpiM
                                 </Popover>
                                 )}
                             />
+                             {errors.startDate && <p className="text-sm text-destructive">{errors.startDate.message}</p>}
                         </div>
                         <div className="space-y-2">
                             <Label>Prazo de Fim</Label>
@@ -198,6 +216,7 @@ export function UpsertKpiModal({ isOpen, onOpenChange, areaId, kpi }: UpsertKpiM
                                 </Popover>
                                 )}
                             />
+                            {errors.endDate && <p className="text-sm text-destructive">{errors.endDate.message}</p>}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="targetValue">Meta (Valor Final)</Label>
@@ -208,7 +227,8 @@ export function UpsertKpiModal({ isOpen, onOpenChange, areaId, kpi }: UpsertKpiM
                     
                     <div className="space-y-2">
                         <Label>Valores Mensais Realizados</Label>
-                        <div className="rounded-md border">
+                        {fields.length > 0 ? (
+                        <div className="rounded-md border max-h-60 overflow-y-auto">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -219,11 +239,12 @@ export function UpsertKpiModal({ isOpen, onOpenChange, areaId, kpi }: UpsertKpiM
                                 <TableBody>
                                     {fields.map((field, index) => (
                                         <TableRow key={field.id}>
-                                            <TableCell className="font-medium">{field.month}</TableCell>
+                                            <TableCell className="font-medium capitalize">{field.month}</TableCell>
                                             <TableCell>
                                                 <Input 
                                                     type="number" 
-                                                    {...register(`series.${index}.Realizado` as const, { valueAsNumber: true })}
+                                                    step="any"
+                                                    {...register(`series.${index}.Realizado` as const, { setValueAs: v => (v === '' || v === null) ? null : Number(v) })}
                                                     placeholder="-"
                                                 />
                                             </TableCell>
@@ -232,6 +253,11 @@ export function UpsertKpiModal({ isOpen, onOpenChange, areaId, kpi }: UpsertKpiM
                                 </TableBody>
                             </Table>
                         </div>
+                        ) : (
+                            <div className="text-sm text-muted-foreground text-center py-4 border border-dashed rounded-md">
+                                Selecione um período de início e fim para inserir os valores.
+                            </div>
+                        )}
                     </div>
 
 
