@@ -74,6 +74,12 @@ export interface RecurringMeeting {
   occurrenceHistory?: MeetingOccurrence[];
 }
 
+export interface KpiSeriesData {
+    month: string; 
+    Previsto: number; 
+    Realizado: number; 
+    Projetado: number;
+}
 
 // Types for Strategic Panel
 export interface Kpi {
@@ -81,7 +87,9 @@ export interface Kpi {
     areaId: string;
     name: string;
     unit: string;
-    series: { month: string; Previsto: number; Realizado: number; Projetado: number; }[];
+    series: KpiSeriesData[];
+    startDate?: string;
+    endDate?: string;
 }
 
 export interface Okr {
@@ -111,7 +119,7 @@ export interface Collaborator {
 // Form data types for Strategic Panel Management
 export type BusinessAreaFormData = Omit<BusinessArea, 'id' | 'okrs' | 'kpis'>;
 export type OkrFormData = Omit<Okr, 'id' | 'areaId'>;
-export type KpiFormData = Omit<Kpi, 'id' | 'areaId' | 'series'>;
+export type KpiFormData = Omit<Kpi, 'id' | 'areaId'>;
 
 // Types for Audit Log
 export type AuditLogEvent = 'login' | 'logout' | 'view_page' | 'create_initiative' | 'update_initiative';

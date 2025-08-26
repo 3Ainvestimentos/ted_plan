@@ -18,7 +18,7 @@ interface StrategicPanelContextType {
   updateOkr: (okrId: string, okrData: OkrFormData) => Promise<void>;
   deleteOkr: (okrId: string) => Promise<void>;
   addKpi: (areaId: string, kpiData: KpiFormData) => Promise<void>;
-  updateKpi: (kpiId: string, kpiData: KpiFormData) => Promise<void>;
+  updateKpi: (kpiId: string, kpiData: Partial<KpiFormData>) => Promise<void>;
   deleteKpi: (kpiId: string) => Promise<void>;
 }
 
@@ -119,19 +119,13 @@ export const StrategicPanelProvider = ({ children }: { children: ReactNode }) =>
 
   const addKpi = async (areaId: string, kpiData: KpiFormData) => {
       try {
-          const defaultSeries = Array.from({ length: 12 }, (_, i) => ({
-                month: new Date(0, i).toLocaleString('default', { month: 'short' }),
-                Previsto: 0,
-                Realizado: 0,
-                Projetado: 0,
-            }));
-          const dataToSave = { ...kpiData, series: defaultSeries, areaId };
+          const dataToSave = { ...kpiData, areaId };
           await addDoc(collection(db, 'kpis'), dataToSave);
           await fetchPanelData();
       } catch (e) { console.error("Error adding KPI: ", e); }
   }
 
-  const updateKpi = async (kpiId: string, kpiData: KpiFormData) => {
+  const updateKpi = async (kpiId: string, kpiData: Partial<KpiFormData>) => {
        try {
           await updateDoc(doc(db, 'kpis', kpiId), kpiData as any);
           await fetchPanelData();
