@@ -91,7 +91,7 @@ export default function StrategicPanelPage() {
                                 <h2 className="font-headline text-2xl font-semibold mb-4 text-foreground/90">Indicadores Chave de Performance (KPIs)</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {area.kpis.map(kpi => {
-                                         const chartData = kpi.series.map(seriesItem => ({
+                                        const chartData = kpi.series.map(seriesItem => ({
                                             ...seriesItem,
                                             Meta: kpi.targetValue,
                                         }));
