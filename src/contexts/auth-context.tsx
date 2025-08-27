@@ -11,9 +11,6 @@ import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firesto
 import type { MaintenanceSettings } from '@/types';
 
 
-const ALLOWED_DOMAINS = ['3ainvestimentos.com.br'];
-
-
 interface User {
   uid: string;
   name: string | null;
@@ -55,14 +52,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (currentAdminEmails.includes(email)) {
         return true;
     }
-
-    // 2. Check for allowed domains
-    const domain = email.split('@')[1];
-    if (ALLOWED_DOMAINS.includes(domain)) {
-        return true;
-    }
     
-    // 3. Check for individual email in collaborators list (as an exception)
+    // 2. Check for individual email in collaborators list
     try {
         const collaboratorsRef = collection(db, 'collaborators');
         const q = query(collaboratorsRef, where('email', '==', email));
