@@ -228,36 +228,40 @@ const adminModules = [
         title: "Permissões de Acesso",
         description: "Controle quais seções cada colaborador pode visualizar.",
         icon: GanttChartSquare,
-        component: <PermissionsTabContent />
+        component: <PermissionsTabContent />,
+        disabled: false,
     },
     {
         name: "collaborators",
         title: "Colaboradores",
         description: "Adicione, edite ou importe a lista de colaboradores da plataforma.",
         icon: Users,
-        component: <CollaboratorsTabContent />
+        component: <CollaboratorsTabContent />,
+        disabled: false,
     },
     {
         name: "content",
         title: "Conteúdo e Metas",
         description: "O painel para gerenciar áreas de negócio, OKRs e KPIs que alimentam o Painel Estratégico será implementado aqui.",
         icon: BarChart2,
-        component: <ContentGoalsTabContent />
+        component: <ContentGoalsTabContent />,
+        disabled: false,
     },
     {
         name: "audit",
         title: "Painel de Auditoria",
         description: "Os relatórios de auditoria, com análise de logins e visualização de conteúdos, estarão disponíveis nesta seção.",
         icon: History,
-        component: <AuditLogTabContent />
+        component: <AuditLogTabContent />,
+        disabled: true, // Temporarily disable
     },
     {
         name: "maintenance",
         title: "Modo Manutenção",
         description: "A ferramenta para ativar o modo de manutenção e gerenciar o acesso de usuários autorizados será implementada aqui.",
         icon: HardHat,
-        component: <MaintenanceModeTabContent />
-
+        component: <MaintenanceModeTabContent />,
+        disabled: false,
     }
 ];
 
@@ -269,10 +273,10 @@ export default function SettingsHubPage() {
             description="Gerencie os módulos e configurações da plataforma em um local central."
         />
 
-        <Tabs defaultValue="audit" className="w-full">
+        <Tabs defaultValue="collaborators" className="w-full">
             <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 h-auto">
                  {adminModules.map((mod) => (
-                    <TabsTrigger key={mod.name} value={mod.name} className="py-2 flex-col h-auto">
+                    <TabsTrigger key={mod.name} value={mod.name} className="py-2 flex-col h-auto" disabled={mod.disabled}>
                         <span>{mod.title}</span>
                     </TabsTrigger>
                  ))}

@@ -103,6 +103,9 @@ export const AuditLogProvider = ({ children }: { children: ReactNode }) => {
   const getLoginSummary = useCallback(async (): Promise<UserAuditSummaryData[]> => {
     setIsLoadingSummary(true);
     try {
+        // Temporarily return empty array to avoid the query error
+        return [];
+        /*
         const loginLogsQuery = query(
             collection(db, 'auditLogs'),
             where('event', '==', 'login'),
@@ -133,6 +136,7 @@ export const AuditLogProvider = ({ children }: { children: ReactNode }) => {
             userEmail,
             ...data
         })).sort((a, b) => b.lastLogin.getTime() - a.lastLogin.getTime());
+        */
 
     } catch (error) {
         console.error("Error fetching login summary: ", error);
