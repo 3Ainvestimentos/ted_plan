@@ -5,14 +5,15 @@
 import { useStrategicPanel } from "@/contexts/strategic-panel-context";
 import { Accordion } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Briefcase } from "lucide-react";
+import { PlusCircle, Briefcase, GripVertical } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { BusinessAreaAccordion } from "./business-area-accordion";
 import { useState } from "react";
 import { UpsertBusinessAreaModal } from "./upsert-business-area-modal";
+import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 
 export function BusinessAreasManager() {
-    const { businessAreas, isLoading } = useStrategicPanel();
+    const { businessAreas, isLoading, updateBusinessAreasOrder } = useStrategicPanel();
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     if (isLoading) {
@@ -25,6 +26,24 @@ export function BusinessAreasManager() {
         )
     }
 
+    const onDragEnd = (result: DropResult) => {
+        const { destination, source } = result;
+
+        if (!destination) {
+            return;
+        }
+
+        if (destination.droppableId === source.droppableId && destination.index === source.index) {
+            return;
+        }
+
+        const newBusinessAreas = Array.from(businessAreas);
+        const [reorderedItem] = newBusinessAreas.splice(source.index, 1);
+        newBusinessAreas.splice(destination.index, 0, reorderedItem);
+
+        updateBusinessAreasOrder(newBusinessAreas);
+    };
+
     return (
         <>
             <UpsertBusinessAreaModal isOpen={isModalOpen} onOpenChange={setIsModalOpen} />
@@ -35,11 +54,29 @@ export function BusinessAreasManager() {
             </div>
             
             {businessAreas.length > 0 ? (
-                <Accordion type="single" collapsible className="w-full">
-                    {businessAreas.map(area => (
-                        <BusinessAreaAccordion key={area.id} area={area} />
-                    ))}
-                </Accordion>
+                 <DragDropContext onDragEnd={onDragEnd}>
+                    <Droppable droppableId="business-areas">
+                        {(provided) => (
+                            <div {...provided.droppableProps} ref={provided.innerRef}>
+                                <Accordion type="single" collapsible className="w-full space-y-2">
+                                    {businessAreas.map((area, index) => (
+                                         <Draggable key={area.id} draggableId={area.id} index={index}>
+                                            {(provided) => (
+                                                <div ref={provided.innerRef} {...provided.draggableProps}>
+                                                    <BusinessAreaAccordion 
+                                                        area={area}
+                                                        dragHandleProps={provided.dragHandleProps}
+                                                    />
+                                                </div>
+                                            )}
+                                        </Draggable>
+                                    ))}
+                                    {provided.placeholder}
+                                </Accordion>
+                            </div>
+                        )}
+                    </Droppable>
+                </DragDropContext>
             ) : (
                 <div className="flex flex-col items-center justify-center text-center p-12 border-2 border-dashed rounded-lg text-muted-foreground">
                     <Briefcase className="h-12 w-12 mb-4" />

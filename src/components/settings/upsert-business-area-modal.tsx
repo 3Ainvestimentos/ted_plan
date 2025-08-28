@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "../ui/loading-spinner";
 import { useStrategicPanel } from "@/contexts/strategic-panel-context";
 import { useToast } from "@/hooks/use-toast";
-import type { BusinessArea, BusinessAreaFormData } from "@/types";
+import type { BusinessArea } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { DollarSign, Target, Briefcase } from "lucide-react";
 
@@ -28,6 +28,8 @@ const formSchema = z.object({
   icon: z.string().min(1, "A seleção de um ícone é obrigatória."),
 });
 
+type BusinessAreaModalFormData = z.infer<typeof formSchema>;
+
 interface UpsertBusinessAreaModalProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
@@ -40,7 +42,7 @@ export function UpsertBusinessAreaModal({ isOpen, onOpenChange, area }: UpsertBu
     const [isLoading, setIsLoading] = useState(false);
     const isEditing = !!area;
 
-    const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<BusinessAreaFormData>({
+    const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<BusinessAreaModalFormData>({
         resolver: zodResolver(formSchema),
     });
 
@@ -52,11 +54,11 @@ export function UpsertBusinessAreaModal({ isOpen, onOpenChange, area }: UpsertBu
         }
     }, [area, reset, isOpen]);
     
-    const onSubmit = async (data: BusinessAreaFormData) => {
+    const onSubmit = async (data: BusinessAreaModalFormData) => {
         setIsLoading(true);
         try {
             if (isEditing && area) {
-                await updateBusinessArea(area.id, data);
+                await updateBusinessArea(area.id, {...area, ...data });
                 toast({ title: "Área Atualizada!", description: `A área "${data.name}" foi atualizada.` });
             } else {
                 await addBusinessArea(data);

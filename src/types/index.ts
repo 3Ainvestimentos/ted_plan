@@ -103,6 +103,7 @@ export interface BusinessArea {
     id: string;
     name: string;
     icon: string; // Name of the lucide-react icon
+    order: number;
     okrs: Okr[];
     kpis: Kpi[];
 }

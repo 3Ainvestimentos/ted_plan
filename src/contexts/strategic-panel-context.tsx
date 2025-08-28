@@ -5,7 +5,7 @@
 import type { BusinessArea, Okr, Kpi, BusinessAreaFormData, OkrFormData, KpiFormData } from '@/types';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, writeBatch, query, where } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, writeBatch, query, where, orderBy } from 'firebase/firestore';
 
 interface StrategicPanelContextType {
   businessAreas: BusinessArea[];
@@ -14,6 +14,7 @@ interface StrategicPanelContextType {
   addBusinessArea: (areaData: BusinessAreaFormData) => Promise<string | undefined>;
   updateBusinessArea: (areaId: string, areaData: BusinessAreaFormData) => Promise<void>;
   deleteBusinessArea: (areaId: string) => Promise<void>;
+  updateBusinessAreasOrder: (reorderedAreas: BusinessArea[]) => Promise<void>;
   addOkr: (areaId: string, okrData: OkrFormData) => Promise<void>;
   updateOkr: (okrId: string, okrData: OkrFormData) => Promise<void>;
   deleteOkr: (okrId: string) => Promise<void>;
@@ -31,7 +32,8 @@ export const StrategicPanelProvider = ({ children }: { children: ReactNode }) =>
   const fetchPanelData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const areasSnapshot = await getDocs(collection(db, 'businessAreas'));
+      const areasQuery = query(collection(db, 'businessAreas'), orderBy('order'));
+      const areasSnapshot = await getDocs(areasQuery);
       const areasData = areasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BusinessArea));
 
       const okrsSnapshot = await getDocs(collection(db, 'okrs'));
@@ -59,9 +61,11 @@ export const StrategicPanelProvider = ({ children }: { children: ReactNode }) =>
   }, [fetchPanelData]);
   
   // CRUD functions
-  const addBusinessArea = async (areaData: BusinessAreaFormData) => {
+  const addBusinessArea = async (areaData: Omit<BusinessAreaFormData, 'order'>) => {
       try {
-          const docRef = await addDoc(collection(db, 'businessAreas'), areaData);
+          const newOrder = businessAreas.length;
+          const dataToSave = { ...areaData, order: newOrder };
+          const docRef = await addDoc(collection(db, 'businessAreas'), dataToSave);
           await fetchPanelData();
           return docRef.id;
       } catch (e) { console.error("Error adding document: ", e); }
@@ -73,6 +77,22 @@ export const StrategicPanelProvider = ({ children }: { children: ReactNode }) =>
           await fetchPanelData();
       } catch (e) { console.error("Error updating document: ", e); }
   }
+
+  const updateBusinessAreasOrder = async (reorderedAreas: BusinessArea[]) => {
+    setBusinessAreas(reorderedAreas); // Optimistic update
+    const batch = writeBatch(db);
+    reorderedAreas.forEach((area, index) => {
+        const docRef = doc(db, 'businessAreas', area.id);
+        batch.update(docRef, { order: index });
+    });
+    try {
+        await batch.commit();
+        // No need to fetch, state is already updated
+    } catch (error) {
+        console.error("Failed to update order", error);
+        fetchPanelData(); // Revert on failure
+    }
+  };
 
   const deleteBusinessArea = async (areaId: string) => {
       try {
@@ -147,6 +167,7 @@ export const StrategicPanelProvider = ({ children }: { children: ReactNode }) =>
         addBusinessArea,
         updateBusinessArea,
         deleteBusinessArea,
+        updateBusinessAreasOrder,
         addOkr,
         updateOkr,
         deleteOkr,
