@@ -96,9 +96,11 @@ export interface Okr {
     areaId: string;
     name: string;
     progress: number;
-    previousProgress: number; // Progress from last month
-    deadline: string | null; // 'YYYY-MM-DD'
+    previousProgress: number;
+    deadline: string | null;
     status: 'Em Dia' | 'Em Risco' | 'Concluído';
+    lastUpdate: string | null;
+    previousUpdate: string | null;
 }
 
 export interface BusinessArea {

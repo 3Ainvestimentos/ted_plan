@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DollarSign, Target, Briefcase, ListChecks, TrendingUp, TrendingDown, Minus, CalendarDays, ArrowRight } from 'lucide-react';
+import { DollarSign, Target, Briefcase, ListChecks, TrendingUp, TrendingDown, Minus, CalendarDays, ArrowRight, History } from 'lucide-react';
 import { KpiChart } from '@/components/strategic-panel/kpi-chart';
 import { useStrategicPanel } from '@/contexts/strategic-panel-context';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,6 +14,7 @@ import type { BusinessArea, KpiSeriesData, Okr } from '@/types';
 import { eachMonthOfInterval, startOfMonth, endOfMonth, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 // Map icon names from Firestore to Lucide components
@@ -45,6 +46,9 @@ function PanelSkeleton() {
 }
 
 const TrendIndicator = ({ okr }: { okr: Okr }) => {
+    if (!okr.previousUpdate) {
+         return <Minus className="w-4 h-4 text-gray-500" />;
+    }
     const progressChange = okr.progress - (okr.previousProgress || 0);
 
     if (progressChange > 0) {
@@ -129,6 +133,7 @@ export default function StrategicPanelPage() {
                             </section>
                             
                             <section>
+                                 <TooltipProvider>
                                 <Card className="shadow-lg">
                                     <CardHeader>
                                         <CardTitle className="text-lg flex items-center gap-2">
@@ -155,16 +160,34 @@ export default function StrategicPanelPage() {
                                                     </div>
                                                 </div>
                                                 <Progress value={okr.progress} className="h-2" aria-label={okr.name} />
-                                                {okr.deadline && (
-                                                    <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                                                        <CalendarDays className="w-3 h-3" />
-                                                        <span>Prazo: {format(new Date(okr.deadline), 'dd/MM/yyyy', { timeZone: 'UTC' })}</span>
-                                                    </div>
-                                                )}
+                                                <div className="text-xs text-muted-foreground mt-1 flex items-center justify-between">
+                                                    {okr.deadline && (
+                                                        <div className="flex items-center gap-1">
+                                                            <CalendarDays className="w-3 h-3" />
+                                                            <span>Prazo: {format(new Date(okr.deadline), 'dd/MM/yyyy', { timeZone: 'UTC' })}</span>
+                                                        </div>
+                                                    )}
+                                                    {okr.lastUpdate && (
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <div className="flex items-center gap-1 cursor-help">
+                                                                    <History className="w-3 h-3"/>
+                                                                    <span>Atualizado em: {format(new Date(okr.lastUpdate), 'dd/MM/yyyy')}</span>
+                                                                </div>
+                                                            </TooltipTrigger>
+                                                            {okr.previousUpdate && (
+                                                                <TooltipContent>
+                                                                    <p>Anterior: {okr.previousProgress}% em {format(new Date(okr.previousUpdate), 'dd/MM/yyyy')}</p>
+                                                                </TooltipContent>
+                                                            )}
+                                                        </Tooltip>
+                                                    )}
+                                                </div>
                                             </div>
                                         ))}
                                     </CardContent>
                                 </Card>
+                                 </TooltipProvider>
                             </section>
                         </div>
                     </TabsContent>

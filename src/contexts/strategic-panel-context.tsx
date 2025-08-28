@@ -123,6 +123,8 @@ export const StrategicPanelProvider = ({ children }: { children: ReactNode }) =>
             areaId,
             deadline: okrData.deadline ? okrData.deadline : null,
             previousProgress: 0,
+            lastUpdate: new Date().toISOString(),
+            previousUpdate: null,
         };
         await addDoc(collection(db, 'okrs'), dataToSave);
         await fetchPanelData();
@@ -132,8 +134,22 @@ export const StrategicPanelProvider = ({ children }: { children: ReactNode }) =>
   const updateOkr = async (okrId: string, okrData: Partial<OkrFormData>) => {
       try {
           const okrDocRef = doc(db, 'okrs', okrId);
-          // Only update the fields provided in okrData, preserving the rest.
-          await updateDoc(okrDocRef, okrData);
+          const okrSnap = await getDoc(okrDocRef);
+          if (!okrSnap.exists()) {
+              throw new Error("OKR not found");
+          }
+          const currentOkr = okrSnap.data() as Okr;
+
+          // Prepare data with history
+          const dataToUpdate = {
+              ...currentOkr, // Preserve existing data
+              ...okrData, // Apply new changes
+              previousUpdate: currentOkr.lastUpdate,
+              previousProgress: currentOkr.progress,
+              lastUpdate: new Date().toISOString(),
+          };
+
+          await updateDoc(okrDocRef, dataToUpdate as any);
           await fetchPanelData();
       } catch (e) { console.error("Error updating OKR: ", e); }
   }

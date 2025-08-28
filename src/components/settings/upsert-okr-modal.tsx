@@ -66,7 +66,6 @@ export function UpsertOkrModal({ isOpen, onOpenChange, areaId, okr }: UpsertOkrM
             const dataToSave = {
                 ...data,
                 deadline: data.deadline ? data.deadline.toISOString().split('T')[0] : null,
-                previousProgress: isEditing ? okr.progress : 0, // Store current progress as previous
             };
 
             if (isEditing && okr) {
