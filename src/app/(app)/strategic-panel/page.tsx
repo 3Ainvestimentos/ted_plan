@@ -175,7 +175,11 @@ export default function StrategicPanelPage() {
                                                         <div className="flex items-center gap-1 text-sm font-semibold font-body">
                                                             <TrendIndicator okr={okr} />
                                                             <span>{okr.progress}%</span>
-                                                            {okr.previousUpdate && <span className="text-xs text-muted-foreground font-normal">(de {okr.previousProgress}%)</span>}
+                                                            {okr.previousUpdate && (
+                                                                <span className="text-xs text-muted-foreground font-normal">
+                                                                    (de {okr.previousProgress}% em {format(new Date(okr.previousUpdate), 'dd/MM/yy')})
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -188,19 +192,10 @@ export default function StrategicPanelPage() {
                                                         </div>
                                                     )}
                                                     {okr.lastUpdate && (
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <div className="flex items-center gap-1 cursor-help">
-                                                                    <History className="w-3 h-3"/>
-                                                                    <span>Atualizado em: {format(new Date(okr.lastUpdate), 'dd/MM/yyyy')}</span>
-                                                                </div>
-                                                            </TooltipTrigger>
-                                                            {okr.previousUpdate && (
-                                                                <TooltipContent>
-                                                                    <p>Anterior: {okr.previousProgress}% em {format(new Date(okr.previousUpdate), 'dd/MM/yyyy')}</p>
-                                                                </TooltipContent>
-                                                            )}
-                                                        </Tooltip>
+                                                        <div className="flex items-center gap-1">
+                                                            <History className="w-3 h-3"/>
+                                                            <span>Atualizado em: {format(new Date(okr.lastUpdate), 'dd/MM/yyyy')}</span>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
