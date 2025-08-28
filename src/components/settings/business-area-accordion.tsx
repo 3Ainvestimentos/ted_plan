@@ -60,7 +60,7 @@ export function BusinessAreaAccordion({ area, dragHandleProps }: BusinessAreaAcc
             />
             <AccordionItem value={area.id} className="border-b-0">
                 <div className="flex justify-between items-center w-full hover:bg-accent/50 px-2 rounded-md border bg-card">
-                    <div {...dragHandleProps} className="p-2 cursor-grab">
+                    <div {...dragHandleProps} className="p-2 cursor-grab touch-none">
                         <GripVertical className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <AccordionTrigger className="hover:no-underline flex-grow py-0">

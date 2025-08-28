@@ -12,7 +12,7 @@ interface StrategicPanelContextType {
   isLoading: boolean;
   refetchData: () => void;
   addBusinessArea: (areaData: BusinessAreaFormData) => Promise<string | undefined>;
-  updateBusinessArea: (areaId: string, areaData: BusinessAreaFormData) => Promise<void>;
+  updateBusinessArea: (areaId: string, areaData: Partial<BusinessAreaFormData>) => Promise<void>;
   deleteBusinessArea: (areaId: string) => Promise<void>;
   updateBusinessAreasOrder: (reorderedAreas: BusinessArea[]) => Promise<void>;
   addOkr: (areaId: string, okrData: OkrFormData) => Promise<void>;
@@ -71,9 +71,10 @@ export const StrategicPanelProvider = ({ children }: { children: ReactNode }) =>
       } catch (e) { console.error("Error adding document: ", e); }
   }
 
-  const updateBusinessArea = async (areaId: string, areaData: BusinessAreaFormData) => {
+  const updateBusinessArea = async (areaId: string, areaData: Partial<BusinessAreaFormData>) => {
       try {
-          await updateDoc(doc(db, 'businessAreas', areaId), areaData as any);
+          const areaDocRef = doc(db, 'businessAreas', areaId);
+          await updateDoc(areaDocRef, areaData);
           await fetchPanelData();
       } catch (e) { console.error("Error updating document: ", e); }
   }
