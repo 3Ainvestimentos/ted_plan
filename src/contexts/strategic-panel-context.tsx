@@ -122,16 +122,15 @@ export const StrategicPanelProvider = ({ children }: { children: ReactNode }) =>
           }
           const currentOkr = okrSnap.data() as Okr;
 
-          // Prepare data with history
+          // Prepare data with history, ensuring no undefined values
           const dataToUpdate = {
-              ...currentOkr, // Preserve existing data
-              ...okrData, // Apply new changes
-              previousUpdate: currentOkr.lastUpdate,
-              previousProgress: currentOkr.progress,
+              ...okrData,
+              previousUpdate: currentOkr.lastUpdate || null,
+              previousProgress: currentOkr.progress || 0,
               lastUpdate: new Date().toISOString(),
           };
 
-          await updateDoc(okrDocRef, dataToUpdate as any);
+          await updateDoc(okrDocRef, { ...currentOkr, ...dataToUpdate });
           await fetchPanelData();
       } catch (e) { console.error("Error updating OKR: ", e); }
   }
