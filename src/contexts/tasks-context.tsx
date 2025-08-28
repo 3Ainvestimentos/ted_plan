@@ -38,12 +38,20 @@ export const TasksProvider = ({ children }: { children: ReactNode }) => {
     if (!tasksCollectionRef) return;
     
     try {
-      const q = query(tasksCollectionRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
+      const q = query(tasksCollectionRef, where('userId', '==', user.uid));
       const querySnapshot = await getDocs(q);
       const tasksData = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       } as Task));
+      
+      // Sort on the client-side to avoid composite index
+      tasksData.sort((a, b) => {
+        const aTimestamp = a.createdAt?.seconds || 0;
+        const bTimestamp = b.createdAt?.seconds || 0;
+        return bTimestamp - aTimestamp;
+      });
+
       setTasks(tasksData);
     } catch (error) {
       console.error("Error fetching tasks: ", error);
