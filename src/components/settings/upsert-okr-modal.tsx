@@ -20,12 +20,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
+import { Textarea } from "../ui/textarea";
 
 const formSchema = z.object({
   name: z.string().min(5, "O nome do OKR deve ter pelo menos 5 caracteres."),
   progress: z.number().min(0).max(100),
   status: z.enum(['Em Dia', 'Em Risco', 'Concluído']),
   deadline: z.date().optional().nullable(),
+  observations: z.string().optional(),
 });
 
 type OkrFormData = z.infer<typeof formSchema>;
@@ -56,7 +58,7 @@ export function UpsertOkrModal({ isOpen, onOpenChange, areaId, okr }: UpsertOkrM
                 deadline: okr.deadline ? new Date(okr.deadline) : null,
             });
         } else {
-            reset({ name: '', progress: 0, status: 'Em Dia', deadline: null });
+            reset({ name: '', progress: 0, status: 'Em Dia', deadline: null, observations: '' });
         }
     }, [okr, reset, isOpen]);
     
@@ -164,6 +166,13 @@ export function UpsertOkrModal({ isOpen, onOpenChange, areaId, okr }: UpsertOkrM
                         />
                         {errors.progress && <p className="text-sm text-destructive">{errors.progress.message}</p>}
                     </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="observations">Observações</Label>
+                        <Textarea id="observations" {...register("observations")} placeholder="Adicione notas, contexto ou justificativas sobre o OKR." />
+                        {errors.observations && <p className="text-sm text-destructive">{errors.observations.message}</p>}
+                    </div>
+
                     <DialogFooter className="pt-4">
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>Cancelar</Button>
                         <Button type="submit" disabled={isLoading}>

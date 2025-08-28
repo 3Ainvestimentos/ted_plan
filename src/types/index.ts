@@ -101,6 +101,7 @@ export interface Okr {
     status: 'Em Dia' | 'Em Risco' | 'Concluído';
     lastUpdate: string | null;
     previousUpdate: string | null;
+    observations?: string;
 }
 
 export interface BusinessArea {

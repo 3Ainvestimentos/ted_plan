@@ -2,6 +2,7 @@
 
 "use client";
 
+import { useState } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -14,7 +15,7 @@ import type { BusinessArea, KpiSeriesData, Okr } from '@/types';
 import { eachMonthOfInterval, startOfMonth, endOfMonth, format, isValid, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { OkrObservationsModal } from '@/components/strategic-panel/okr-observations-modal';
 
 
 // Map icon names from Firestore to Lucide components
@@ -63,6 +64,7 @@ const TrendIndicator = ({ okr }: { okr: Okr }) => {
 
 export default function StrategicPanelPage() {
     const { businessAreas, isLoading } = useStrategicPanel();
+    const [selectedOkr, setSelectedOkr] = useState<Okr | null>(null);
 
     if (isLoading) {
         return <PanelSkeleton />;
@@ -85,6 +87,12 @@ export default function StrategicPanelPage() {
     const defaultTab = businessAreas[0]?.id || '';
 
     return (
+        <>
+        <OkrObservationsModal
+            isOpen={!!selectedOkr}
+            onOpenChange={() => setSelectedOkr(null)}
+            okr={selectedOkr}
+        />
         <div className="space-y-6">
             <PageHeader
                 title="Painel Estratégico"
@@ -152,7 +160,6 @@ export default function StrategicPanelPage() {
                             </section>
                             
                             <section>
-                                 <TooltipProvider>
                                 <Card className="shadow-lg">
                                     <CardHeader>
                                         <CardTitle className="text-lg flex items-center gap-2">
@@ -165,7 +172,12 @@ export default function StrategicPanelPage() {
                                         {area.okrs.map(okr => (
                                             <div key={okr.id}>
                                                 <div className="flex justify-between items-center mb-1">
-                                                    <p className="text-sm font-body font-medium text-foreground/90">{okr.name}</p>
+                                                    <p 
+                                                        className="text-sm font-body font-medium text-foreground/90 cursor-pointer hover:underline"
+                                                        onClick={() => setSelectedOkr(okr)}
+                                                    >
+                                                        {okr.name}
+                                                    </p>
                                                     <div className="flex items-center gap-3">
                                                          <span className={cn(`text-xs font-semibold px-2 py-0.5 rounded-full`, 
                                                             okr.status === 'Em Dia' ? 'bg-blue-100 text-blue-800' :
@@ -202,12 +214,12 @@ export default function StrategicPanelPage() {
                                         ))}
                                     </CardContent>
                                 </Card>
-                                 </TooltipProvider>
                             </section>
                         </div>
                     </TabsContent>
                 ))}
             </Tabs>
         </div>
+        </>
     );
 }
