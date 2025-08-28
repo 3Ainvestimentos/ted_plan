@@ -114,10 +114,16 @@ export default function StrategicPanelPage() {
 
                 {businessAreas.map((area: BusinessArea) => (
                     <TabsContent key={area.id} value={area.id} className="mt-6">
-                        <div className="space-y-6">
-                            <section>
-                                <h2 className="font-headline text-2xl font-semibold mb-4 text-foreground/90">Indicadores Chave de Performance (KPIs)</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                            <Card className="shadow-lg">
+                                <CardHeader>
+                                    <CardTitle className="text-lg flex items-center gap-2">
+                                        <TrendingUp className="w-5 h-5 text-primary" />
+                                        Indicadores Chave de Performance (KPIs)
+                                    </CardTitle>
+                                    <CardDescription>Métricas de performance para acompanhamento contínuo.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
                                     {area.kpis.map(kpi => {
                                         
                                         const startDate = kpi.startDate ? parseISO(kpi.startDate) : null;
@@ -144,77 +150,68 @@ export default function StrategicPanelPage() {
                                         }));
 
                                         return (
-                                        <Card key={kpi.id} className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
-                                            <CardHeader>
-                                                <CardTitle className="font-headline text-lg flex items-center gap-2">
-                                                   <TrendingUp className="w-5 h-5 text-primary" />
-                                                    {kpi.name}
-                                                </CardTitle>
-                                            </CardHeader>
-                                            <CardContent className="flex-grow">
+                                            <div key={kpi.id}>
+                                                <h4 className="font-semibold text-sm mb-2 text-foreground/80">{kpi.name}</h4>
                                                 <KpiChart data={chartDataWithTarget} unit={kpi.unit} />
-                                            </CardContent>
-                                        </Card>
+                                            </div>
                                     )})}
-                                </div>
-                            </section>
+                                </CardContent>
+                            </Card>
                             
-                            <section>
-                                <Card className="shadow-lg">
-                                    <CardHeader>
-                                        <CardTitle className="text-lg flex items-center gap-2">
-                                            <ListChecks className="w-5 h-5 text-primary" />
-                                            Resultados-Chave (OKRs)
-                                        </CardTitle>
-                                        <CardDescription>Progresso dos objetivos estratégicos da área.</CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        {area.okrs.map(okr => (
-                                            <div key={okr.id}>
-                                                <div className="flex justify-between items-center mb-1">
-                                                    <p 
-                                                        className="text-sm font-body font-medium text-foreground/90 cursor-pointer hover:underline"
-                                                        onClick={() => setSelectedOkr(okr)}
-                                                    >
-                                                        {okr.name}
-                                                    </p>
-                                                    <div className="flex items-center gap-3">
-                                                         <span className={cn(`text-xs font-semibold px-2 py-0.5 rounded-full`, 
-                                                            okr.status === 'Em Dia' ? 'bg-blue-100 text-blue-800' :
-                                                            okr.status === 'Em Risco' ? 'bg-orange-100 text-orange-800' :
-                                                            okr.status === 'Concluído' ? 'bg-green-100 text-green-800' : ''
-                                                          )}>{okr.status}</span>
-                                                        <div className="flex items-center gap-1 text-sm font-semibold font-body">
-                                                            <TrendIndicator okr={okr} />
-                                                            <span>{okr.progress}%</span>
-                                                            {okr.previousUpdate && (
-                                                                <span className="text-xs text-muted-foreground font-normal">
-                                                                    (de {okr.previousProgress}% em {format(new Date(okr.previousUpdate), 'dd/MM/yy')})
-                                                                </span>
-                                                            )}
-                                                        </div>
+                            <Card className="shadow-lg">
+                                <CardHeader>
+                                    <CardTitle className="text-lg flex items-center gap-2">
+                                        <ListChecks className="w-5 h-5 text-primary" />
+                                        Resultados-Chave (OKRs)
+                                    </CardTitle>
+                                    <CardDescription>Progresso dos objetivos estratégicos da área.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    {area.okrs.map(okr => (
+                                        <div key={okr.id}>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <p 
+                                                    className="text-sm font-body font-medium text-foreground/90 cursor-pointer hover:underline"
+                                                    onClick={() => setSelectedOkr(okr)}
+                                                >
+                                                    {okr.name}
+                                                </p>
+                                                <div className="flex items-center gap-3">
+                                                     <span className={cn(`text-xs font-semibold px-2 py-0.5 rounded-full`, 
+                                                        okr.status === 'Em Dia' ? 'bg-blue-100 text-blue-800' :
+                                                        okr.status === 'Em Risco' ? 'bg-orange-100 text-orange-800' :
+                                                        okr.status === 'Concluído' ? 'bg-green-100 text-green-800' : ''
+                                                      )}>{okr.status}</span>
+                                                    <div className="flex items-center gap-1 text-sm font-semibold font-body">
+                                                        <TrendIndicator okr={okr} />
+                                                        <span>{okr.progress}%</span>
+                                                        {okr.previousUpdate && (
+                                                            <span className="text-xs text-muted-foreground font-normal">
+                                                                (de {okr.previousProgress}% em {format(new Date(okr.previousUpdate), 'dd/MM/yy')})
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
-                                                <Progress value={okr.progress} className="h-2" aria-label={okr.name} />
-                                                <div className="text-xs text-muted-foreground mt-1 flex items-center justify-between">
-                                                    {okr.deadline && (
-                                                        <div className="flex items-center gap-1">
-                                                            <CalendarDays className="w-3 h-3" />
-                                                            <span>Prazo: {format(new Date(okr.deadline), 'dd/MM/yyyy', { timeZone: 'UTC' })}</span>
-                                                        </div>
-                                                    )}
-                                                    {okr.lastUpdate && (
-                                                        <div className="flex items-center gap-1">
-                                                            <History className="w-3 h-3"/>
-                                                            <span>Atualizado em: {format(new Date(okr.lastUpdate), 'dd/MM/yyyy')}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
                                             </div>
-                                        ))}
-                                    </CardContent>
-                                </Card>
-                            </section>
+                                            <Progress value={okr.progress} className="h-2" aria-label={okr.name} />
+                                            <div className="text-xs text-muted-foreground mt-1 flex items-center justify-between">
+                                                {okr.deadline && (
+                                                    <div className="flex items-center gap-1">
+                                                        <CalendarDays className="w-3 h-3" />
+                                                        <span>Prazo: {format(new Date(okr.deadline), 'dd/MM/yyyy', { timeZone: 'UTC' })}</span>
+                                                    </div>
+                                                )}
+                                                {okr.lastUpdate && (
+                                                    <div className="flex items-center gap-1">
+                                                        <History className="w-3 h-3"/>
+                                                        <span>Atualizado em: {format(new Date(okr.lastUpdate), 'dd/MM/yyyy')}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </CardContent>
+                            </Card>
                         </div>
                     </TabsContent>
                 ))}
