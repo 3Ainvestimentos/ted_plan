@@ -17,6 +17,7 @@ interface InitiativesContextType {
   updateInitiative: (initiativeId: string, data: InitiativeFormData) => Promise<void>;
   deleteInitiative: (initiativeId: string) => Promise<void>;
   archiveInitiative: (initiativeId: string) => Promise<void>;
+  unarchiveInitiative: (initiativeId: string) => Promise<void>;
   updateInitiativeStatus: (initiativeId: string, newStatus: InitiativeStatus) => void;
   updateSubItem: (initiativeId: string, subItemId: string, completed: boolean) => Promise<void>;
   bulkAddInitiatives: (newInitiatives: Omit<Initiative, 'id' | 'lastUpdate' | 'topicNumber' | 'progress' | 'keyMetrics' | 'subItems' | 'deadline'>[]) => void;
@@ -78,8 +79,7 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
             return init;
         });
 
-        // Filter out archived initiatives from the main view
-        setInitiatives(initiativesWithFinalProgress.filter(i => !i.archived));
+        setInitiatives(initiativesWithFinalProgress);
     } catch (error) {
         console.error("Error fetching initiatives: ", error);
     } finally {
@@ -189,6 +189,19 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
       console.error("Error archiving initiative: ", error);
     }
   }, [fetchInitiatives]);
+  
+  const unarchiveInitiative = useCallback(async (initiativeId: string) => {
+    const initiativeDocRef = doc(db, 'initiatives', initiativeId);
+    try {
+      await updateDoc(initiativeDocRef, {
+        archived: false,
+        lastUpdate: new Date().toISOString(),
+      });
+      fetchInitiatives();
+    } catch (error) {
+      console.error("Error unarchiving initiative: ", error);
+    }
+  }, [fetchInitiatives]);
 
   const updateInitiativeStatus = useCallback(async (initiativeId: string, newStatus: InitiativeStatus) => {
     const initiativeDocRef = doc(db, 'initiatives', initiativeId);
@@ -252,7 +265,7 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
   }, [initiatives]);
 
   return (
-    <InitiativesContext.Provider value={{ initiatives, addInitiative, bulkAddInitiatives, updateInitiative, deleteInitiative, archiveInitiative, updateInitiativeStatus, updateSubItem, isLoading }}>
+    <InitiativesContext.Provider value={{ initiatives, addInitiative, bulkAddInitiatives, updateInitiative, deleteInitiative, archiveInitiative, unarchiveInitiative, updateInitiativeStatus, updateSubItem, isLoading }}>
       {children}
     </InitiativesContext.Provider>
   );

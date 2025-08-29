@@ -1,10 +1,9 @@
 
-
 "use client";
 
 import { STATUS_ICONS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, ChevronDown, ChevronRight, Filter, CornerDownRight, ChevronsUpDown, Archive } from "lucide-react";
+import { ExternalLink, ChevronDown, ChevronRight, Filter, CornerDownRight, ChevronsUpDown, Archive, Undo } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import React, { useState, useMemo } from "react";
@@ -37,9 +36,10 @@ const sortInitiatives = (initiatives: Initiative[]) => {
 };
 
 export function InitiativesTable({ initiatives, onInitiativeClick }: InitiativesTableProps) {
-  const { updateSubItem, archiveInitiative } = useInitiatives();
+  const { updateSubItem, archiveInitiative, unarchiveInitiative } = useInitiatives();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [archiveFilter, setArchiveFilter] = useState<string>("active");
   
   const parentInitiativeIds = useMemo(() => 
     new Set(initiatives.filter(i => i.subItems && i.subItems.length > 0).map(i => i.id))
@@ -76,10 +76,11 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
                             initiative.owner.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             initiative.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "all" || initiative.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesArchive = archiveFilter === 'all' || (archiveFilter === 'active' && !initiative.archived) || (archiveFilter === 'archived' && initiative.archived)
+      return matchesSearch && matchesStatus && matchesArchive;
     });
     return sortInitiatives(filtered);
-  }, [searchTerm, statusFilter, initiatives]);
+  }, [searchTerm, statusFilter, archiveFilter, initiatives]);
 
   const initiativeStatuses: (string | InitiativeStatus)[] = ["all", "Pendente", "Em execução", "Concluído", "Suspenso"];
   const initiativePriorities: (string | InitiativePriority)[] = ["all", "Alta", "Média", "Baixa"];
@@ -93,7 +94,7 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
           onChange={(e) => setSearchTerm(e.target.value)}
           className="flex-grow"
         />
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center flex-wrap">
           <Filter className="h-5 w-5 text-muted-foreground" />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-full sm:w-[180px]">
@@ -103,6 +104,16 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
               {initiativeStatuses.map(status => (
                 <SelectItem key={status} value={status} className="capitalize">{status === "all" ? "Todos os Status" : status}</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          <Select value={archiveFilter} onValueChange={setArchiveFilter}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Filtrar por arquivo" />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="active">Ativas</SelectItem>
+                <SelectItem value="archived">Arquivadas</SelectItem>
+                <SelectItem value="all">Todas</SelectItem>
             </SelectContent>
           </Select>
            <Button variant="outline" size="sm" onClick={toggleAllTopics} disabled={parentInitiativeIds.size === 0}>
@@ -134,7 +145,7 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
 
                 return (
                   <React.Fragment key={initiative.id}>
-                  <TableRow>
+                  <TableRow className={cn(initiative.archived && 'bg-muted/30 hover:bg-muted/50 text-muted-foreground')}>
                     <TableCell className="font-medium">
                         <div className="flex items-center gap-1">
                          {initiative.topicNumber}
@@ -147,14 +158,14 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
                                 {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                             </Button>
                           )}
-                          <span className={cn(hasSubItems && "cursor-pointer")} onClick={() => hasSubItems && toggleTopic(initiative.id)}>
+                          <span className={cn(hasSubItems && "cursor-pointer", "text-current")} onClick={() => hasSubItems && toggleTopic(initiative.id)}>
                             {initiative.title}
                          </span>
                        </div>
                     </TableCell>
-                    <TableCell className="font-body">{initiative.owner}</TableCell>
+                    <TableCell className="font-body text-current">{initiative.owner}</TableCell>
                     <TableCell>
-                      <Badge variant={initiative.status === 'Concluído' ? 'default' : initiative.status === 'Em Risco' || initiative.status === 'Atrasado' ? 'destructive' : 'secondary'} className="capitalize flex items-center w-fit">
+                      <Badge variant={initiative.archived ? 'outline' : initiative.status === 'Concluído' ? 'default' : initiative.status === 'Em Risco' || initiative.status === 'Atrasado' ? 'destructive' : 'secondary'} className="capitalize flex items-center w-fit">
                         {StatusIcon && <StatusIcon className="mr-1.5 h-3.5 w-3.5" />}
                         {initiative.status}
                       </Badge>
@@ -162,18 +173,22 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Progress value={initiative.progress} className="w-24 h-2" aria-label={`Progresso de ${initiative.title}`} />
-                        <span className="text-sm text-muted-foreground">{initiative.progress}%</span>
+                        <span className="text-sm text-current">{initiative.progress}%</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
-                       {isArchivable ? (
+                    <TableCell className="text-right space-x-1">
+                        <Button variant="outline" size="sm" onClick={() => onInitiativeClick(initiative)}>
+                           Ver Dossiê <ExternalLink className="ml-2 h-4 w-4" />
+                        </Button>
+                       {isArchivable && !initiative.archived && (
                           <Button variant="outline" size="sm" onClick={() => archiveInitiative(initiative.id)}>
-                            Arquivar <Archive className="ml-2 h-4 w-4" />
+                            <Archive className="h-4 w-4" />
                           </Button>
-                       ) : (
-                         <Button variant="outline" size="sm" onClick={() => onInitiativeClick(initiative)}>
-                             Ver Dossiê <ExternalLink className="ml-2 h-4 w-4" />
-                         </Button>
+                       )}
+                       {initiative.archived && (
+                          <Button variant="outline" size="sm" onClick={() => unarchiveInitiative(initiative.id)}>
+                             <Undo className="h-4 w-4" />
+                          </Button>
                        )}
                     </TableCell>
                   </TableRow>

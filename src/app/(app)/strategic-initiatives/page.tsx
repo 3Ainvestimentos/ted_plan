@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, LayoutGrid, List, Upload, Download, Loader2 } from "lucide-react";
 import { useInitiatives } from "@/contexts/initiatives-context";
@@ -34,6 +34,8 @@ export default function InitiativesPage() {
   const closeDossier = () => {
     setSelectedInitiative(null);
   }
+  
+  const activeInitiatives = useMemo(() => initiatives.filter(i => !i.archived), [initiatives]);
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -91,7 +93,7 @@ export default function InitiativesPage() {
         ) : viewMode === 'table' ? (
           <InitiativesTable initiatives={initiatives} onInitiativeClick={openDossier} />
         ) : (
-          <InitiativesKanban initiatives={initiatives} onInitiativeClick={openDossier} />
+          <InitiativesKanban initiatives={activeInitiatives} onInitiativeClick={openDossier} />
         )}
       </div>
     </DndProvider>
