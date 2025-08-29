@@ -28,6 +28,14 @@ export interface Initiative {
 
 export type UserRole = 'PMO' | 'Líder' | 'Colaborador';
 
+export interface Collaborator {
+    id: string;
+    name: string;
+    email: string;
+    cargo: string;
+    permissions: Record<string, boolean>;
+}
+
 export interface NavItem {
   title: string;
   href: string;
@@ -158,3 +166,5 @@ export interface Task {
     archived: boolean;
     createdAt: any; // Firestore Timestamp
 }
+
+    

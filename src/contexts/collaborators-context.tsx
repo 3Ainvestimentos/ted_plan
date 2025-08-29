@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { Collaborator } from '@/types';
@@ -12,6 +13,7 @@ interface CollaboratorsContextType {
   collaborators: Collaborator[];
   addCollaborator: (collaborator: CollaboratorData) => Promise<void>;
   updateCollaborator: (id: string, collaborator: Partial<CollaboratorData>) => Promise<void>;
+  updateCollaboratorPermissions: (id: string, permissionKey: string, value: boolean) => Promise<void>;
   deleteCollaborator: (id: string) => Promise<void>;
   bulkAddCollaborators: (collaborators: CollaboratorData[]) => Promise<void>;
   isLoading: boolean;
@@ -48,7 +50,7 @@ export const CollaboratorsProvider = ({ children }: { children: ReactNode }) => 
 
   const addCollaborator = useCallback(async (collaboratorData: CollaboratorData) => {
     try {
-      await addDoc(collaboratorsCollectionRef, collaboratorData);
+      await addDoc(collaboratorsCollectionRef, { ...collaboratorData, permissions: {} });
       fetchCollaborators();
     } catch (error) {
       console.error("Error adding collaborator: ", error);
@@ -66,6 +68,24 @@ export const CollaboratorsProvider = ({ children }: { children: ReactNode }) => 
       throw error;
     }
   }, [fetchCollaborators]);
+
+  const updateCollaboratorPermissions = useCallback(async (id: string, permissionKey: string, value: boolean) => {
+    const collaboratorDocRef = doc(db, 'collaborators', id);
+    try {
+        const fieldToUpdate = `permissions.${permissionKey}`;
+        await updateDoc(collaboratorDocRef, { [fieldToUpdate]: value });
+        setCollaborators(prev => 
+            prev.map(c => 
+                c.id === id 
+                    ? { ...c, permissions: { ...(c.permissions || {}), [permissionKey]: value } }
+                    : c
+            )
+        );
+    } catch (error) {
+        console.error("Error updating collaborator permissions: ", error);
+        throw error;
+    }
+  }, []);
   
   const deleteCollaborator = useCallback(async (id: string) => {
     const collaboratorDocRef = doc(db, 'collaborators', id);
@@ -82,7 +102,7 @@ export const CollaboratorsProvider = ({ children }: { children: ReactNode }) => 
       const batch = writeBatch(db);
       collaboratorsData.forEach(collaborator => {
           const docRef = doc(collection(db, 'collaborators'));
-          batch.set(docRef, collaborator);
+          batch.set(docRef, {...collaborator, permissions: {}});
       });
       try {
           await batch.commit();
@@ -95,7 +115,7 @@ export const CollaboratorsProvider = ({ children }: { children: ReactNode }) => 
 
 
   return (
-    <CollaboratorsContext.Provider value={{ collaborators, addCollaborator, updateCollaborator, deleteCollaborator, bulkAddCollaborators, isLoading }}>
+    <CollaboratorsContext.Provider value={{ collaborators, addCollaborator, updateCollaborator, updateCollaboratorPermissions, deleteCollaborator, bulkAddCollaborators, isLoading }}>
       {children}
     </CollaboratorsContext.Provider>
   );
@@ -108,3 +128,5 @@ export const useCollaborators = () => {
   }
   return context;
 };
+
+    

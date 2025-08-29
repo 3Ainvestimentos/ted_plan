@@ -35,6 +35,7 @@ import { MaintenanceModeManager } from '@/components/settings/maintenance-mode-m
 import { UserAuditSummary } from '@/components/settings/user-audit-summary';
 import { useCollaborators } from '@/contexts/collaborators-context';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 
 const getInitials = (name: string) => {
@@ -45,20 +46,24 @@ const getInitials = (name: string) => {
 }
 
 function PermissionsTabContent() {
-  const { collaborators, isLoading } = useCollaborators();
-  const [permissions, setPermissions] = useState<Record<string, Record<string, boolean>>>({}); // Placeholder for permissions state
+  const { collaborators, isLoading, updateCollaboratorPermissions } = useCollaborators();
+  const { toast } = useToast();
 
-
-  const handlePermissionChange = (userId: string, navHref: string, isEnabled: boolean) => {
-    // This will be updated to write to Firestore
-    setPermissions(prev => ({
-      ...prev,
-      [userId]: {
-        ...prev[userId],
-        [navHref]: isEnabled,
-      },
-    }));
-    console.log(`Permission for user ${userId}, item ${navHref} is now ${isEnabled}`);
+  const handlePermissionChange = async (userId: string, navHref: string, isEnabled: boolean) => {
+    try {
+      await updateCollaboratorPermissions(userId, navHref, isEnabled);
+      toast({
+        title: "Permissão Atualizada",
+        description: "A permissão do colaborador foi salva.",
+        duration: 2000,
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível salvar a permissão.",
+      });
+    }
   };
   
   const navItemsForPermissions = NAV_ITEMS_CONFIG.filter(item => !item.isDivider && !item.isFooter);
@@ -124,7 +129,7 @@ function PermissionsTabContent() {
                       {navItemsForPermissions.map((navItem) => (
                         <TableCell key={navItem.href} className="text-center">
                           <Switch
-                            checked={permissions[user.id]?.[navItem.href] ?? false}
+                            checked={user.permissions?.[navItem.href] ?? false}
                             onCheckedChange={(checked) => handlePermissionChange(user.id, navItem.href, checked)}
                             aria-label={`Permissão para ${navItem.title} para ${user.name}`}
                           />
@@ -316,3 +321,5 @@ export default function SettingsHubPage() {
     </div>
   );
 }
+
+    
