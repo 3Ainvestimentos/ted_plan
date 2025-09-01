@@ -83,149 +83,153 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
   }, [searchTerm, statusFilter, archiveFilter, initiatives]);
 
   const initiativeStatuses: (string | InitiativeStatus)[] = ["all", "Pendente", "Em execução", "Concluído", "Suspenso"];
-  const initiativePriorities: (string | InitiativePriority)[] = ["all", "Alta", "Média", "Baixa"];
   
   return (
-    <div className="space-y-4">
-       <div className="flex flex-col sm:flex-row items-center gap-4 p-4 border rounded-lg bg-card shadow-sm">
-        <div className="flex-grow w-full">
-            <Input 
-              placeholder="Buscar iniciativas..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-        </div>
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          <Filter className="h-5 w-5 text-muted-foreground" />
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-[150px]">
-              <SelectValue placeholder="Filtrar por status" />
-            </SelectTrigger>
-            <SelectContent>
-              {initiativeStatuses.map(status => (
-                <SelectItem key={status} value={status} className="capitalize">{status === "all" ? "Todos os Status" : status}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={archiveFilter} onValueChange={setArchiveFilter}>
-            <SelectTrigger className="w-full sm:w-[120px]">
-              <SelectValue placeholder="Filtrar" />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectItem value="active">Ativas</SelectItem>
-                <SelectItem value="archived">Arquivadas</SelectItem>
-                <SelectItem value="all">Todas</SelectItem>
-            </SelectContent>
-          </Select>
-           <Button variant="outline" size="sm" onClick={toggleAllTopics} disabled={parentInitiativeIds.size === 0}>
-                <ChevronsUpDown className="mr-2 h-4 w-4" />
-                {areAllExpanded ? "Recolher" : "Expandir"}
-            </Button>
-        </div>
-      </div>
-      
-      <Card className="shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[80px]">Tópico</TableHead>
-              <TableHead className="w-[35%]">Título da Iniciativa</TableHead>
-              <TableHead>Responsável</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Progresso</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredInitiatives.length > 0 ? (
-              filteredInitiatives.map((initiative: Initiative) => {
-                const StatusIcon = STATUS_ICONS[initiative.status];
-                const hasSubItems = initiative.subItems && initiative.subItems.length > 0;
-                const isExpanded = expandedTopics.has(initiative.id);
-                const isArchivable = initiative.status === 'Concluído' || initiative.status === 'Suspenso';
+    <Card className="shadow-sm">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[120px]">
+                <div className="flex items-center gap-2">
+                    Tópico
+                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={toggleAllTopics} disabled={parentInitiativeIds.size === 0}>
+                        <ChevronsUpDown className="h-4 w-4" />
+                    </Button>
+                </div>
+            </TableHead>
+            <TableHead className="w-[35%]">Título da Iniciativa</TableHead>
+            <TableHead>Responsável</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Progresso</TableHead>
+            <TableHead className="text-right">Ações</TableHead>
+          </TableRow>
+          <TableRow className="bg-muted/30">
+            <TableCell className="p-2"></TableCell>
+            <TableCell className="p-2">
+                 <Input 
+                  placeholder="Buscar..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="h-8"
+                />
+            </TableCell>
+            <TableCell className="p-2"></TableCell>
+            <TableCell className="p-2">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-8">
+                    <SelectValue placeholder="Filtrar por status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                    {initiativeStatuses.map(status => (
+                        <SelectItem key={status} value={status} className="capitalize">{status === "all" ? "Todos os Status" : status}</SelectItem>
+                    ))}
+                    </SelectContent>
+                </Select>
+            </TableCell>
+            <TableCell className="p-2"></TableCell>
+            <TableCell className="p-2">
+                <Select value={archiveFilter} onValueChange={setArchiveFilter}>
+                    <SelectTrigger className="h-8">
+                    <SelectValue placeholder="Filtrar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="active">Ativas</SelectItem>
+                        <SelectItem value="archived">Arquivadas</SelectItem>
+                        <SelectItem value="all">Todas</SelectItem>
+                    </SelectContent>
+                </Select>
+            </TableCell>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredInitiatives.length > 0 ? (
+            filteredInitiatives.map((initiative: Initiative) => {
+              const StatusIcon = STATUS_ICONS[initiative.status];
+              const hasSubItems = initiative.subItems && initiative.subItems.length > 0;
+              const isExpanded = expandedTopics.has(initiative.id);
+              const isArchivable = initiative.status === 'Concluído' || initiative.status === 'Suspenso';
 
-                return (
-                  <React.Fragment key={initiative.id}>
-                  <TableRow className={cn(initiative.archived && 'bg-muted/30 hover:bg-muted/50 text-muted-foreground')}>
-                    <TableCell className="font-medium">
-                        <div className="flex items-center gap-1">
-                         {initiative.topicNumber}
-                        </div>
-                    </TableCell>
-                    <TableCell className="font-medium font-body">
-                       <div className="flex items-center gap-1">
-                          {hasSubItems && (
-                            <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2" onClick={() => toggleTopic(initiative.id)}>
-                                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                            </Button>
-                          )}
-                          <span className={cn(hasSubItems && "cursor-pointer", "text-current")} onClick={() => hasSubItems && toggleTopic(initiative.id)}>
-                            {initiative.title}
-                         </span>
-                       </div>
-                    </TableCell>
-                    <TableCell className="font-body text-current">{initiative.owner}</TableCell>
-                    <TableCell>
-                      <Badge variant={initiative.archived ? 'outline' : initiative.status === 'Concluído' ? 'default' : initiative.status === 'Em Risco' || initiative.status === 'Atrasado' ? 'destructive' : 'secondary'} className="capitalize flex items-center w-fit">
-                        {StatusIcon && <StatusIcon className="mr-1.5 h-3.5 w-3.5" />}
-                        {initiative.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Progress value={initiative.progress} className="w-24 h-2" aria-label={`Progresso de ${initiative.title}`} />
-                        <span className="text-sm text-current">{initiative.progress}%</span>
+              return (
+                <React.Fragment key={initiative.id}>
+                <TableRow className={cn(initiative.archived && 'bg-muted/30 text-muted-foreground hover:bg-muted/50')}>
+                  <TableCell className="font-medium">
+                      <div className="flex items-center gap-1">
+                       {initiative.topicNumber}
                       </div>
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                        <Button variant="outline" size="sm" onClick={() => onInitiativeClick(initiative)}>
-                           Ver Dossiê <ExternalLink className="ml-2 h-4 w-4" />
+                  </TableCell>
+                  <TableCell className="font-medium font-body">
+                     <div className="flex items-center gap-1">
+                        {hasSubItems && (
+                          <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2" onClick={() => toggleTopic(initiative.id)}>
+                              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </Button>
+                        )}
+                        <span className={cn(hasSubItems && "cursor-pointer", "text-current")} onClick={() => hasSubItems && toggleTopic(initiative.id)}>
+                          {initiative.title}
+                       </span>
+                     </div>
+                  </TableCell>
+                  <TableCell className="font-body text-current">{initiative.owner}</TableCell>
+                  <TableCell>
+                    <Badge variant={initiative.archived ? 'outline' : initiative.status === 'Concluído' ? 'default' : initiative.status === 'Em Risco' || initiative.status === 'Atrasado' ? 'destructive' : 'secondary'} className="capitalize flex items-center w-fit">
+                      {StatusIcon && <StatusIcon className="mr-1.5 h-3.5 w-3.5" />}
+                      {initiative.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Progress value={initiative.progress} className="w-24 h-2" aria-label={`Progresso de ${initiative.title}`} />
+                      <span className="text-sm text-current">{initiative.progress}%</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right space-x-1">
+                      <Button variant="outline" size="sm" onClick={() => onInitiativeClick(initiative)}>
+                         Ver Dossiê <ExternalLink className="ml-2 h-4 w-4" />
+                      </Button>
+                     {isArchivable && !initiative.archived && (
+                        <Button variant="outline" size="sm" onClick={() => archiveInitiative(initiative.id)}>
+                          <Archive className="h-4 w-4" />
                         </Button>
-                       {isArchivable && !initiative.archived && (
-                          <Button variant="outline" size="sm" onClick={() => archiveInitiative(initiative.id)}>
-                            <Archive className="h-4 w-4" />
-                          </Button>
-                       )}
-                       {initiative.archived && (
-                          <Button variant="outline" size="sm" onClick={() => unarchiveInitiative(initiative.id)}>
-                             <Undo className="h-4 w-4" />
-                          </Button>
-                       )}
-                    </TableCell>
-                  </TableRow>
-                   {isExpanded && hasSubItems && initiative.subItems.map(subItem => (
-                      <TableRow key={subItem.id} className="bg-secondary/80 hover:bg-secondary">
-                        <TableCell></TableCell>
-                        <TableCell colSpan={4} className="pl-12">
-                           <div className="flex items-center gap-2">
-                                <CornerDownRight className="h-4 w-4 text-muted-foreground" />
-                                <Checkbox 
-                                    id={`subitem-${subItem.id}`} 
-                                    checked={subItem.completed}
-                                    onCheckedChange={(checked) => updateSubItem(initiative.id, subItem.id, !!checked)}
-                                />
-                                <label htmlFor={`subitem-${subItem.id}`} className={cn("text-sm", subItem.completed && "line-through text-muted-foreground")}>
-                                  {subItem.title}
-                                </label>
-                           </div>
-                        </TableCell>
-                        <TableCell></TableCell>
-                      </TableRow>
-                   ))}
-                  </React.Fragment>
-                )
-              })
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center h-48">
-                  <p className="text-muted-foreground">Nenhuma iniciativa encontrada.</p>
-                  <p className="text-sm text-muted-foreground mt-1">Tente ajustar sua busca ou filtros.</p>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </Card>
-    </div>
+                     )}
+                     {initiative.archived && (
+                        <Button variant="outline" size="sm" onClick={() => unarchiveInitiative(initiative.id)}>
+                           <Undo className="h-4 w-4" />
+                        </Button>
+                     )}
+                  </TableCell>
+                </TableRow>
+                 {isExpanded && hasSubItems && initiative.subItems.map(subItem => (
+                    <TableRow key={subItem.id} className="bg-secondary hover:bg-secondary/80">
+                      <TableCell></TableCell>
+                      <TableCell colSpan={4} className="pl-12">
+                         <div className="flex items-center gap-2">
+                              <CornerDownRight className="h-4 w-4 text-muted-foreground" />
+                              <Checkbox 
+                                  id={`subitem-${subItem.id}`} 
+                                  checked={subItem.completed}
+                                  onCheckedChange={(checked) => updateSubItem(initiative.id, subItem.id, !!checked)}
+                              />
+                              <label htmlFor={`subitem-${subItem.id}`} className={cn("text-sm", subItem.completed && "line-through text-muted-foreground")}>
+                                {subItem.title}
+                              </label>
+                         </div>
+                      </TableCell>
+                      <TableCell></TableCell>
+                    </TableRow>
+                 ))}
+                </React.Fragment>
+              )
+            })
+          ) : (
+            <TableRow>
+              <TableCell colSpan={6} className="text-center h-48">
+                <p className="text-muted-foreground">Nenhuma iniciativa encontrada.</p>
+                <p className="text-sm text-muted-foreground mt-1">Tente ajustar sua busca ou filtros.</p>
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </Card>
   );
 }
