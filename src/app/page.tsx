@@ -15,7 +15,7 @@ export default function HomePage() {
   useEffect(() => {
     if (!isLoading) {
         if (isAuthenticated) {
-            router.replace('/strategic-panel');
+            router.replace('/strategic-initiatives');
         } else {
             router.replace('/login');
         }

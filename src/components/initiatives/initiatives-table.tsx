@@ -87,17 +87,18 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
   
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg bg-card shadow-sm">
-        <Input 
-          placeholder="Buscar iniciativas..." 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-grow"
-        />
-        <div className="flex gap-2 items-center flex-wrap">
+       <div className="flex flex-col sm:flex-row items-center gap-4 p-4 border rounded-lg bg-card shadow-sm">
+        <div className="flex-grow w-full">
+            <Input 
+              placeholder="Buscar iniciativas..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+        </div>
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <Filter className="h-5 w-5 text-muted-foreground" />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger className="w-full sm:w-[150px]">
               <SelectValue placeholder="Filtrar por status" />
             </SelectTrigger>
             <SelectContent>
@@ -107,8 +108,8 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
             </SelectContent>
           </Select>
           <Select value={archiveFilter} onValueChange={setArchiveFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Filtrar por arquivo" />
+            <SelectTrigger className="w-full sm:w-[120px]">
+              <SelectValue placeholder="Filtrar" />
             </SelectTrigger>
             <SelectContent>
                 <SelectItem value="active">Ativas</SelectItem>
@@ -193,7 +194,7 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
                     </TableCell>
                   </TableRow>
                    {isExpanded && hasSubItems && initiative.subItems.map(subItem => (
-                      <TableRow key={subItem.id} className="bg-secondary hover:bg-secondary/80">
+                      <TableRow key={subItem.id} className="bg-secondary/80 hover:bg-secondary">
                         <TableCell></TableCell>
                         <TableCell colSpan={4} className="pl-12">
                            <div className="flex items-center gap-2">

@@ -33,7 +33,7 @@ export default function LoginPage() {
   useEffect(() => {
     // This effect only handles redirection *after* auth state is confirmed.
     if (!isLoading && isAuthenticated) {
-        router.replace('/strategic-panel');
+        router.replace('/strategic-initiatives');
     }
   }, [isLoading, isAuthenticated, router]);
   
