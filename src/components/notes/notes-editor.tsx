@@ -43,7 +43,7 @@ export function NotesEditor() {
       />
       <div className="flex justify-end items-center h-8 px-4 py-1 text-xs">
           {isSaving ? (
-            <span style={{ color: '#DFB87F' }}>Salvando...</span>
+            <span className="text-muted-foreground">Salvando...</span>
           ) : lastUpdated ? (
              <span className="text-muted-foreground">
                 Atualizado em {format(lastUpdated, "dd/MM/yyyy 'às' HH:mm:ss")}
