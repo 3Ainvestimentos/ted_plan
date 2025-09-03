@@ -45,7 +45,7 @@ export function NotesEditor() {
           {isSaving ? (
             <span style={{ color: '#DFB87F' }}>Salvando...</span>
           ) : lastUpdated ? (
-             <span style={{ color: '#DFB87F' }}>
+             <span className="text-muted-foreground">
                 Atualizado em {format(lastUpdated, "dd/MM/yyyy 'às' HH:mm:ss")}
             </span>
           ) : (
