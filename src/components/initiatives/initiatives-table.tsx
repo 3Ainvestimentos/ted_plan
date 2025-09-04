@@ -45,8 +45,8 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
     new Set(initiatives.filter(i => i.subItems && i.subItems.length > 0).map(i => i.id))
   , [initiatives]);
 
-  const [expandedTopics, setExpandedTopics] = useState<Set<string>>(() => new Set(parentInitiativeIds));
-  const [areAllExpanded, setAreAllExpanded] = useState(true);
+  const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set());
+  const [areAllExpanded, setAreAllExpanded] = useState(false);
 
   const toggleAllTopics = () => {
     if (areAllExpanded) {
@@ -182,7 +182,7 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
                       <span className="text-sm text-current">{initiative.progress}%</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right space-x-1">
+                  <TableCell className="text-right space-x-1 whitespace-nowrap">
                       <Button variant="outline" size="sm" onClick={() => onInitiativeClick(initiative)}>
                          Ver Dossiê <ExternalLink className="ml-2 h-4 w-4" />
                       </Button>
