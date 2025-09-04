@@ -5,7 +5,7 @@
 import { PageHeader } from '@/components/layout/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users, GanttChartSquare, BarChart2, History, HardHat, PlusCircle, MoreVertical, Upload, Mail, X, BadgeAlert, CheckCircle, CalendarIcon } from 'lucide-react';
+import { Users, GanttChartSquare, BarChart2, History, HardHat, PlusCircle, MoreVertical, Upload, Mail, X, BadgeAlert, CheckCircle, CalendarIcon, Briefcase } from 'lucide-react';
 
 // Permissions Component (moved from its own page)
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -36,6 +36,7 @@ import { UserAuditSummary } from '@/components/settings/user-audit-summary';
 import { useCollaborators } from '@/contexts/collaborators-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { PersonnelDataManager } from '@/components/settings/personnel-data-manager';
 
 
 const getInitials = (name: string) => {
@@ -176,6 +177,15 @@ function MaintenanceModeTabContent() {
     );
 }
 
+function PersonnelDataTabContent() {
+    return (
+        <Card className="shadow-lg mt-6">
+            <PersonnelDataManager />
+        </Card>
+    );
+}
+
+
 function CollaboratorsTabContent() {
     const [isUpsertModalOpen, setIsUpsertModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -281,6 +291,14 @@ const adminModules = [
         disabled: false,
     },
     {
+        name: "personnel_data",
+        title: "Dados de Pessoal",
+        description: "Faça o upload de dados de carreira e remuneração dos colaboradores.",
+        icon: Briefcase,
+        component: <PersonnelDataTabContent />,
+        disabled: false,
+    },
+    {
         name: "audit",
         title: "Painel de Auditoria",
         description: "Os relatórios de auditoria, com análise de logins e visualização de conteúdos, estarão disponíveis nesta seção.",
@@ -307,7 +325,7 @@ export default function SettingsHubPage() {
         />
 
         <Tabs defaultValue="content" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 h-auto">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6 h-auto">
                  {adminModules.map((mod) => (
                     <TabsTrigger key={mod.name} value={mod.name} className="py-2 flex-col h-auto" disabled={mod.disabled}>
                         <span>{mod.title}</span>
@@ -324,5 +342,3 @@ export default function SettingsHubPage() {
     </div>
   );
 }
-
-    

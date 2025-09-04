@@ -14,6 +14,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { NotesProvider } from '@/contexts/notes-context';
 import { TasksProvider } from '@/contexts/tasks-context';
+import { TeamControlProvider } from '@/contexts/team-control-context';
 
 function AppContent({ children }: { children: React.ReactNode }) {
   return (
@@ -73,7 +74,7 @@ export default function AppLayout({
           <StrategicPanelProvider>
             <TasksProvider>
               <NotesProvider>
-                <AppContent>{children}</AppContent>
+                  <AppContent>{children}</AppContent>
               </NotesProvider>
             </TasksProvider>
           </StrategicPanelProvider>

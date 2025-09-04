@@ -29,13 +29,26 @@ export interface Initiative {
 
 export type UserRole = 'PMO' | 'Líder' | 'Colaborador';
 
+export interface RemunerationHistory {
+    date: string; // 'YYYY-MM-DD'
+    value: number;
+}
+
+export interface PositionHistory {
+    date: string; // 'YYYY-MM-DD'
+    position: string;
+}
+
 export interface Collaborator {
     id: string;
     name: string;
     email: string;
     cargo: string;
     permissions: Record<string, boolean>;
+    remunerationHistory?: RemunerationHistory[];
+    positionHistory?: PositionHistory[];
 }
+
 
 export interface NavItem {
   title: string;
@@ -167,5 +180,3 @@ export interface Task {
     archived: boolean;
     createdAt: any; // Firestore Timestamp
 }
-
-    
