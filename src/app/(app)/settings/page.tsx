@@ -1,16 +1,15 @@
 
-
 "use client";
 
 import { PageHeader } from '@/components/layout/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users, GanttChartSquare, BarChart2, HardHat, PlusCircle, Upload, Briefcase } from 'lucide-react';
-import { PersonnelDataManager } from '@/components/settings/personnel-data-manager';
+import { Users, GanttChartSquare, BarChart2, HardHat, Briefcase, TrendingUp } from 'lucide-react';
 import { PermissionsManager } from '@/components/settings/permissions-manager';
 import { BusinessAreasManager } from '@/components/settings/business-areas-manager';
 import { MaintenanceModeManager } from '@/components/settings/maintenance-mode-manager';
-import { UserAuditSummary } from '@/components/settings/user-audit-summary';
+import { RemunerationManager } from '@/components/settings/remuneration-manager';
+import { PositionManager } from '@/components/settings/position-manager';
 
 
 function PermissionsTabContent() {
@@ -29,10 +28,18 @@ function MaintenanceModeTabContent() {
     );
 }
 
-function PersonnelDataTabContent() {
+function RemunerationTabContent() {
     return (
         <Card className="shadow-lg mt-6">
-            <PersonnelDataManager />
+            <RemunerationManager />
+        </Card>
+    );
+}
+
+function PositionTabContent() {
+    return (
+        <Card className="shadow-lg mt-6">
+            <PositionManager />
         </Card>
     );
 }
@@ -51,22 +58,6 @@ function ContentGoalsTabContent() {
     )
 }
 
-function AuditLogTabContent() {
-    return (
-        <Card className="shadow-lg mt-6">
-            <CardContent className="pt-6 space-y-6">
-                <div>
-                    <h3 className="text-lg font-medium">Relatório de Auditoria</h3>
-                    <p className="text-muted-foreground text-sm">Monitore a atividade e o engajamento dos usuários na plataforma.</p>
-                </div>
-                <UserAuditSummary />
-            </CardContent>
-        </Card>
-    );
-}
-
-
-
 const adminModules = [
     {
         name: "content",
@@ -77,16 +68,23 @@ const adminModules = [
     },
     {
         name: "permissions",
-        title: "Permissões de Acesso",
+        title: "Permissões e Usuários",
         icon: GanttChartSquare,
         component: <PermissionsTabContent />,
         disabled: false,
     },
     {
-        name: "team",
-        title: "Equipe",
-        icon: Users,
-        component: <PersonnelDataTabContent />,
+        name: "remuneration",
+        title: "Remuneração",
+        icon: TrendingUp,
+        component: <RemunerationTabContent />,
+        disabled: false,
+    },
+    {
+        name: "positions",
+        title: "Cargos e Promoções",
+        icon: Briefcase,
+        component: <PositionTabContent />,
         disabled: false,
     },
     {
@@ -107,7 +105,7 @@ export default function SettingsHubPage() {
         />
 
         <Tabs defaultValue="content" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-2 md:grid-cols-4 h-auto">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 h-auto">
                  {adminModules.map((mod) => (
                     <TabsTrigger key={mod.name} value={mod.name} className="py-2 flex-col h-auto" disabled={mod.disabled}>
                         <span>{mod.title}</span>
