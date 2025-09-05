@@ -83,9 +83,9 @@ const adminModules = [
         disabled: false,
     },
     {
-        name: "personnel_data",
-        title: "Dados de Pessoal",
-        icon: Briefcase,
+        name: "team",
+        title: "Equipe",
+        icon: Users,
         component: <PersonnelDataTabContent />,
         disabled: false,
     },
