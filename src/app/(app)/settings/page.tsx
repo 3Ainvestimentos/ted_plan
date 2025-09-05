@@ -10,12 +10,21 @@ import { BusinessAreasManager } from '@/components/settings/business-areas-manag
 import { MaintenanceModeManager } from '@/components/settings/maintenance-mode-manager';
 import { RemunerationManager } from '@/components/settings/remuneration-manager';
 import { PositionManager } from '@/components/settings/position-manager';
+import { TeamManager } from '@/components/settings/team-manager';
 
 
 function PermissionsTabContent() {
     return (
         <Card className="shadow-lg mt-6">
             <PermissionsManager />
+        </Card>
+    );
+}
+
+function TeamTabContent() {
+    return (
+        <Card className="shadow-lg mt-6">
+            <TeamManager />
         </Card>
     );
 }
@@ -67,8 +76,15 @@ const adminModules = [
         disabled: false,
     },
     {
+        name: "team",
+        title: "Equipe",
+        icon: Users,
+        component: <TeamTabContent />,
+        disabled: false,
+    },
+    {
         name: "permissions",
-        title: "Permissões e Usuários",
+        title: "Permissões",
         icon: GanttChartSquare,
         component: <PermissionsTabContent />,
         disabled: false,
@@ -82,14 +98,14 @@ const adminModules = [
     },
     {
         name: "positions",
-        title: "Cargos e Promoções",
+        title: "Cargos",
         icon: Briefcase,
         component: <PositionTabContent />,
         disabled: false,
     },
     {
         name: "maintenance",
-        title: "Modo Manutenção",
+        title: "Manutenção",
         icon: HardHat,
         component: <MaintenanceModeTabContent />,
         disabled: false,
@@ -105,7 +121,7 @@ export default function SettingsHubPage() {
         />
 
         <Tabs defaultValue="content" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 h-auto">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6 h-auto">
                  {adminModules.map((mod) => (
                     <TabsTrigger key={mod.name} value={mod.name} className="py-2 flex-col h-auto" disabled={mod.disabled}>
                         <span>{mod.title}</span>
