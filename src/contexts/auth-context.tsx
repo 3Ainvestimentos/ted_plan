@@ -53,10 +53,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return true;
     }
     
-    // 2. Check for individual email in collaborators list
+    // 2. Check for individual email in the public authorizedUsers list
     try {
-        const collaboratorsRef = collection(db, 'collaborators');
-        const q = query(collaboratorsRef, where('email', '==', email));
+        const authorizedUsersRef = collection(db, 'authorizedUsers');
+        const q = query(authorizedUsersRef, where('email', '==', email));
         const querySnapshot = await getDocs(q);
         return !querySnapshot.empty;
     } catch (error) {

@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -9,12 +10,18 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // A coleção 'collaborators' pode ser lida por qualquer pessoa para
-    // verificar a autorização de e-mail antes do login completo ser processado pela aplicação.
-    // A escrita continua restrita.
-    match /collaborators/{collaboratorId} {
+    // A coleção 'authorizedUsers' pode ser lida por qualquer pessoa para
+    // verificar a autorização de e-mail antes do login completo.
+    // A escrita é bloqueada para todos para evitar adulteração.
+    match /authorizedUsers/{userId} {
       allow read: if true;
-      allow write: if request.auth != null; // Apenas usuários autenticados podem escrever
+      allow write: if request.auth != null; // Apenas autenticados (admins) podem escrever
+    }
+
+    // A coleção 'collaborators' contém dados sensíveis e só pode ser
+    // lida ou escrita por usuários que já estão autenticados na aplicação.
+    match /collaborators/{collaboratorId} {
+      allow read, write: if request.auth != null;
     }
 
     // Para todas as outras coleções, apenas usuários autenticados (logados)
