@@ -2,49 +2,52 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Permite a leitura da lista de colaboradores para verificação de autorização
-    // antes do login completo, corrigindo o loop de carregamento infinito.
-    match /collaborators/{document=**} {
-      allow read: if true; 
-      allow write: if request.auth != null; // Apenas usuários logados podem escrever
+
+    // Regra Padrão: Negar leitura e escrita para todos por padrão.
+    // Acesso só é concedido se uma regra mais específica abaixo permitir.
+    match /{document=**} {
+      allow read, write: if false;
     }
 
-    // Regras para as outras coleções: requerem autenticação
-    match /initiatives/{document=**} {
+    // A coleção 'collaborators' pode ser lida por qualquer pessoa para
+    // verificar a autorização de e-mail antes do login completo ser processado pela aplicação.
+    // A escrita continua restrita.
+    match /collaborators/{collaboratorId} {
+      allow read: if true;
+      allow write: if request.auth != null; // Apenas usuários autenticados podem escrever
+    }
+
+    // Para todas as outras coleções, apenas usuários autenticados (logados)
+    // podem ler ou escrever dados.
+    match /businessAreas/{areaId} {
+      allow read, write: if request.auth != null;
+    }
+    match /initiatives/{initiativeId} {
+      allow read, write: if request.auth != null;
+    }
+    match /kpis/{kpiId} {
+      allow read, write: if request.auth != null;
+    }
+    match /okrs/{okrId} {
+      allow read, write: if request.auth != null;
+    }
+    match /recurringMeetings/{meetingId} {
+      allow read, write: if request.auth != null;
+    }
+     match /settings/{settingId} {
       allow read, write: if request.auth != null;
     }
 
-    match /recurringMeetings/{document=**} {
-      allow read, write: if request.auth != null;
-    }
-
-    match /businessAreas/{document=**} {
-      allow read, write: if request.auth != null;
-    }
-
-    match /okrs/{document=**} {
-      allow read, write: if request.auth != null;
-    }
-    
-    match /kpis/{document=**} {
-      allow read, write: if request.auth != null;
-    }
-
+    // Coleções específicas do usuário (Notas e Tarefas)
+    // Apenas o próprio usuário pode acessar seus dados.
     match /notes/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-
-    match /tasks/{document=**} {
-      allow read, write: if request.auth != null;
+    match /tasks/{taskId} {
+       allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
     }
-
-    match /settings/{document=**} {
-      allow read, write: if request.auth != null;
-    }
-
-    match /auditLogs/{document=**} {
-      allow read, write: if request.auth != null;
+    match /auditLogs/{logId} {
+        allow read, write: if request.auth != null;
     }
   }
 }
