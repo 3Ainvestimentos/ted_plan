@@ -5,7 +5,7 @@
 import type { Collaborator } from '@/types';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, orderBy, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, orderBy, writeBatch, where } from 'firebase/firestore';
 
 type CollaboratorData = Omit<Collaborator, 'id'>;
 
@@ -26,6 +26,7 @@ export const CollaboratorsProvider = ({ children }: { children: ReactNode }) => 
   const [isLoading, setIsLoading] = useState(true);
 
   const collaboratorsCollectionRef = collection(db, 'collaborators');
+  const authorizedUsersCollectionRef = collection(db, 'authorizedUsers');
 
   const fetchCollaborators = useCallback(async () => {
     setIsLoading(true);
@@ -42,7 +43,7 @@ export const CollaboratorsProvider = ({ children }: { children: ReactNode }) => 
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [collaboratorsCollectionRef]);
 
   useEffect(() => {
     fetchCollaborators();
@@ -50,13 +51,23 @@ export const CollaboratorsProvider = ({ children }: { children: ReactNode }) => 
 
   const addCollaborator = useCallback(async (collaboratorData: CollaboratorData) => {
     try {
-      await addDoc(collaboratorsCollectionRef, { ...collaboratorData, permissions: {} });
+      const batch = writeBatch(db);
+      
+      // 1. Add to 'collaborators' collection
+      const newCollaboratorRef = doc(collaboratorsCollectionRef);
+      batch.set(newCollaboratorRef, { ...collaboratorData, permissions: {} });
+
+      // 2. Add email to 'authorizedUsers' collection
+      const newAuthorizedUserRef = doc(authorizedUsersCollectionRef);
+      batch.set(newAuthorizedUserRef, { email: collaboratorData.email });
+      
+      await batch.commit();
       fetchCollaborators();
     } catch (error) {
       console.error("Error adding collaborator: ", error);
       throw error;
     }
-  }, [fetchCollaborators, collaboratorsCollectionRef]);
+  }, [fetchCollaborators, collaboratorsCollectionRef, authorizedUsersCollectionRef]);
 
   const updateCollaborator = useCallback(async (id: string, collaboratorData: Partial<CollaboratorData>) => {
     const collaboratorDocRef = doc(db, 'collaborators', id);
@@ -90,22 +101,37 @@ export const CollaboratorsProvider = ({ children }: { children: ReactNode }) => 
     }
   }, []);
   
-  const deleteCollaborator = useCallback(async (id: string) => {
-    const collaboratorDocRef = doc(db, 'collaborators', id);
+  const deleteCollaborator = useCallback(async (id: string, email: string) => {
     try {
-        await deleteDoc(collaboratorDocRef);
-        fetchCollaborators();
+      const batch = writeBatch(db);
+      
+      // 1. Delete from 'collaborators'
+      const collaboratorDocRef = doc(db, 'collaborators', id);
+      batch.delete(collaboratorDocRef);
+
+      // 2. Delete from 'authorizedUsers'
+      const q = query(authorizedUsersCollectionRef, where("email", "==", email));
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach(doc => {
+          batch.delete(doc.ref);
+      });
+
+      await batch.commit();
+      fetchCollaborators();
     } catch (error) {
         console.error("Error deleting collaborator: ", error);
         throw error;
     }
-  }, [fetchCollaborators]);
+  }, [fetchCollaborators, authorizedUsersCollectionRef]);
 
   const bulkAddCollaborators = useCallback(async (collaboratorsData: CollaboratorData[]) => {
       const batch = writeBatch(db);
       collaboratorsData.forEach(collaborator => {
-          const docRef = doc(collection(db, 'collaborators'));
-          batch.set(docRef, {...collaborator, permissions: {}});
+          const newCollaboratorRef = doc(collaboratorsCollectionRef);
+          batch.set(newCollaboratorRef, {...collaborator, permissions: {}});
+          
+          const newAuthorizedUserRef = doc(authorizedUsersCollectionRef);
+          batch.set(newAuthorizedUserRef, { email: collaborator.email });
       });
       try {
           await batch.commit();
@@ -114,7 +140,7 @@ export const CollaboratorsProvider = ({ children }: { children: ReactNode }) => 
           console.error("Error bulk adding collaborators: ", error);
           throw error;
       }
-  }, [fetchCollaborators]);
+  }, [fetchCollaborators, collaboratorsCollectionRef, authorizedUsersCollectionRef]);
 
 
   return (
