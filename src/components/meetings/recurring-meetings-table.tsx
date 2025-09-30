@@ -157,12 +157,13 @@ export function RecurringMeetingsTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[30%]">
+              <TableHead className="w-[25%]">
                  <Button variant="ghost" onClick={() => requestSort('name')}>
                     Tipo de Reunião
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
+              <TableHead>Recorrência</TableHead>
               <TableHead>
                 <Button variant="ghost" onClick={() => requestSort('lastOccurrence')}>
                     Última Ocorrência
@@ -200,6 +201,9 @@ export function RecurringMeetingsTable() {
                     <TableRow>
                     <TableCell className="font-medium">
                         {meeting.name}
+                    </TableCell>
+                    <TableCell>
+                        A cada {meeting.recurrence.value} {meeting.recurrence.unit}
                     </TableCell>
                     <TableCell>{format(lastOccurrenceLocal, 'dd/MM/yyyy')}</TableCell>
                     <TableCell className={cn(isOverdue && 'text-destructive font-bold')}>
@@ -294,7 +298,7 @@ export function RecurringMeetingsTable() {
               );
             }) : (
                     <TableRow>
-                        <TableCell colSpan={5} className="text-center h-24">
+                        <TableCell colSpan={6} className="text-center h-24">
                         Nenhuma reunião encontrada com os filtros atuais.
                         </TableCell>
                     </TableRow>
