@@ -1,14 +1,8 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // REGRA GERAL: Permite que qualquer usuário autenticado leia e escreva em
-    // qualquer documento de qualquer coleção.
-    // Isso garante que, após o login, a aplicação tenha permissão para
-    // buscar e exibir todas as informações necessárias.
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
   }
 }
