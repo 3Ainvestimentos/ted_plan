@@ -1,59 +1,53 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // REGRA PADRÃO: Negar acesso a tudo por padrão.
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // Acesso Público para Autorização e Configurações
-    // Permite que a aplicação verifique a lista de emails autorizados antes do login.
-    match /authorizedUsers/{userId} {
-      allow read: if true;
-      allow write: if request.auth != null; // Apenas usuários logados podem (potencialmente) escrever.
-    }
-
-    // Permite que a aplicação verifique o modo manutenção antes do login.
+    // Regra para permitir a leitura pública das configurações de manutenção
     match /settings/maintenance {
-        allow read: if true;
-        allow write: if request.auth != null; // Apenas usuários logados podem alterar.
-    }
-    
-    // Acesso Restrito para Coleções da Aplicação
-    // Exige que o usuário esteja autenticado para ler ou escrever em qualquer uma destas coleções.
-    // A lógica de quem pode ver o quê (ex: admin vs. usuário normal) é controlada na aplicação.
-    match /collaborators/{collaboratorId} {
-      allow read, write: if request.auth != null;
-    }
-    match /businessAreas/{areaId} {
-      allow read, write: if request.auth != null;
-    }
-    match /initiatives/{initiativeId} {
-      allow read, write: if request.auth != null;
-    }
-    match /kpis/{kpiId} {
-      allow read, write: if request.auth != null;
-    }
-    match /okrs/{okrId} {
-      allow read, write: if request.auth != null;
-    }
-    match /recurringMeetings/{meetingId} {
-      allow read, write: if request.auth != null;
-    }
-    match /settings/{settingId} {
-       allow read, write: if request.auth != null;
-    }
-     match /auditLogs/{logId} {
-        allow read, write: if request.auth != null;
+      allow get: if true;
+      allow list, create, update, delete: if request.auth != null;
     }
 
-    // Acesso Específico do Dono do Documento
+    // Regra para permitir a leitura pública dos usuários autorizados (necessário para o login)
+    match /authorizedUsers/{userId} {
+      allow get, list: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // Coleções de dados principais - Acesso para qualquer usuário autenticado
+    match /initiatives/{document=**} {
+      allow get, list, create, update, delete: if request.auth != null;
+    }
+    match /businessAreas/{document=**} {
+      allow get, list, create, update, delete: if request.auth != null;
+    }
+    match /okrs/{document=**} {
+      allow get, list, create, update, delete: if request.auth != null;
+    }
+    match /kpis/{document=**} {
+      allow get, list, create, update, delete: if request.auth != null;
+    }
+    match /recurringMeetings/{document=**} {
+      allow get, list, create, update, delete: if request.auth != null;
+    }
+    match /collaborators/{document=**} {
+      allow get, list, create, update, delete: if request.auth != null;
+    }
+    match /auditLogs/{document=**} {
+      allow get, list, create, update, delete: if request.auth != null;
+    }
+    match /settings/{document=**} {
+        allow get, list, create, update, delete: if request.auth != null;
+    }
+
+
+    // Coleções específicas do usuário - Acesso restrito ao proprietário
 
     // Apenas o dono pode ler/escrever suas próprias notas.
     match /notes/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow get, list, create, update, delete: if request.auth != null && request.auth.uid == userId;
     }
 
     // Regra para Tarefas:
@@ -61,7 +55,7 @@ service cloud.firestore {
     // read, update, delete: Permite ler, atualizar ou deletar se o 'userId' da tarefa existente for o seu.
     match /tasks/{taskId} {
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow get, list, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
   }
 }
