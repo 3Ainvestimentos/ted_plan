@@ -1,61 +1,27 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Regra para permitir a leitura pública das configurações de manutenção
+    
+    // Regra Pública: Permite a leitura de configurações essenciais ANTES do login.
+    // Isso é necessário para que a aplicação verifique o modo de manutenção.
     match /settings/maintenance {
-      allow get: if true;
-      allow list, create, update, delete: if request.auth != null;
+      allow read: if true;
+      allow write: if request.auth != null; // Apenas autenticados (admins) podem escrever.
     }
-
-    // Regra para permitir a leitura pública dos usuários autorizados (necessário para o login)
+    
+    // Regra Pública: Permite que a aplicação verifique se um email está autorizado
+    // durante o processo de login, antes do usuário estar autenticado.
     match /authorizedUsers/{userId} {
-      allow get, list: if true;
-      allow create, update, delete: if request.auth != null;
+        allow read: if true;
+        allow write: if request.auth != null;
     }
 
-    // Coleções de dados principais - Acesso para qualquer usuário autenticado
-    match /initiatives/{document=**} {
-      allow get, list, create, update, delete: if request.auth != null;
-    }
-    match /businessAreas/{document=**} {
-      allow get, list, create, update, delete: if request.auth != null;
-    }
-    match /okrs/{document=**} {
-      allow get, list, create, update, delete: if request.auth != null;
-    }
-    match /kpis/{document=**} {
-      allow get, list, create, update, delete: if request.auth != null;
-    }
-    match /recurringMeetings/{document=**} {
-      allow get, list, create, update, delete: if request.auth != null;
-    }
-    match /collaborators/{document=**} {
-      allow get, list, create, update, delete: if request.auth != null;
-    }
-    match /auditLogs/{document=**} {
-      allow get, list, create, update, delete: if request.auth != null;
-    }
-    match /settings/{document=**} {
-        allow get, list, create, update, delete: if request.auth != null;
-    }
-
-
-    // Coleções específicas do usuário - Acesso restrito ao proprietário
-
-    // Apenas o dono pode ler/escrever suas próprias notas.
-    match /notes/{userId} {
-      allow get, list, create, update, delete: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Regra para Tarefas:
-    // create: Permite criar se o 'userId' da nova tarefa for o seu.
-    // read, update, delete: Permite ler, atualizar ou deletar se o 'userId' da tarefa existente for o seu.
-    match /tasks/{taskId} {
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow get, list, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    // Regra Geral Protegida: Para todos os outros documentos e coleções
+    // (initiatives, tasks, collaborators, etc.), o acesso de leitura e escrita
+    // é permitido APENAS se o usuário estiver autenticado.
+    match /{path=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
