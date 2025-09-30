@@ -2,47 +2,31 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // =================================
-    // Funções Helper de Segurança
-    // =================================
-    
-    // Função para verificar se um UID pertence a um administrador.
-    function isAdmin(userId) {
-      return get(/databases/$(database)/documents/settings/maintenance).data.adminEmails.hasAny([request.auth.token.email]);
-    }
-    
-    // =================================
-    // Regras Gerais
-    // =================================
 
-    // Regra Padrão: Negar tudo, a menos que seja explicitamente permitido abaixo.
+    // REGRA PADRÃO: Negar acesso a tudo por padrão.
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // =================================
-    // Regras por Coleção
-    // =================================
-
-    // A coleção 'authorizedUsers' pode ser lida por qualquer um para a verificação inicial de login.
+    // Acesso Público para Autorização e Configurações
+    // Permite que a aplicação verifique a lista de emails autorizados antes do login.
     match /authorizedUsers/{userId} {
       allow read: if true;
-      allow write: if isAdmin(request.auth.uid); // Apenas admins podem adicionar/remover usuários autorizados
-    }
-    
-    // A coleção 'settings' pode ser lida por qualquer um (para verificar o modo de manutenção).
-    // A escrita é limitada a administradores.
-    match /settings/maintenance {
-      allow read: if true;
-      allow write: if isAdmin(request.auth.uid);
+      allow write: if request.auth != null; // Apenas usuários logados podem (potencialmente) escrever.
     }
 
-    // A coleção 'collaborators' SÓ PODE ser listada (lida) por administradores.
-    match /collaborators/{collaboratorId} {
-      allow read, write: if isAdmin(request.auth.uid);
+    // Permite que a aplicação verifique o modo manutenção antes do login.
+    match /settings/maintenance {
+        allow read: if true;
+        allow write: if request.auth != null; // Apenas usuários logados podem alterar.
     }
     
+    // Acesso Restrito para Coleções da Aplicação
+    // Exige que o usuário esteja autenticado para ler ou escrever em qualquer uma destas coleções.
+    // A lógica de quem pode ver o quê (ex: admin vs. usuário normal) é controlada na aplicação.
+    match /collaborators/{collaboratorId} {
+      allow read, write: if request.auth != null;
+    }
     match /businessAreas/{areaId} {
       allow read, write: if request.auth != null;
     }
@@ -58,21 +42,26 @@ service cloud.firestore {
     match /recurringMeetings/{meetingId} {
       allow read, write: if request.auth != null;
     }
-    
-    // Coleções específicas do usuário (Notas e Tarefas)
-    // Apenas o próprio usuário pode acessar seus dados.
+    match /settings/{settingId} {
+       allow read, write: if request.auth != null;
+    }
+     match /auditLogs/{logId} {
+        allow read, write: if request.auth != null;
+    }
+
+    // Acesso Específico do Dono do Documento
+
+    // Apenas o dono pode ler/escrever suas próprias notas.
     match /notes/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // Regra corrigida para Tasks: permite criar e depois gerenciar o próprio recurso.
-    match /tasks/{taskId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-    }
 
-    match /auditLogs/{logId} {
-      allow read, write: if isAdmin(request.auth.uid);
+    // Regra para Tarefas:
+    // create: Permite criar se o 'userId' da nova tarefa for o seu.
+    // read, update, delete: Permite ler, atualizar ou deletar se o 'userId' da tarefa existente for o seu.
+    match /tasks/{taskId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
   }
 }
