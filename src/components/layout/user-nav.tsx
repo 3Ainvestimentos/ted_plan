@@ -63,7 +63,7 @@ export function UserNav() {
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/settings" className="text-[hsl(0,72%,51%)] focus:text-[hsl(0,72%,51%)]">
+              <Link href="/settings">
                 <Shield className="mr-2 h-4 w-4" />
                 <span>Sistema</span>
               </Link>
