@@ -91,7 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 await createUserWithEmailAndPassword(auth, email, pass);
                 // After creation, signIn will be automatic, and onAuthStateChanged will trigger.
             } catch (createError: any) {
-                 throw new Error(`Falha ao criar usuário: ${'createError.message'} `);
+                 throw new Error(`Falha ao criar usuário: ${createError.message} `);
             }
         } else {
             // For other errors like wrong password
