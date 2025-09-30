@@ -28,13 +28,22 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock user for simple auth
-const MOCK_USER: User = {
-    uid: 'mock-admin-uid',
-    name: 'Admin TED',
-    email: 'admin@ted.com.br',
-    role: 'PMO'
-};
+// Mock users for simple auth
+const ALLOWED_USERS: User[] = [
+    {
+        uid: 'mock-matheus-uid',
+        name: 'Matheus',
+        email: 'matheus@3ainvestimentos.com.br',
+        role: 'PMO'
+    },
+    {
+        uid: 'mock-thiago-uid',
+        name: 'Thiago',
+        email: 'thiago@3ainvestimentos.com.br',
+        role: 'PMO'
+    }
+];
+
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -86,10 +95,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, pass: string) => {
     setIsLoading(true);
 
+    const normalizedEmail = email.toLowerCase();
+    const userToLogin = ALLOWED_USERS.find(u => u.email === normalizedEmail);
+
     // Simple hardcoded authentication
-    if (email.toLowerCase() === 'admin@ted.com.br' && pass === 'ted@2024') {
-        sessionStorage.setItem('user-session', JSON.stringify(MOCK_USER));
-        setUser(MOCK_USER);
+    if (userToLogin && pass === 'ted@2024') {
+        sessionStorage.setItem('user-session', JSON.stringify(userToLogin));
+        setUser(userToLogin);
         router.push('/strategic-initiatives');
     } else {
         throw new Error('Credenciais inválidas.');
