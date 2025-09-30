@@ -14,7 +14,8 @@ interface TeamControlContextType {
   refetch: () => void;
   addCollaborator: (collaborator: Omit<Collaborator, 'id'>) => Promise<void>;
   updateCollaborator: (id: string, collaborator: Partial<Omit<Collaborator, 'id'>>) => Promise<void>;
-  deleteCollaborator: (id: string) => Promise<void>;
+  deleteCollaborator: (id: string, email: string) => Promise<void>;
+  updateCollaboratorPermissions: (id: string, permissionKey: string, value: boolean) => Promise<void>;
   updateCollaboratorHistory: (collaboratorId: string, historyType: 'remunerationHistory' | 'positionHistory', data: any[]) => Promise<void>;
   addHistoryEntry: (collaboratorId: string, historyType: 'remunerationHistory' | 'positionHistory', entry: RemunerationHistory | PositionHistory) => Promise<void>;
   bulkUpdateRemuneration: (csvData: any[]) => Promise<void>;
@@ -26,11 +27,13 @@ const TeamControlContext = createContext<TeamControlContextType | undefined>(und
 export const TeamControlProvider = ({ children }: { children: ReactNode }) => {
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const collaboratorsCollectionRef = collection(db, 'collaborators');
+  const authorizedUsersCollectionRef = collection(db, 'authorizedUsers');
 
   const fetchCollaborators = useCallback(async () => {
     setIsLoading(true);
     try {
-      const q = query(collection(db, 'collaborators'), orderBy('name'));
+      const q = query(collaboratorsCollectionRef, orderBy('name'));
       const querySnapshot = await getDocs(q);
       const collaboratorsData = querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -42,7 +45,7 @@ export const TeamControlProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [collaboratorsCollectionRef]);
 
   useEffect(() => {
     fetchCollaborators();
@@ -50,11 +53,15 @@ export const TeamControlProvider = ({ children }: { children: ReactNode }) => {
 
   const addCollaborator = async (collaboratorData: CollaboratorData) => {
     try {
-      await addDoc(collection(db, 'collaborators'), {
-        ...collaboratorData,
-        remunerationHistory: [],
-        positionHistory: [],
-      });
+      const batch = writeBatch(db);
+      
+      const newCollaboratorRef = doc(collaboratorsCollectionRef);
+      batch.set(newCollaboratorRef, { ...collaboratorData, permissions: {}, remunerationHistory: [], positionHistory: [] });
+
+      const newAuthorizedUserRef = doc(authorizedUsersCollectionRef);
+      batch.set(newAuthorizedUserRef, { email: collaboratorData.email });
+      
+      await batch.commit();
       await fetchCollaborators();
     } catch (error) {
       console.error("Error adding collaborator: ", error);
@@ -73,16 +80,46 @@ export const TeamControlProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const deleteCollaborator = async (id: string) => {
+  const deleteCollaborator = async (id: string, email: string) => {
     try {
+      const batch = writeBatch(db);
+      
       const collaboratorDocRef = doc(db, 'collaborators', id);
-      await deleteDoc(collaboratorDocRef);
+      batch.delete(collaboratorDocRef);
+
+      const q = query(authorizedUsersCollectionRef, where("email", "==", email));
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach(doc => {
+          batch.delete(doc.ref);
+      });
+
+      await batch.commit();
       await fetchCollaborators();
     } catch (error) {
       console.error("Error deleting collaborator: ", error);
       throw error;
     }
   };
+
+  const updateCollaboratorPermissions = useCallback(async (id: string, permissionKey: string, value: boolean) => {
+    const collaboratorDocRef = doc(db, 'collaborators', id);
+    const validPermissionKey = permissionKey.startsWith('/') ? permissionKey.substring(1) : permissionKey;
+
+    try {
+        const fieldToUpdate = `permissions.${validPermissionKey}`;
+        await updateDoc(collaboratorDocRef, { [fieldToUpdate]: value });
+        setCollaborators(prev => 
+            prev.map(c => 
+                c.id === id 
+                    ? { ...c, permissions: { ...(c.permissions || {}), [validPermissionKey]: value } }
+                    : c
+            )
+        );
+    } catch (error) {
+        console.error("Error updating collaborator permissions: ", error);
+        throw error;
+    }
+  }, []);
 
   const updateCollaboratorHistory = async (collaboratorId: string, historyType: 'remunerationHistory' | 'positionHistory', data: any[]) => {
       const collaboratorDocRef = doc(db, 'collaborators', collaboratorId);
@@ -162,7 +199,7 @@ export const TeamControlProvider = ({ children }: { children: ReactNode }) => {
 
 
   return (
-    <TeamControlContext.Provider value={{ collaborators, isLoading, refetch: fetchCollaborators, addCollaborator, updateCollaborator, deleteCollaborator, updateCollaboratorHistory, addHistoryEntry, bulkUpdateRemuneration, bulkUpdatePositions }}>
+    <TeamControlContext.Provider value={{ collaborators, isLoading, refetch: fetchCollaborators, addCollaborator, updateCollaborator, deleteCollaborator, updateCollaboratorPermissions, updateCollaboratorHistory, addHistoryEntry, bulkUpdateRemuneration, bulkUpdatePositions }}>
       {children}
     </TeamControlContext.Provider>
   );

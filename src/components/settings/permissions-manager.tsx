@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Switch } from '@/components/ui/switch';
 import { NAV_ITEMS_CONFIG } from '@/lib/constants';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useCollaborators } from '@/contexts/collaborators-context';
+import { useTeamControl } from '@/contexts/team-control-context';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Collaborator } from '@/types';
@@ -37,6 +37,7 @@ import {
 
 
 const getInitials = (name: string) => {
+  if (!name) return '??'
   const parts = name.split(' ');
   if (parts.length === 0) return '??';
   if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
@@ -44,7 +45,7 @@ const getInitials = (name: string) => {
 }
 
 export function PermissionsManager() {
-  const { collaborators, isLoading, updateCollaboratorPermissions, deleteCollaborator } = useCollaborators();
+  const { collaborators, isLoading, updateCollaboratorPermissions, deleteCollaborator } = useTeamControl();
   const { toast } = useToast();
   const [isUpsertModalOpen, setIsUpsertModalOpen] = useState(false);
   const [selectedCollaborator, setSelectedCollaborator] = useState<Collaborator | null>(null);

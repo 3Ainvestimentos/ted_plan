@@ -7,14 +7,12 @@ import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { InitiativesProvider } from '@/contexts/initiatives-context';
 import { MeetingsProvider } from '@/contexts/meetings-context';
 import { StrategicPanelProvider } from '@/contexts/strategic-panel-context';
-import { CollaboratorsProvider } from '@/contexts/collaborators-context';
 import { UserNav } from '@/components/layout/user-nav';
 import { useAuth } from '@/contexts/auth-context';
 import { usePathname, useRouter } from 'next/navigation';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { NotesProvider } from '@/contexts/notes-context';
 import { TasksProvider } from '@/contexts/tasks-context';
-import { TeamControlProvider } from '@/contexts/team-control-context';
 
 function AppContent({ children }: { children: React.ReactNode }) {
   return (
@@ -68,18 +66,16 @@ export default function AppLayout({
   }
 
   return (
-    <CollaboratorsProvider>
-      <InitiativesProvider>
-        <MeetingsProvider>
-          <StrategicPanelProvider>
-            <TasksProvider>
-              <NotesProvider>
-                  <AppContent>{children}</AppContent>
-              </NotesProvider>
-            </TasksProvider>
-          </StrategicPanelProvider>
-        </MeetingsProvider>
-      </InitiativesProvider>
-    </CollaboratorsProvider>
+    <InitiativesProvider>
+      <MeetingsProvider>
+        <StrategicPanelProvider>
+          <TasksProvider>
+            <NotesProvider>
+                <AppContent>{children}</AppContent>
+            </NotesProvider>
+          </TasksProvider>
+        </StrategicPanelProvider>
+      </MeetingsProvider>
+    </InitiativesProvider>
   );
 }

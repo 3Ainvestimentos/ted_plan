@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "../ui/loading-spinner";
-import { useCollaborators } from "@/contexts/collaborators-context";
+import { useTeamControl } from "@/contexts/team-control-context";
 import type { Collaborator } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 
@@ -29,7 +29,7 @@ interface UpsertCollaboratorModalProps {
 }
 
 export function UpsertCollaboratorModal({ isOpen, onOpenChange, collaborator }: UpsertCollaboratorModalProps) {
-    const { addCollaborator, updateCollaborator } = useCollaborators();
+    const { addCollaborator, updateCollaborator } = useTeamControl();
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const isEditing = !!collaborator;
@@ -65,7 +65,7 @@ export function UpsertCollaboratorModal({ isOpen, onOpenChange, collaborator }: 
                     description: `Os dados de ${data.name} foram atualizados.`,
                 });
             } else {
-                await addCollaborator(data);
+                await addCollaborator(data as Omit<Collaborator, 'id'>);
                 toast({
                     title: "Colaborador Adicionado!",
                     description: `${data.name} foi adicionado à lista.`,
