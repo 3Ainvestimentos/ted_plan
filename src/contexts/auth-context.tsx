@@ -2,15 +2,17 @@
 "use client";
 
 import type { UserRole } from '@/types';
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { MOCK_COLLABORATORS } from '@/lib/constants';
+import { useSettings } from './settings-context';
 
 interface User {
   uid: string;
   name: string | null;
   email: string | null;
   role: UserRole;
+  permissions?: Record<string, boolean>;
 }
 
 interface AuthContextType {
@@ -21,7 +23,6 @@ interface AuthContextType {
   logout: () => Promise<void>;
   isLoading: boolean;
   isUnderMaintenance: boolean;
-  setIsUnderMaintenance: (isUnder: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,15 +32,15 @@ const ALLOWED_USERS_MAP = new Map(MOCK_COLLABORATORS.map(c => [c.email.toLowerCa
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isUnderMaintenance, setIsUnderMaintenance] = useState(false);
+  const { maintenanceSettings, isLoading: isLoadingSettings } = useSettings();
   const router = useRouter();
 
-  useEffect(() => {
-    // Check for a user session in sessionStorage when the app loads
+  const checkSession = useCallback(() => {
     try {
-      const savedUser = sessionStorage.getItem('user');
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
+      const savedUserJson = sessionStorage.getItem('user');
+      if (savedUserJson) {
+        const savedUser = JSON.parse(savedUserJson);
+        setUser(savedUser);
       }
     } catch (e) {
       console.error("Could not parse user from session storage", e);
@@ -48,28 +49,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
     }
   }, []);
+  
+  useEffect(() => {
+      checkSession();
+  }, [checkSession]);
 
   const login = async (email: string, pass: string) => {
     const lowerCaseEmail = email.toLowerCase();
-    
+
     if (pass !== 'ted@2024' || !ALLOWED_USERS_MAP.has(lowerCaseEmail)) {
-        throw new Error('Credenciais inválidas.');
+      throw new Error('Credenciais inválidas.');
     }
 
     const collaboratorData = ALLOWED_USERS_MAP.get(lowerCaseEmail);
     if (!collaboratorData) {
-        throw new Error('Credenciais inválidas.');
+        throw new Error('Credenciais inválidas.'); // Should be caught by the first check, but for safety
     }
-
+    
     const userProfile: User = {
       uid: collaboratorData.id,
       name: collaboratorData.name,
       email: collaboratorData.email,
-      role: collaboratorData.cargo as UserRole
+      role: collaboratorData.cargo as UserRole,
+      permissions: collaboratorData.permissions
     };
     
     sessionStorage.setItem('user', JSON.stringify(userProfile));
     setUser(userProfile);
+    router.push('/strategic-initiatives');
   };
 
   const logout = async () => {
@@ -80,9 +87,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const isAuthenticated = !!user;
   const isAdmin = user?.role === 'PMO';
+  
+  const isUnderMaintenance = !!maintenanceSettings?.isEnabled && !maintenanceSettings?.adminEmails.includes(user?.email || '');
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, isAdmin, login, logout, isLoading, isUnderMaintenance, setIsUnderMaintenance }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, isAdmin, login, logout, isLoading: isLoading || isLoadingSettings, isUnderMaintenance }}>
       {children}
     </AuthContext.Provider>
   );

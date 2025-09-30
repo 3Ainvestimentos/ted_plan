@@ -48,16 +48,15 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isUnderMaintenance } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
-    // If loading is finished and the user is not authenticated, redirect to login.
-    if (!isLoading && !isAuthenticated) {
+    // If loading is finished and the user is not authenticated, or if site is under maintenance, redirect to login.
+    if (!isLoading && (!isAuthenticated || isUnderMaintenance)) {
       router.replace('/login');
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, isUnderMaintenance, router]);
 
   // While loading, show a spinner to prevent flicker or showing the login page incorrectly.
   if (isLoading) {
@@ -68,9 +67,8 @@ export default function AppLayout({
     );
   }
 
-  // If authenticated, render the app content.
-  // The check above will redirect if not authenticated, so we don't need to check again here.
-  if (isAuthenticated) {
+  // If authenticated and not under maintenance, render the app content.
+  if (isAuthenticated && !isUnderMaintenance) {
     return (
       <InitiativesProvider>
         <MeetingsProvider>

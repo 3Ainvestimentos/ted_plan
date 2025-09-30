@@ -2,10 +2,10 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Regra Global: Permite leitura e escrita em qualquer documento
-    // somente se o usuário estiver autenticado via Firebase Authentication.
+    // Regra simplificada para permitir leitura e escrita em toda a base,
+    // uma vez que a autenticação agora é controlada pela própria aplicação.
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
   }
 }

@@ -38,6 +38,13 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Do not allow login if under maintenance for non-admins
+    if (isUnderMaintenance) {
+        setError("A plataforma está em manutenção. Tente novamente mais tarde.");
+        return;
+    }
+
     setError('');
     setIsSubmitting(true);
     try {
@@ -82,7 +89,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                disabled={isSubmitting}
+                disabled={isSubmitting || isUnderMaintenance}
               />
             </div>
             <div className="space-y-2">
@@ -93,7 +100,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                disabled={isSubmitting}
+                disabled={isSubmitting || isUnderMaintenance}
               />
             </div>
              {error && (
@@ -103,7 +110,7 @@ export default function LoginPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button type="submit" className="w-full" disabled={isSubmitting || isUnderMaintenance}>
               {isSubmitting ? <LoadingSpinner className="mr-2 h-4 w-4" /> : null}
               Entrar
             </Button>
