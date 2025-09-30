@@ -4,10 +4,7 @@
 import type { UserRole } from '@/types';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { MOCK_COLLABORATORS } from '@/lib/constants'; // Assuming user data is here
 
 interface User {
   uid: string;
@@ -29,10 +26,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ALLOWED_EMAILS = [
-    'matheus@3ainvestimentos.com.br',
-    'thiago@3ainvestimentos.com.br'
-];
+// Define allowed users directly, pulling from a central mock if available
+const ALLOWED_USERS = MOCK_COLLABORATORS.map(c => ({
+    email: c.email.toLowerCase(),
+    uid: c.id,
+    name: c.name,
+    role: c.cargo as UserRole
+}));
+const ALLOWED_EMAILS = ALLOWED_USERS.map(u => u.email);
 
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -40,79 +41,76 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isUnderMaintenance, setIsUnderMaintenance] = useState(false);
   const router = useRouter();
-  const auth = getAuth();
 
   const isAuthenticated = !!user;
   const isAdmin = user?.role === 'PMO';
   
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-        if (firebaseUser) {
-            const userDocRef = doc(db, 'collaborators', firebaseUser.uid);
-            const userDocSnap = await getDoc(userDocRef);
-            if (userDocSnap.exists()) {
-                const userData = userDocSnap.data();
-                setUser({
-                    uid: firebaseUser.uid,
-                    email: firebaseUser.email,
-                    name: userData.name || firebaseUser.email,
-                    role: userData.role || 'Colaborador',
-                });
-            } else {
-                 setUser({
-                    uid: firebaseUser.uid,
-                    email: firebaseUser.email,
-                    name: firebaseUser.email,
-                    role: 'Colaborador',
-                 });
+    // This effect runs only once on mount to check for an existing session.
+    const checkSession = () => {
+        try {
+            const session = sessionStorage.getItem('user-session');
+            if (session) {
+                const userData = JSON.parse(session);
+                setUser(userData);
             }
-        } else {
-            setUser(null);
+        } catch (error) {
+            console.error("Failed to parse user session:", error);
+            sessionStorage.removeItem('user-session');
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [auth]);
+    };
+    checkSession();
+  }, []);
 
 
   const login = async (email: string, pass: string) => {
-    if (!ALLOWED_EMAILS.includes(email.toLowerCase())) {
+    setIsLoading(true);
+
+    const lowerCaseEmail = email.toLowerCase();
+    
+    // 1. Check if email is allowed
+    if (!ALLOWED_EMAILS.includes(lowerCaseEmail)) {
+        setIsLoading(false);
         throw new Error('Usuário não autorizado.');
     }
-    
-    try {
-        await signInWithEmailAndPassword(auth, email, pass);
-        // onAuthStateChanged will handle setting the user and loading state
-    } catch (error: any) {
-        if (error.code === 'auth/user-not-found') {
-            // If user does not exist, create it.
-            try {
-                await createUserWithEmailAndPassword(auth, email, pass);
-                // After creation, signIn will be automatic, and onAuthStateChanged will trigger.
-            } catch (createError: any) {
-                 throw new Error(`Falha ao criar usuário: ${createError.message} `);
-            }
-        } else {
-            // For other errors like wrong password
-            throw new Error('Credenciais inválidas.');
-        }
+
+    // 2. Check hardcoded password
+    if (pass !== 'ted@2024') {
+        setIsLoading(false);
+        throw new Error('Credenciais inválidas.');
     }
+
+    // 3. Find user data from our mock list
+    const userData = ALLOWED_USERS.find(u => u.email === lowerCaseEmail);
+    if (!userData) {
+        setIsLoading(false);
+        // This should technically never happen if email is in ALLOWED_EMAILS
+        throw new Error('Usuário não encontrado.');
+    }
+
+    // 4. Set session and state
+    const userToSave: User = {
+        uid: userData.uid,
+        name: userData.name,
+        email: userData.email,
+        role: userData.role
+    };
+
+    sessionStorage.setItem('user-session', JSON.stringify(userToSave));
+    setUser(userToSave);
+    
+    // Let the layout handle the redirection
+    setIsLoading(false);
   };
 
   const logout = async () => {
-    await signOut(auth);
+    sessionStorage.removeItem('user-session');
+    setUser(null);
     router.push('/login');
   };
   
-  if (isLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <LoadingSpinner className="h-12 w-12" />
-      </div>
-    );
-  }
-
   return (
     <AuthContext.Provider value={{ isAuthenticated, user, isAdmin, login, logout, isLoading, isUnderMaintenance, setIsUnderMaintenance }}>
       {children}

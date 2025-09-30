@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 
 
 export default function LoginPage() {
-  const { login, isAuthenticated, isLoading, isUnderMaintenance, setIsUnderMaintenance } = useAuth();
+  const { login, isAuthenticated, isLoading, isUnderMaintenance } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [email, setEmail] = useState('');
@@ -35,13 +35,6 @@ export default function LoginPage() {
         router.replace('/'); // Redirect to the root of the app, layout will handle the rest.
     }
   }, [isLoading, isAuthenticated, router]);
-  
-  useEffect(() => {
-    // This is just to clear the maintenance flag on component unmount
-    return () => {
-        setIsUnderMaintenance(false);
-    }
-  }, [setIsUnderMaintenance]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
