@@ -3,9 +3,12 @@
 
 import type { UserRole } from '@/types';
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { MOCK_COLLABORATORS } from '@/lib/constants';
+import { useRouter, usePathname } from 'next/navigation';
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
+import { app } from '@/lib/firebase';
 import { useSettings } from './settings-context';
+import { MOCK_COLLABORATORS } from '@/lib/constants';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 interface User {
   uid: string;
@@ -19,7 +22,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   isAdmin: boolean;
-  login: (email: string, pass: string) => Promise<void>;
+  login: () => Promise<void>;
   logout: () => Promise<void>;
   isLoading: boolean;
   isUnderMaintenance: boolean;
@@ -27,71 +30,98 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ALLOWED_USERS_MAP = new Map(MOCK_COLLABORATORS.map(c => [c.email.toLowerCase(), c]));
+const ALLOWED_EMAILS = ['matheus@3ainvestimentos.com.br', 'thiago@3ainvestimentos.com.br'];
+const MAPPED_USERS = new Map(MOCK_COLLABORATORS.map(c => [c.email, c]));
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { maintenanceSettings, isLoading: isLoadingSettings } = useSettings();
   const router = useRouter();
+  const pathname = usePathname();
 
-  const checkSession = useCallback(() => {
-    try {
-      const savedUserJson = sessionStorage.getItem('user');
-      if (savedUserJson) {
-        const savedUser = JSON.parse(savedUserJson);
-        setUser(savedUser);
-      }
-    } catch (e) {
-      console.error("Could not parse user from session storage", e);
-      sessionStorage.removeItem('user');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-  
   useEffect(() => {
-      checkSession();
-  }, [checkSession]);
+    const auth = getAuth(app);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser && firebaseUser.email && ALLOWED_EMAILS.includes(firebaseUser.email)) {
+        const collaboratorData = MAPPED_USERS.get(firebaseUser.email);
+        const userProfile: User = {
+          uid: firebaseUser.uid,
+          name: firebaseUser.displayName,
+          email: firebaseUser.email,
+          role: collaboratorData?.cargo as UserRole || 'Colaborador',
+          permissions: collaboratorData?.permissions || {},
+        };
+        setUser(userProfile);
+      } else {
+        setUser(null);
+        if (firebaseUser) {
+           // If a user is logged in but not in the allowed list, sign them out.
+           signOut(auth);
+        }
+      }
+      setIsLoading(false);
+    });
 
-  const login = async (email: string, pass: string) => {
-    const lowerCaseEmail = email.toLowerCase();
+    return () => unsubscribe();
+  }, []);
 
-    if (pass !== 'ted@2024' || !ALLOWED_USERS_MAP.has(lowerCaseEmail)) {
-      throw new Error('Credenciais inválidas.');
+  const login = async () => {
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const email = result.user.email;
+      if (!email || !ALLOWED_EMAILS.includes(email)) {
+        await signOut(auth); // Sign out unauthorized user
+        throw new Error("Usuário não autorizado.");
+      }
+      // onAuthStateChanged will handle setting the user and redirecting
+    } catch (error: any) {
+      console.error("Google Sign-In Error:", error);
+      // Let the user know they are not authorized
+      if (error.message === "Usuário não autorizado.") {
+        throw error;
+      }
+      // Handle other potential errors like popup closed by user, etc.
+      throw new Error("Falha ao fazer login com o Google.");
     }
-
-    const collaboratorData = ALLOWED_USERS_MAP.get(lowerCaseEmail);
-    if (!collaboratorData) {
-        throw new Error('Credenciais inválidas.'); // Should be caught by the first check, but for safety
-    }
-    
-    const userProfile: User = {
-      uid: collaboratorData.id,
-      name: collaboratorData.name,
-      email: collaboratorData.email,
-      role: collaboratorData.cargo as UserRole,
-      permissions: collaboratorData.permissions
-    };
-    
-    sessionStorage.setItem('user', JSON.stringify(userProfile));
-    setUser(userProfile);
-    router.push('/strategic-initiatives');
   };
 
   const logout = async () => {
-    sessionStorage.removeItem('user');
+    const auth = getAuth(app);
+    await signOut(auth);
     setUser(null);
     router.push('/login');
   };
 
   const isAuthenticated = !!user;
   const isAdmin = user?.role === 'PMO';
-  
   const isUnderMaintenance = !!maintenanceSettings?.isEnabled && !maintenanceSettings?.adminEmails.includes(user?.email || '');
 
+  // Redirect logic within a useEffect to avoid rendering protected routes unnecessarily
+  useEffect(() => {
+    const isLoginPage = pathname === '/login';
+
+    if (!isLoading && !isAuthenticated && !isLoginPage) {
+      router.replace('/login');
+    }
+
+    if (!isLoading && isAuthenticated && (isLoginPage || pathname === '/')) {
+      router.replace('/strategic-initiatives');
+    }
+  }, [isLoading, isAuthenticated, pathname, router]);
+
+  if (isLoading || (!isAuthenticated && pathname !== '/login')) {
+      return (
+        <div className="flex h-screen w-full items-center justify-center bg-background">
+          <LoadingSpinner className="h-12 w-12" />
+        </div>
+      );
+  }
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, isAdmin, login, logout, isLoading: isLoading || isLoadingSettings, isUnderMaintenance }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, isAdmin, login, logout, isLoading, isUnderMaintenance }}>
       {children}
     </AuthContext.Provider>
   );

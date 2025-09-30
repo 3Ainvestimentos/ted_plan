@@ -9,60 +9,39 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/auth-context";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { HardHat, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-
 export default function LoginPage() {
-  const { login, isAuthenticated, isLoading, isUnderMaintenance } = useAuth();
-  const router = useRouter();
+  const { login, isLoading } = useAuth();
   const { toast } = useToast();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-
-  useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-        router.replace('/strategic-initiatives'); // Redirect to a default page after login
-    }
-  }, [isLoading, isAuthenticated, router]);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Do not allow login if under maintenance for non-admins
-    if (isUnderMaintenance) {
-        setError("A plataforma está em manutenção. Tente novamente mais tarde.");
-        return;
-    }
-
+  const handleLogin = async () => {
     setError('');
     setIsSubmitting(true);
     try {
-      await login(email, password);
-      // The useEffect above will handle the redirect once isAuthenticated is true.
+      await login();
+      // The AuthProvider's useEffect will handle the redirect on successful login.
     } catch (err: any) {
-      setError(err.message);
+      const errorMessage = err.message || "Ocorreu um erro durante o login. Tente novamente.";
+      setError(errorMessage);
       toast({
         variant: "destructive",
-        title: "Erro de Login",
-        description: err.message || "Verifique suas credenciais e tente novamente.",
+        title: "Erro de Acesso",
+        description: errorMessage,
       });
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
-
+  // The main layout and auth provider will show a spinner while loading
   if (isLoading) {
     return (
         <div className="flex items-center justify-center min-h-screen bg-background">
@@ -76,56 +55,28 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-xl bg-card text-card-foreground">
         <CardHeader className="space-y-2 text-center">
           <CardTitle className="text-2xl font-headline mt-6">Bem-vindo ao Ted 1.0</CardTitle>
-          <CardDescription>Insira suas credenciais para acessar a plataforma.</CardDescription>
+          <CardDescription>Use sua conta Google para acessar a plataforma.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isSubmitting || isUnderMaintenance}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={isSubmitting || isUnderMaintenance}
-              />
-            </div>
-             {error && (
+          <div className="space-y-4">
+            {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Erro de Acesso</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <Button type="submit" className="w-full" disabled={isSubmitting || isUnderMaintenance}>
-              {isSubmitting ? <LoadingSpinner className="mr-2 h-4 w-4" /> : null}
-              Entrar
+            <Button onClick={handleLogin} className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <LoadingSpinner className="mr-2 h-4 w-4" />
+              ) : (
+                <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
+                  <path fill="currentColor" d="M488 261.8C488 403.3 381.5 512 244 512 110.3 512 0 401.7 0 265.2 0 128.3 109.2 17.1 244 17.1 315.3 17.1 377.3 46.8 423.4 89.8l-65.7 64.2c-20.3-19.1-46.7-30.9-78.7-30.9-61.9 0-112.2 50.8-112.2 113.3s50.3 113.3 112.2 113.3c72.1 0 98.4-48.9 101.9-72.3H244v-85.1h243.9c1.3 12.8 2.1 26.6 2.1 41.8z"></path>
+                </svg>
+              )}
+              Entrar com Google
             </Button>
-          </form>
-
-          {isUnderMaintenance && (
-             <Alert variant="destructive" className="bg-orange-50 border-orange-200 text-orange-800">
-                <HardHat className="h-4 w-4 !text-orange-600" />
-                <AlertTitle className="font-semibold">Plataforma em Manutenção</AlertTitle>
-                <AlertDescription className="text-orange-700">
-                    A plataforma está temporariamente indisponível para manutenção. Voltaremos em breve!
-                </AlertDescription>
-            </Alert>
-          )}
-
+          </div>
         </CardContent>
       </Card>
     </div>
