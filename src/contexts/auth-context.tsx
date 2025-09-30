@@ -49,7 +49,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUnderMaintenance, setIsUnderMaintenance] = useState(false);
-  const [adminEmails, setAdminEmails] = useState<string[]>([]);
   const router = useRouter();
 
   const isAuthenticated = !!user;
@@ -61,23 +60,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const maintenanceDocRef = doc(db, 'settings', 'maintenance');
         const maintenanceSnap = await getDoc(maintenanceDocRef);
         const maintenanceSettings = maintenanceSnap.exists() ? (maintenanceSnap.data() as MaintenanceSettings) : { isEnabled: false, adminEmails: [] };
-        setAdminEmails(maintenanceSettings.adminEmails);
-
-        // Check if user is in maintenance mode
-        if (maintenanceSettings.isEnabled && !maintenanceSettings.adminEmails.includes(user?.email || '')) {
-            setIsUnderMaintenance(true);
-            setUser(null);
-            sessionStorage.removeItem('user-session');
-            router.push('/login');
-            setIsLoading(false);
-            return;
-        }
 
         // Check for existing session in sessionStorage
         const session = sessionStorage.getItem('user-session');
         if (session) {
             const sessionUser = JSON.parse(session);
-            // Additional check if user is admin when maintenance is on
+            // Check if user is allowed during maintenance
             if(maintenanceSettings.isEnabled && !maintenanceSettings.adminEmails.includes(sessionUser.email)) {
                  setIsUnderMaintenance(true);
                  setUser(null);
@@ -86,11 +74,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             } else {
                 setUser(sessionUser);
             }
+        } else {
+            // No session, check if maintenance is on for everyone else
+            if (maintenanceSettings.isEnabled) {
+                 setIsUnderMaintenance(true);
+                 router.push('/login');
+            }
         }
         setIsLoading(false);
     };
     checkSession();
-  }, [router, user?.email]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const login = async (email: string, pass: string) => {
     setIsLoading(true);
@@ -104,10 +99,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(userToLogin);
         router.push('/strategic-initiatives');
     } else {
+        setIsLoading(false);
         throw new Error('Credenciais inválidas.');
     }
     
-    setIsLoading(false);
+    // No need to set loading to false here as the page will redirect and re-render.
   };
 
   const logout = async () => {
