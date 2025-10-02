@@ -4,7 +4,7 @@
 import type { UserRole } from '@/types';
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
+import { getAuth, signInWithRedirect, GoogleAuthProvider, onAuthStateChanged, signOut, User as FirebaseUser, getRedirectResult, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { useSettings } from './settings-context';
 import { MOCK_COLLABORATORS } from '@/lib/constants';
@@ -42,50 +42,63 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const auth = getAuth(app);
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser && firebaseUser.email && ALLOWED_EMAILS.includes(firebaseUser.email)) {
-        const collaboratorData = MAPPED_USERS.get(firebaseUser.email);
-        const userProfile: User = {
-          uid: firebaseUser.uid,
-          name: firebaseUser.displayName,
-          email: firebaseUser.email,
-          role: collaboratorData?.cargo as UserRole || 'Colaborador',
-          permissions: collaboratorData?.permissions || {},
-        };
-        setUser(userProfile);
-      } else {
-        setUser(null);
-        if (firebaseUser) {
-           // If a user is logged in but not in the allowed list, sign them out.
-           signOut(auth);
-        }
-      }
-      setIsLoading(false);
-    });
 
-    return () => unsubscribe();
-  }, []);
+    const handleAuth = async () => {
+        try {
+            await setPersistence(auth, browserLocalPersistence);
+
+            const result = await getRedirectResult(auth);
+            if (result) {
+                const email = result.user.email;
+                if (!email || !ALLOWED_EMAILS.includes(email)) {
+                    await signOut(auth);
+                    throw new Error("Usuário não autorizado.");
+                }
+            }
+
+            const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+              if (firebaseUser && firebaseUser.email && ALLOWED_EMAILS.includes(firebaseUser.email)) {
+                const collaboratorData = MAPPED_USERS.get(firebaseUser.email);
+                const userProfile: User = {
+                  uid: firebaseUser.uid,
+                  name: firebaseUser.displayName,
+                  email: firebaseUser.email,
+                  role: collaboratorData?.cargo as UserRole || 'Colaborador',
+                  permissions: collaboratorData?.permissions || {},
+                };
+                setUser(userProfile);
+              } else {
+                setUser(null);
+                if (firebaseUser) {
+                   signOut(auth);
+                }
+              }
+              setIsLoading(false);
+            });
+
+            return unsubscribe;
+
+        } catch (error) {
+            console.error("Auth process error:", error);
+            setIsLoading(false);
+            setUser(null);
+            router.push('/login');
+        }
+    };
+    
+    const unsubscribePromise = handleAuth();
+
+    return () => {
+        unsubscribePromise.then(unsubscribe => {
+            if(unsubscribe) unsubscribe();
+        });
+    };
+  }, [router]);
 
   const login = async () => {
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const email = result.user.email;
-      if (!email || !ALLOWED_EMAILS.includes(email)) {
-        await signOut(auth); // Sign out unauthorized user
-        throw new Error("Usuário não autorizado.");
-      }
-      // onAuthStateChanged will handle setting the user and redirecting
-    } catch (error: any) {
-      console.error("Google Sign-In Error:", error);
-      // Let the user know they are not authorized
-      if (error.message === "Usuário não autorizado.") {
-        throw error;
-      }
-      // Handle other potential errors like popup closed by user, etc.
-      throw new Error("Falha ao fazer login com o Google.");
-    }
+    await signInWithRedirect(auth, provider);
   };
 
   const logout = async () => {
