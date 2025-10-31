@@ -1,10 +1,9 @@
-
 "use client";
 
 import type { MnaDeal, InitiativeStatus, SubItem } from '@/types';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, query, orderBy, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, query, orderBy, deleteDoc, writeBatch, setDoc } from 'firebase/firestore';
 import type { DealFormData } from '@/components/m-and-as/deal-form';
 
 
@@ -157,7 +156,7 @@ export const MnaDealsProvider = ({ children }: { children: ReactNode }) => {
           lastUpdate: new Date().toISOString(),
           subItems: data.subItems?.map(si => ({...si, id: si.id || doc(collection(db, 'dummy')).id})) || [],
       };
-      await updateDoc(dealDocRef, updatedData as any);
+      await setDoc(dealDocRef, updatedData, { merge: true });
       fetchDeals();
     } catch (error) {
         console.error("Error updating deal: ", error);
@@ -223,7 +222,7 @@ export const MnaDealsProvider = ({ children }: { children: ReactNode }) => {
       
       const dealDocRef = doc(db, 'mnaDeals', dealId);
       try {
-          await updateDoc(dealDocRef, { subItems: updatedSubItems, lastUpdate: new Date().toISOString() });
+          await setDoc(dealDocRef, { subItems: updatedSubItems, lastUpdate: new Date().toISOString() }, { merge: true });
           setDeals(prevDeals => {
               const newDeals = prevDeals.map(deal => {
                   if (deal.id === dealId) {

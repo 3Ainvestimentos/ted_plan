@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo } from "react";
@@ -45,6 +44,7 @@ export default function MnaPage() {
           isOpen={!!selectedDeal}
           onOpenChange={(isOpen) => !isOpen && closeDossier()}
           initiative={selectedDeal}
+          isMna={true}
         />
       )}
       <div className="space-y-6">

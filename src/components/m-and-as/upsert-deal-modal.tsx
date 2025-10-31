@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -7,45 +6,63 @@ import { useMnaDeals } from "@/contexts/m-and-as-context";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import type { DealFormData } from "./deal-form";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import type { MnaDeal } from "@/types";
 
 interface UpsertDealModalProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
+    deal?: MnaDeal | null;
 }
 
-export function UpsertDealModal({ isOpen, onOpenChange }: UpsertDealModalProps) {
-    const { addDeal } = useMnaDeals();
+export function UpsertDealModal({ isOpen, onOpenChange, deal }: UpsertDealModalProps) {
+    const { addDeal, updateDeal } = useMnaDeals();
     const { toast } = useToast();
-    const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
+    const isEditing = !!deal;
 
     const handleFormSubmit = async (data: DealFormData) => {
         setIsLoading(true);
-        await addDeal(data);
-        setIsLoading(false);
-
-        toast({
-            title: "Deal Criado!",
-            description: `O deal "${data.title}" foi criado com sucesso.`,
-        });
-        
-        onOpenChange(false);
+        try {
+            if (isEditing && deal) {
+                await updateDeal(deal.id, data);
+                 toast({
+                    title: "Deal Atualizado!",
+                    description: `O deal "${data.title}" foi atualizado com sucesso.`,
+                });
+            } else {
+                await addDeal(data);
+                toast({
+                    title: "Deal Criado!",
+                    description: `O deal "${data.title}" foi criado com sucesso.`,
+                });
+            }
+            onOpenChange(false);
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: "Erro",
+                description: "Não foi possível salvar o deal."
+            })
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Criar Novo Deal</DialogTitle>
+                    <DialogTitle>{isEditing ? 'Editar Deal' : 'Criar Novo Deal'}</DialogTitle>
                     <DialogDescription>
-                        Preencha as informações abaixo para cadastrar um novo deal de M&A.
+                       {isEditing ? 'Atualize os detalhes do deal.' : 'Preencha as informações abaixo para cadastrar um novo deal de M&A.'}
                     </DialogDescription>
                 </DialogHeader>
                 <DealForm 
                     onSubmit={handleFormSubmit} 
                     onCancel={() => onOpenChange(false)} 
                     isLoading={isLoading}
+                    initialData={deal as DealFormData}
                 />
             </DialogContent>
         </Dialog>

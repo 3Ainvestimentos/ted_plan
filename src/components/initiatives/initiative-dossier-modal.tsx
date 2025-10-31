@@ -1,29 +1,31 @@
-
 "use client";
 
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { STATUS_ICONS } from '@/lib/constants';
 import { useInitiatives } from '@/contexts/initiatives-context';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Edit3, Paperclip, ListChecks } from 'lucide-react';
-import type { Initiative } from "@/types";
+import { Edit3, ListChecks } from 'lucide-react';
+import type { Initiative, MnaDeal } from "@/types";
 import { EditInitiativeModal } from './edit-initiative-modal';
 import { Checkbox } from '../ui/checkbox';
 import { cn } from '@/lib/utils';
-
+import { UpsertDealModal } from '../m-and-as/upsert-deal-modal';
+import { useMnaDeals } from '@/contexts/m-and-as-context';
 
 interface InitiativeDossierModalProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
-    initiative: Initiative;
+    initiative: Initiative | MnaDeal;
+    isMna?: boolean;
 }
 
-export function InitiativeDossierModal({ isOpen, onOpenChange, initiative }: InitiativeDossierModalProps) {
-    const { updateSubItem } = useInitiatives();
+export function InitiativeDossierModal({ isOpen, onOpenChange, initiative, isMna = false }: InitiativeDossierModalProps) {
+    const { updateSubItem: updateInitiativeSubItem } = useInitiatives();
+    const { updateSubItem: updateMnaSubItem } = useMnaDeals();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     
     if (!initiative) return null;
@@ -32,18 +34,35 @@ export function InitiativeDossierModal({ isOpen, onOpenChange, initiative }: Ini
     const hasSubItems = initiative.subItems && initiative.subItems.length > 0;
 
     const handleSubItemToggle = (subItemId: string, completed: boolean) => {
-        updateSubItem(initiative.id, subItemId, completed);
+        if (isMna) {
+            updateMnaSubItem(initiative.id, subItemId, completed);
+        } else {
+            updateInitiativeSubItem(initiative.id, subItemId, completed);
+        }
     };
+
+    const renderEditModal = () => {
+        if (isMna) {
+            return (
+                <UpsertDealModal
+                    isOpen={isEditModalOpen}
+                    onOpenChange={setIsEditModalOpen}
+                    deal={initiative as MnaDeal}
+                />
+            )
+        }
+        return (
+             <EditInitiativeModal
+                isOpen={isEditModalOpen}
+                onOpenChange={setIsEditModalOpen}
+                initiative={initiative as Initiative}
+            />
+        )
+    }
 
     return (
         <>
-        {isEditModalOpen && (
-            <EditInitiativeModal
-                isOpen={isEditModalOpen}
-                onOpenChange={setIsEditModalOpen}
-                initiative={initiative}
-            />
-        )}
+        {isEditModalOpen && renderEditModal()}
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
@@ -51,11 +70,11 @@ export function InitiativeDossierModal({ isOpen, onOpenChange, initiative }: Ini
                         <div>
                             <DialogTitle className="text-2xl font-headline text-foreground">{initiative.title}</DialogTitle>
                             <DialogDescription className="mt-1">
-                               Dossiê completo da iniciativa.
+                               Dossiê completo da {isMna ? 'deal' : 'iniciativa'}.
                             </DialogDescription>
                         </div>
                         <Button size="sm" onClick={() => setIsEditModalOpen(true)}>
-                            <Edit3 className="mr-2 h-4 w-4" /> Editar Iniciativa
+                            <Edit3 className="mr-2 h-4 w-4" /> Editar {isMna ? 'Deal' : 'Iniciativa'}
                         </Button>
                     </div>
                      <div className="mt-2">
@@ -73,16 +92,16 @@ export function InitiativeDossierModal({ isOpen, onOpenChange, initiative }: Ini
                       <p className="text-foreground/80 whitespace-pre-line">{initiative.description}</p>
                     </section>
 
-                    <section>
-                      <h3 className="text-xl font-headline mb-2 text-foreground/90">Progresso</h3>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm font-medium">Progresso Geral</span>
-                        <span className="text-sm font-medium">{initiative.progress}%</span>
-                      </div>
-                      <Progress value={initiative.progress} aria-label={`${initiative.title} progresso ${initiative.progress}%`} className="h-3" />
-                    </section>
-
                     {hasSubItems && (
+                        <>
+                        <section>
+                            <h3 className="text-xl font-headline mb-2 text-foreground/90">Progresso</h3>
+                            <div className="flex justify-between mb-1">
+                                <span className="text-sm font-medium">Progresso Geral</span>
+                                <span className="text-sm font-medium">{initiative.progress}%</span>
+                            </div>
+                            <Progress value={initiative.progress} aria-label={`${initiative.title} progresso ${initiative.progress}%`} className="h-3" />
+                        </section>
                         <section>
                             <h3 className="text-xl font-headline mb-2 text-foreground/90 flex items-center gap-2"><ListChecks className="w-5 h-5"/> Checklist</h3>
                             <div className="space-y-2 rounded-md border p-4">
@@ -100,6 +119,7 @@ export function InitiativeDossierModal({ isOpen, onOpenChange, initiative }: Ini
                                 ))}
                             </div>
                         </section>
+                        </>
                     )}
 
                   </div>
@@ -111,9 +131,9 @@ export function InitiativeDossierModal({ isOpen, onOpenChange, initiative }: Ini
                       </CardHeader>
                       <CardContent className="text-sm space-y-2">
                         <p><strong className="text-foreground/80">Prioridade:</strong> {initiative.priority}</p>
-                        <p><strong className="text-foreground/80">Responsável:</strong> {initiative.owner}</p>
+                        {!isMna && 'owner' in initiative && <p><strong className="text-foreground/80">Responsável:</strong> {initiative.owner}</p>}
                         <p><strong className="text-foreground/80">Última Atualização:</strong> {new Date(initiative.lastUpdate).toLocaleDateString()}</p>
-                        <p><strong className="text-foreground/80">Conclusão Alvo:</strong> <span className="text-muted-foreground">{initiative.deadline ? new Date(initiative.deadline).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : 'N/D'}</span></p>
+                        {!isMna && 'deadline' in initiative && <p><strong className="text-foreground/80">Conclusão Alvo:</strong> <span className="text-muted-foreground">{initiative.deadline ? new Date(initiative.deadline).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : 'N/D'}</span></p>}
                       </CardContent>
                     </Card>
                   </aside>
