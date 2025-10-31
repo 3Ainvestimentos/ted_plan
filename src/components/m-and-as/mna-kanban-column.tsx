@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -34,7 +35,7 @@ export function MnaKanbanColumn({ column, onDropTask, onDealClick }: ColumnProps
     <div
       ref={drop}
       className={cn(
-        "w-72 md:w-80 flex-shrink-0 bg-secondary/30 rounded-lg p-1.5 flex flex-col transition-colors duration-200",
+        "w-80 md:w-96 flex-shrink-0 bg-secondary/30 rounded-lg p-1.5 flex flex-col transition-colors duration-200",
         isOver && canDrop ? "bg-primary/10" : "",
         isOver && !canDrop ? "bg-destructive/10" : ""
       )}
