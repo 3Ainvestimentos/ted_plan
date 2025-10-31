@@ -1,11 +1,10 @@
 
-
 "use client";
 
 import type { Initiative, InitiativeStatus, SubItem } from '@/types';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, query, orderBy, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, query, orderBy, deleteDoc, writeBatch, setDoc } from 'firebase/firestore';
 import type { InitiativeFormData } from '@/components/initiatives/initiative-form';
 
 
@@ -160,7 +159,7 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
           lastUpdate: new Date().toISOString(),
           subItems: data.subItems?.map(si => ({...si, id: si.id || doc(collection(db, 'dummy')).id})) || [],
       };
-      await updateDoc(initiativeDocRef, updatedData as any);
+      await setDoc(initiativeDocRef, updatedData, { merge: true });
       fetchInitiatives();
     } catch (error) {
         console.error("Error updating initiative: ", error);
@@ -180,10 +179,10 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
   const archiveInitiative = useCallback(async (initiativeId: string) => {
     const initiativeDocRef = doc(db, 'initiatives', initiativeId);
     try {
-      await updateDoc(initiativeDocRef, {
+      await setDoc(initiativeDocRef, {
         archived: true,
         lastUpdate: new Date().toISOString(),
-      });
+      }, { merge: true });
       fetchInitiatives();
     } catch (error) {
       console.error("Error archiving initiative: ", error);
@@ -193,10 +192,10 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
   const unarchiveInitiative = useCallback(async (initiativeId: string) => {
     const initiativeDocRef = doc(db, 'initiatives', initiativeId);
     try {
-      await updateDoc(initiativeDocRef, {
+      await setDoc(initiativeDocRef, {
         archived: false,
         lastUpdate: new Date().toISOString(),
-      });
+      }, { merge: true });
       fetchInitiatives();
     } catch (error) {
       console.error("Error unarchiving initiative: ", error);
@@ -206,10 +205,10 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
   const updateInitiativeStatus = useCallback(async (initiativeId: string, newStatus: InitiativeStatus) => {
     const initiativeDocRef = doc(db, 'initiatives', initiativeId);
     try {
-        await updateDoc(initiativeDocRef, {
+        await setDoc(initiativeDocRef, {
             status: newStatus,
             lastUpdate: new Date().toISOString(),
-        });
+        }, { merge: true });
         await fetchInitiatives(); // Refetch to recalculate parent progress if needed
     } catch (error) {
         console.error("Error updating initiative status: ", error);
@@ -226,7 +225,7 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
       
       const initiativeDocRef = doc(db, 'initiatives', initiativeId);
       try {
-          await updateDoc(initiativeDocRef, { subItems: updatedSubItems, lastUpdate: new Date().toISOString() });
+          await setDoc(initiativeDocRef, { subItems: updatedSubItems, lastUpdate: new Date().toISOString() }, { merge: true });
           // Update state locally instead of re-fetching everything
           setInitiatives(prevInitiatives => {
               const newInitiatives = prevInitiatives.map(init => {
