@@ -1,10 +1,10 @@
+
 "use client";
 
 import type { MnaDeal } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { FileText, AlertTriangle, Clock, CheckSquare } from "lucide-react";
+import { FileText, AlertTriangle, Clock, CheckSquare, MapPin, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDrag } from 'react-dnd';
 import { Progress } from "../ui/progress";
@@ -12,14 +12,6 @@ import { Progress } from "../ui/progress";
 interface MnaKanbanCardProps {
   task: MnaDeal;
   onClick: () => void;
-}
-
-function getInitials(name: string) {
-  if (!name) return '??';
-  const parts = name.split(' ');
-  if (parts.length === 0) return '??';
-  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
 export function MnaKanbanCard({ task, onClick }: MnaKanbanCardProps) {
@@ -48,6 +40,16 @@ export function MnaKanbanCard({ task, onClick }: MnaKanbanCardProps) {
     statusIndicator = <Clock className="h-4 w-4 text-red-500 ml-auto" title="Atrasado" />;
   }
 
+  const formatAuc = (value: number) => {
+    if (value >= 1_000_000) {
+      return `${(value / 1_000_000).toFixed(1)}M`;
+    }
+    if (value >= 1_000) {
+      return `${(value / 1_000).toFixed(0)}K`;
+    }
+    return value.toString();
+  };
+
   return (
     <div ref={drag} style={{ opacity: isDragging ? 0.5 : 1 }} className="cursor-grab active:cursor-grabbing" onClick={onClick}>
         <Card className={cn(
@@ -74,16 +76,23 @@ export function MnaKanbanCard({ task, onClick }: MnaKanbanCardProps) {
                 </div>
             )}
             
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center justify-between text-xs text-muted-foreground flex-wrap gap-2">
                 <Badge variant="outline" className={cn("text-xs px-1.5 py-0.5", priorityColorClass)}>
                     {task.priority}
                 </Badge>
-                <div className="flex items-center gap-2">
-                     <span>{new Date(task.lastUpdate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
-                     <Avatar className="h-6 w-6">
-                        <AvatarImage src={`https://placehold.co/24x24.png?text=${getInitials(task.owner)}`} alt={task.owner} data-ai-hint="assignee avatar" />
-                        <AvatarFallback className="text-xs">{getInitials(task.owner)}</AvatarFallback>
-                    </Avatar>
+                <div className="flex items-center gap-2 flex-wrap">
+                     {task.cidade && (
+                        <Badge variant="secondary" className="font-normal">
+                            <MapPin className="mr-1 h-3 w-3" />
+                            {task.cidade}
+                        </Badge>
+                     )}
+                     {task.auc && (
+                        <Badge variant="secondary" className="font-normal">
+                           <DollarSign className="mr-1 h-3 w-3" />
+                           {formatAuc(task.auc)}
+                        </Badge>
+                     )}
                 </div>
             </div>
 
