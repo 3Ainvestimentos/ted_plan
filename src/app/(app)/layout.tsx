@@ -12,6 +12,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { NotesProvider } from '@/contexts/notes-context';
 import { TasksProvider } from '@/contexts/tasks-context';
+import { MnaDealsProvider } from '@/contexts/m-and-as-context';
 
 function AppContent({ children }: { children: React.ReactNode }) {
   return (
@@ -70,13 +71,15 @@ export default function AppLayout({
   if (isAuthenticated && !isUnderMaintenance) {
     return (
       <InitiativesProvider>
-        <MeetingsProvider>
-          <TasksProvider>
-            <NotesProvider>
-                <AppContent>{children}</AppContent>
-            </NotesProvider>
-          </TasksProvider>
-        </MeetingsProvider>
+        <MnaDealsProvider>
+          <MeetingsProvider>
+            <TasksProvider>
+              <NotesProvider>
+                  <AppContent>{children}</AppContent>
+              </NotesProvider>
+            </TasksProvider>
+          </MeetingsProvider>
+        </MnaDealsProvider>
       </InitiativesProvider>
     );
   }

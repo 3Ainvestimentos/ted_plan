@@ -27,6 +27,9 @@ export interface Initiative {
   archived?: boolean;
 }
 
+export interface MnaDeal extends Initiative {}
+
+
 export type UserRole = 'PMO' | 'Líder' | 'Colaborador';
 
 export interface RemunerationHistory {
