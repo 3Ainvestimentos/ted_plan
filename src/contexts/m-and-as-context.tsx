@@ -5,21 +5,21 @@ import type { MnaDeal, InitiativeStatus, SubItem } from '@/types';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, query, orderBy, deleteDoc, writeBatch } from 'firebase/firestore';
-import type { InitiativeFormData } from '@/components/initiatives/initiative-form';
+import type { DealFormData } from '@/components/m-and-as/deal-form';
 
 
-type MnaDealData = Omit<MnaDeal, 'id' | 'lastUpdate' | 'topicNumber' | 'progress' | 'keyMetrics' | 'deadline'> & { deadline: Date };
+type MnaDealData = Omit<MnaDeal, 'id' | 'lastUpdate' | 'topicNumber' | 'progress' | 'keyMetrics' | 'deadline' | 'owner'>;
 
 interface MnaDealsContextType {
   deals: MnaDeal[];
-  addDeal: (deal: InitiativeFormData) => Promise<void>;
-  updateDeal: (dealId: string, data: InitiativeFormData) => Promise<void>;
+  addDeal: (deal: DealFormData) => Promise<void>;
+  updateDeal: (dealId: string, data: DealFormData) => Promise<void>;
   deleteDeal: (dealId: string) => Promise<void>;
   archiveDeal: (dealId: string) => Promise<void>;
   unarchiveDeal: (dealId: string) => Promise<void>;
   updateDealStatus: (dealId: string, newStatus: InitiativeStatus) => void;
   updateSubItem: (dealId: string, subItemId: string, completed: boolean) => Promise<void>;
-  bulkAddDeals: (newDeals: Omit<MnaDeal, 'id' | 'lastUpdate' | 'topicNumber' | 'progress' | 'keyMetrics' | 'subItems' | 'deadline'>[]) => void;
+  bulkAddDeals: (newDeals: Omit<MnaDeal, 'id' | 'lastUpdate' | 'topicNumber' | 'progress' | 'keyMetrics' | 'subItems' | 'deadline' | 'owner'>[]) => void;
   isLoading: boolean;
 }
 
@@ -94,12 +94,13 @@ export const MnaDealsProvider = ({ children }: { children: ReactNode }) => {
       return mainTopics.length > 0 ? (Math.max(...mainTopics.map(i => parseInt(i.topicNumber))) + 1) : 1;
   };
 
-  const addDeal = useCallback(async (dealData: InitiativeFormData) => {
+  const addDeal = useCallback(async (dealData: DealFormData) => {
     const nextTopicNumber = getNextTopicNumber(deals).toString();
     
     const newDeal = {
         ...dealData,
-        deadline: dealData.deadline ? dealData.deadline.toISOString().split('T')[0] : null,
+        owner: 'N/A',
+        deadline: null,
         lastUpdate: new Date().toISOString(),
         topicNumber: nextTopicNumber,
         progress: 0, 
@@ -148,12 +149,11 @@ export const MnaDealsProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [deals, fetchDeals, dealsCollectionRef]);
   
-  const updateDeal = useCallback(async (dealId: string, data: InitiativeFormData) => {
+  const updateDeal = useCallback(async (dealId: string, data: DealFormData) => {
     const dealDocRef = doc(db, 'mnaDeals', dealId);
     try {
       const updatedData = {
           ...data,
-          deadline: data.deadline ? data.deadline.toISOString().split('T')[0] : null,
           lastUpdate: new Date().toISOString(),
           subItems: data.subItems?.map(si => ({...si, id: si.id || doc(collection(db, 'dummy')).id})) || [],
       };

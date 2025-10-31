@@ -11,9 +11,9 @@ import { PageHeader } from "@/components/layout/page-header";
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import type { MnaDeal } from "@/types";
-import { CreateInitiativeModal } from "@/components/initiatives/create-initiative-modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InitiativeDossierModal } from "@/components/initiatives/initiative-dossier-modal";
+import { UpsertDealModal } from "@/components/m-and-as/upsert-deal-modal";
 
 
 type ViewMode = "table" | "kanban";
@@ -38,7 +38,7 @@ export default function MnaPage() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <CreateInitiativeModal isOpen={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
+      <UpsertDealModal isOpen={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
       
       {selectedDeal && (
         <InitiativeDossierModal

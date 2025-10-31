@@ -2,33 +2,32 @@
 "use client";
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { InitiativeForm } from "./initiative-form";
-import { useInitiatives } from "@/contexts/initiatives-context";
+import { DealForm } from "./deal-form";
+import { useMnaDeals } from "@/contexts/m-and-as-context";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import type { InitiativeFormData } from "./initiative-form";
+import type { DealFormData } from "./deal-form";
 import { useState } from "react";
 
-interface CreateInitiativeModalProps {
+interface UpsertDealModalProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
 }
 
-export function CreateInitiativeModal({ isOpen, onOpenChange }: CreateInitiativeModalProps) {
-    const { addInitiative } = useInitiatives();
+export function UpsertDealModal({ isOpen, onOpenChange }: UpsertDealModalProps) {
+    const { addDeal } = useMnaDeals();
     const { toast } = useToast();
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleFormSubmit = async (data: InitiativeFormData) => {
+    const handleFormSubmit = async (data: DealFormData) => {
         setIsLoading(true);
-        // The context will handle id, lastUpdate, topicNumber, progress, and keyMetrics
-        await addInitiative(data);
+        await addDeal(data);
         setIsLoading(false);
 
         toast({
-            title: "Iniciativa Criada!",
-            description: `A iniciativa "${data.title}" foi criada com sucesso.`,
+            title: "Deal Criado!",
+            description: `O deal "${data.title}" foi criado com sucesso.`,
         });
         
         onOpenChange(false);
@@ -38,12 +37,12 @@ export function CreateInitiativeModal({ isOpen, onOpenChange }: CreateInitiative
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Criar Nova Iniciativa</DialogTitle>
+                    <DialogTitle>Criar Novo Deal</DialogTitle>
                     <DialogDescription>
-                        Preencha as informações abaixo para cadastrar uma nova iniciativa estratégica.
+                        Preencha as informações abaixo para cadastrar um novo deal de M&A.
                     </DialogDescription>
                 </DialogHeader>
-                <InitiativeForm 
+                <DealForm 
                     onSubmit={handleFormSubmit} 
                     onCancel={() => onOpenChange(false)} 
                     isLoading={isLoading}
