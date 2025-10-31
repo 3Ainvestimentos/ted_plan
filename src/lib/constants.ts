@@ -4,7 +4,7 @@ import { LayoutDashboard, Target, CalendarClock, Settings, Shield, User, BarChar
 
 export const NAV_ITEMS_CONFIG: NavItem[] = [
   { title: 'Iniciativas Estratégicas', href: '/strategic-initiatives', icon: Target },
-  { title: 'Painel Estratégico', href: '/strategic-panel', icon: LayoutDashboard },
+  { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { title: 'Agenda de Reuniões', href: '/meeting-agenda', icon: CalendarClock },
   { title: 'Tarefas', href: '/tasks', icon: ClipboardList },
   { title: 'Anotações', href: '/notes', icon: StickyNote },
@@ -46,7 +46,7 @@ export const MOCK_COLLABORATORS: Collaborator[] = [
         cargo: 'PMO',
         permissions: {
             'strategic-initiatives': true,
-            'strategic-panel': true,
+            'dashboard': true,
             'meeting-agenda': true,
             'team-control': true,
             'tasks': true,
@@ -68,7 +68,7 @@ export const MOCK_COLLABORATORS: Collaborator[] = [
         cargo: 'PMO',
         permissions: {
             'strategic-initiatives': true,
-            'strategic-panel': true,
+            'dashboard': true,
             'meeting-agenda': true,
             'team-control': true,
             'tasks': true,

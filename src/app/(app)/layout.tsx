@@ -6,7 +6,6 @@ import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter, SidebarTrigger
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { InitiativesProvider } from '@/contexts/initiatives-context';
 import { MeetingsProvider } from '@/contexts/meetings-context';
-import { StrategicPanelProvider } from '@/contexts/strategic-panel-context';
 import { UserNav } from '@/components/layout/user-nav';
 import { useAuth } from '@/contexts/auth-context';
 import { usePathname, useRouter } from 'next/navigation';
@@ -72,13 +71,11 @@ export default function AppLayout({
     return (
       <InitiativesProvider>
         <MeetingsProvider>
-          <StrategicPanelProvider>
-            <TasksProvider>
-              <NotesProvider>
-                  <AppContent>{children}</AppContent>
-              </NotesProvider>
-            </TasksProvider>
-          </StrategicPanelProvider>
+          <TasksProvider>
+            <NotesProvider>
+                <AppContent>{children}</AppContent>
+            </NotesProvider>
+          </TasksProvider>
         </MeetingsProvider>
       </InitiativesProvider>
     );
