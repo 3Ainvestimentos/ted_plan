@@ -25,6 +25,8 @@ const dealSchema = z.object({
   description: z.string().min(10, "A descrição deve ter pelo menos 10 caracteres."),
   status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso']),
   priority: z.enum(['Baixa', 'Média', 'Alta']),
+  cidade: z.string().min(2, "A cidade é obrigatória."),
+  auc: z.coerce.number().min(0, "O valor do AUC deve ser positivo."),
   subItems: z.array(subItemSchema).optional(),
 });
 
@@ -50,6 +52,7 @@ export function DealForm({ onSubmit, onCancel, initialData, isLoading }: DealFor
       status: 'Pendente',
       priority: 'Baixa',
       subItems: [],
+      auc: 0,
     }
   });
 
@@ -67,6 +70,19 @@ export function DealForm({ onSubmit, onCancel, initialData, isLoading }: DealFor
         <Label htmlFor="title">Título do Deal</Label>
         <Input id="title" {...register("title")} placeholder="Ex: Aquisição da Empresa X" />
         {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+              <Label htmlFor="cidade">Cidade</Label>
+              <Input id="cidade" {...register("cidade")} placeholder="Ex: São Paulo" />
+              {errors.cidade && <p className="text-sm text-destructive">{errors.cidade.message}</p>}
+          </div>
+          <div className="space-y-2">
+              <Label htmlFor="auc">AUC (R$)</Label>
+              <Input id="auc" type="number" {...register("auc")} placeholder="Ex: 5000000" />
+              {errors.auc && <p className="text-sm text-destructive">{errors.auc.message}</p>}
+          </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

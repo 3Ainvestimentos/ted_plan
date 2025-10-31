@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -131,6 +132,8 @@ export function InitiativeDossierModal({ isOpen, onOpenChange, initiative, isMna
                       </CardHeader>
                       <CardContent className="text-sm space-y-2">
                         <p><strong className="text-foreground/80">Prioridade:</strong> {initiative.priority}</p>
+                        {isMna && initiative.cidade && <p><strong className="text-foreground/80">Cidade:</strong> {initiative.cidade}</p>}
+                        {isMna && initiative.auc && <p><strong className="text-foreground/80">AUC:</strong> R$ {initiative.auc.toLocaleString('pt-BR')}</p>}
                         {!isMna && 'owner' in initiative && <p><strong className="text-foreground/80">Responsável:</strong> {initiative.owner}</p>}
                         <p><strong className="text-foreground/80">Última Atualização:</strong> {new Date(initiative.lastUpdate).toLocaleDateString()}</p>
                         {!isMna && 'deadline' in initiative && <p><strong className="text-foreground/80">Conclusão Alvo:</strong> <span className="text-muted-foreground">{initiative.deadline ? new Date(initiative.deadline).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : 'N/D'}</span></p>}

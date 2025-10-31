@@ -3,7 +3,7 @@
 
 import { STATUS_ICONS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, ChevronDown, ChevronRight, Filter, CornerDownRight, ChevronsUpDown, Archive, Undo } from "lucide-react";
+import { ExternalLink, ChevronDown, ChevronRight, Filter, CornerDownRight, ChevronsUpDown, Archive, Undo, DollarSign } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import React, { useState, useMemo } from "react";
@@ -73,7 +73,7 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
   const filteredInitiatives = useMemo(() => {
     const filtered = initiatives.filter(initiative => {
       const matchesSearch = initiative.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            initiative.owner.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (initiative.owner && initiative.owner.toLowerCase().includes(searchTerm.toLowerCase())) ||
                             initiative.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "all" || initiative.status === statusFilter;
       const matchesArchive = archiveFilter === 'all' || (archiveFilter === 'active' && !initiative.archived) || (archiveFilter === 'archived' && initiative.archived)
@@ -81,9 +81,11 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
     });
     return sortInitiatives(filtered);
   }, [searchTerm, statusFilter, archiveFilter, initiatives]);
-
-  const initiativeStatuses: (string | InitiativeStatus)[] = ["all", "Pendente", "Em execução", "Concluído", "Suspenso"];
   
+  const initiativeStatuses: (string | InitiativeStatus)[] = ["all", "Pendente", "Em execução", "Concluído", "Suspenso"];
+
+  const hasAuc = useMemo(() => initiatives.some(i => i.auc !== undefined && i.auc !== null), [initiatives]);
+
   return (
     <Card className="shadow-sm">
       <Table>
@@ -98,6 +100,7 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
                 </div>
             </TableHead>
             <TableHead className="w-[35%]">Título da Iniciativa</TableHead>
+            { hasAuc && <TableHead>AUC</TableHead> }
             <TableHead>Responsável</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Progresso</TableHead>
@@ -113,6 +116,7 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
                   className="h-8"
                 />
             </TableCell>
+            { hasAuc && <TableCell className="p-2"></TableCell> }
             <TableCell className="p-2"></TableCell>
             <TableCell className="p-2">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -169,6 +173,18 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
                        </span>
                      </div>
                   </TableCell>
+                  {hasAuc && (
+                    <TableCell>
+                      {initiative.auc ? (
+                         <div className="flex items-center gap-1">
+                            <DollarSign className="h-4 w-4 text-muted-foreground"/>
+                            {initiative.auc.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                         </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                  )}
                   <TableCell className="font-body text-current">{initiative.owner}</TableCell>
                   <TableCell>
                     <Badge variant={initiative.archived ? 'outline' : initiative.status === 'Concluído' ? 'default' : initiative.status === 'Em Risco' || initiative.status === 'Atrasado' ? 'destructive' : 'secondary'} className="capitalize flex items-center w-fit">
@@ -201,7 +217,7 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
                  {isExpanded && hasSubItems && initiative.subItems.map(subItem => (
                     <TableRow key={subItem.id} className="bg-secondary hover:bg-secondary/80">
                       <TableCell></TableCell>
-                      <TableCell colSpan={4} className="pl-12">
+                      <TableCell colSpan={hasAuc ? 5 : 4} className="pl-12">
                          <div className="flex items-center gap-2">
                               <CornerDownRight className="h-4 w-4 text-muted-foreground" />
                               <Checkbox 
@@ -222,7 +238,7 @@ export function InitiativesTable({ initiatives, onInitiativeClick }: Initiatives
             })
           ) : (
             <TableRow>
-              <TableCell colSpan={6} className="text-center h-48">
+              <TableCell colSpan={hasAuc ? 7 : 6} className="text-center h-48">
                 <p className="text-muted-foreground">Nenhuma iniciativa encontrada.</p>
                 <p className="text-sm text-muted-foreground mt-1">Tente ajustar sua busca ou filtros.</p>
               </TableCell>

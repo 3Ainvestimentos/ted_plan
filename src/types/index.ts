@@ -25,6 +25,8 @@ export interface Initiative {
   icon?: React.ElementType; // Optional: for specific task icons
   subItems?: SubItem[];
   archived?: boolean;
+  cidade?: string;
+  auc?: number;
 }
 
 export interface MnaDeal extends Initiative {}
