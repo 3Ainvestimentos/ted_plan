@@ -7,6 +7,7 @@ export interface SubItem {
   id: string;
   title: string;
   completed: boolean;
+  deadline?: string | null; // ISO date string 'YYYY-MM-DD'
 }
 
 export interface Initiative {

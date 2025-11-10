@@ -9,15 +9,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Trash2 } from "lucide-react";
+import { PlusCircle, Trash2, CalendarIcon } from "lucide-react";
 import { Checkbox } from "../ui/checkbox";
 import { cn } from "@/lib/utils";
 import type { InitiativePriority } from "@/types";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Calendar } from "../ui/calendar";
+import { format } from "date-fns";
 
 const subItemSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(3, "O título do subitem deve ter pelo menos 3 caracteres."),
   completed: z.boolean(),
+  deadline: z.date().optional().nullable(),
 });
 
 const dealSchema = z.object({
@@ -48,7 +52,10 @@ export function DealForm({ onSubmit, onCancel, initialData, isLoading }: DealFor
     formState: { errors },
   } = useForm<DealFormData>({
     resolver: zodResolver(dealSchema),
-    defaultValues: initialData || {
+    defaultValues: initialData ? {
+        ...initialData,
+        subItems: initialData.subItems?.map(si => ({ ...si, deadline: si.deadline ? new Date(si.deadline) : null }))
+    } : {
       status: 'Pendente',
       priority: 'Baixa',
       subItems: [],
@@ -142,7 +149,7 @@ export function DealForm({ onSubmit, onCancel, initialData, isLoading }: DealFor
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => append({ title: "", completed: false })}
+              onClick={() => append({ title: "", completed: false, deadline: null })}
             >
               <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Item
             </Button>
@@ -150,28 +157,56 @@ export function DealForm({ onSubmit, onCancel, initialData, isLoading }: DealFor
          {hasSubItems ? (
           <div className="space-y-3">
             {fields.map((field, index) => (
-              <div key={field.id} className="flex items-center gap-2">
+              <div key={field.id} className="flex items-start gap-2">
                 <Controller
                   name={`subItems.${index}.completed`}
                   control={control}
                   render={({ field: checkboxField }) => (
                     <Checkbox
+                      className="mt-1"
                       checked={checkboxField.value}
                       onCheckedChange={checkboxField.onChange}
                       aria-label={`Completar subitem ${index + 1}`}
                     />
                   )}
                 />
-                <Input
-                  {...register(`subItems.${index}.title`)}
-                  placeholder={`Item de checklist ${index + 1}`}
-                  className={cn(errors.subItems?.[index]?.title && "border-destructive")}
-                />
+                <div className="flex-grow grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <Input
+                      {...register(`subItems.${index}.title`)}
+                      placeholder={`Item de checklist ${index + 1}`}
+                      className={cn("sm:col-span-2", errors.subItems?.[index]?.title && "border-destructive")}
+                    />
+                     <Controller
+                        name={`subItems.${index}.deadline`}
+                        control={control}
+                        render={({ field: dateField }) => (
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className="w-full justify-start text-left font-normal h-10"
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {dateField.value ? format(dateField.value, "dd/MM/yy") : <span className="text-muted-foreground text-xs">Prazo...</span>}
+                            </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                    mode="single"
+                                    selected={dateField.value}
+                                    onSelect={dateField.onChange}
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+                        )}
+                    />
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="text-destructive hover:text-destructive"
+                  className="text-destructive hover:text-destructive shrink-0 mt-1"
                   onClick={() => remove(index)}
                 >
                   <Trash2 className="h-4 w-4" />

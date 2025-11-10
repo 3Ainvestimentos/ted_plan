@@ -4,10 +4,11 @@
 import type { MnaDeal } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, AlertTriangle, Clock, CheckSquare, MapPin, DollarSign } from "lucide-react";
+import { FileText, AlertTriangle, Clock, CheckSquare, MapPin, DollarSign, CalendarClock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDrag } from 'react-dnd';
 import { Progress } from "../ui/progress";
+import { format, parseISO } from "date-fns";
 
 interface MnaKanbanCardProps {
   task: MnaDeal;
@@ -53,6 +54,19 @@ export function MnaKanbanCard({ task, onClick }: MnaKanbanCardProps) {
     return value.toString();
   };
 
+  const getNextDeadline = () => {
+    if (!task.subItems || task.subItems.length === 0) return null;
+    
+    const upcomingDeadlines = task.subItems
+      .filter(item => !item.completed && item.deadline)
+      .map(item => parseISO(item.deadline!))
+      .sort((a, b) => a.getTime() - b.getTime());
+      
+    return upcomingDeadlines.length > 0 ? upcomingDeadlines[0] : null;
+  };
+
+  const nextDeadline = getNextDeadline();
+
   return (
     <div ref={drag} style={{ opacity: isDragging ? 0.5 : 1 }} className="cursor-grab active:cursor-grabbing" onClick={onClick}>
         <Card className={cn(
@@ -92,8 +106,14 @@ export function MnaKanbanCard({ task, onClick }: MnaKanbanCardProps) {
                      )}
                      <Badge variant={task.auc ? "secondary" : "outline"} className="font-normal">
                         <DollarSign className="mr-1 h-3 w-3" />
-                        {task.auc ? formatAuc(task.auc) : "AUC pendente"}
+                        {task.auc ? formatAuc(task.auc) : "AUC"}
                      </Badge>
+                     {nextDeadline && (
+                        <Badge variant="outline" className="font-normal text-amber-700 border-amber-300">
+                           <CalendarClock className="mr-1 h-3 w-3" />
+                           {format(nextDeadline, 'dd/MM')}
+                        </Badge>
+                     )}
                 </div>
             </div>
 

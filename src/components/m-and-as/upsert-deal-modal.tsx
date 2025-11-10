@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -23,15 +24,25 @@ export function UpsertDealModal({ isOpen, onOpenChange, deal }: UpsertDealModalP
 
     const handleFormSubmit = async (data: DealFormData) => {
         setIsLoading(true);
+
+        // Convert sub-item deadlines back to string format for Firestore
+        const dataWithFormattedDates = {
+            ...data,
+            subItems: data.subItems?.map(si => ({
+                ...si,
+                deadline: si.deadline ? si.deadline.toISOString().split('T')[0] : null,
+            }))
+        };
+        
         try {
             if (isEditing && deal) {
-                await updateDeal(deal.id, data);
+                await updateDeal(deal.id, dataWithFormattedDates as any);
                  toast({
                     title: "Deal Atualizado!",
                     description: `O deal "${data.title}" foi atualizado com sucesso.`,
                 });
             } else {
-                await addDeal(data);
+                await addDeal(dataWithFormattedDates as any);
                 toast({
                     title: "Deal Criado!",
                     description: `O deal "${data.title}" foi criado com sucesso.`,
