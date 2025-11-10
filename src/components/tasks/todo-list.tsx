@@ -94,7 +94,7 @@ export function TodoList() {
         ) : (
             <label
                 htmlFor={`task-${task.id}`}
-                className={cn("flex-grow cursor-pointer font-body", task.completed && "line-through text-muted-foreground")}
+                className={cn("flex-grow cursor-pointer", task.completed && "line-through text-muted-foreground")}
             >
                 {task.title}
             </label>
