@@ -28,8 +28,8 @@ export function DashboardCard({ title, description, href, iconName }: DashboardC
     <Link href={href} className="group">
         <Card className="h-full hover:border-primary transition-colors shadow-sm hover:shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-lg font-medium">{title}</CardTitle>
-                {Icon && <Icon className="w-6 h-6 text-muted-foreground" />}
+                <CardTitle className="text-base font-medium">{title}</CardTitle>
+                {Icon && <Icon className="w-5 h-5 text-muted-foreground" />}
             </CardHeader>
             <CardContent>
                 <p className="text-sm text-muted-foreground">{description}</p>
