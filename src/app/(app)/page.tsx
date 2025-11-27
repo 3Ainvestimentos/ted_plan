@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect } from 'react';
@@ -13,7 +14,7 @@ export default function AppPage() {
     // No need to check for isLoading here because the layout handles it.
     // If we've reached this page, the user is authenticated.
     if (isAuthenticated) {
-      router.replace('/strategic-initiatives');
+      router.replace('/dashboard');
     }
   }, [isAuthenticated, router]);
 

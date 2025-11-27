@@ -29,7 +29,7 @@ export default function LoginPage() {
   // Redirect if user is already authenticated
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.replace('/strategic-initiatives');
+      router.replace('/dashboard');
     }
   }, [isLoading, isAuthenticated, router]);
 

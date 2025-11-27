@@ -3,6 +3,7 @@ import type { NavItem, UserRole, Initiative, InitiativeStatus, InitiativePriorit
 import { LayoutDashboard, Target, CalendarClock, Settings, Shield, User, BarChart3, ListTodo, CircleCheck, AlertTriangle, Clock, CheckCircle, TrendingUp, TrendingDown, Minus, Lightbulb, FileText, Bug, PlayCircle, PauseCircle, CheckSquare, StickyNote, ClipboardList, Users, Handshake } from 'lucide-react';
 
 export const NAV_ITEMS_CONFIG: NavItem[] = [
+  { title: 'Painel de Controle', href: '/dashboard', icon: LayoutDashboard },
   { title: 'Iniciativas Estratégicas', href: '/strategic-initiatives', icon: Target },
   { title: 'M&As', href: '/m-and-as', icon: Handshake },
   { title: 'Agenda de Reuniões', href: '/meeting-agenda', icon: CalendarClock },
