@@ -3,22 +3,33 @@
 
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Handshake, Target, CalendarClock, ClipboardList, StickyNote } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
+const iconMap: Record<string, LucideIcon> = {
+    Handshake,
+    Target,
+    CalendarClock,
+    ClipboardList,
+    StickyNote
+};
 
 interface DashboardCardProps {
     title: string;
     description: string;
     href: string;
-    icon: React.ElementType;
+    iconName: string;
 }
 
-export function DashboardCard({ title, description, href, icon: Icon }: DashboardCardProps) {
+export function DashboardCard({ title, description, href, iconName }: DashboardCardProps) {
+  const Icon = iconMap[iconName];
+
   return (
     <Link href={href} className="group">
         <Card className="h-full hover:border-primary transition-colors shadow-sm hover:shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-lg font-medium">{title}</CardTitle>
-                <Icon className="w-6 h-6 text-muted-foreground" />
+                {Icon && <Icon className="w-6 h-6 text-muted-foreground" />}
             </CardHeader>
             <CardContent>
                 <p className="text-sm text-muted-foreground">{description}</p>
