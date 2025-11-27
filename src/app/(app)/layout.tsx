@@ -14,7 +14,7 @@ import { NotesProvider } from '@/contexts/notes-context';
 import { TasksProvider } from '@/contexts/tasks-context';
 import { MnaDealsProvider } from '@/contexts/m-and-as-context';
 
-function AppContent({ children }: { children: React.ReactNode }) {
+function AppWithSidebar({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
       <div className="flex h-screen bg-background">
@@ -42,6 +42,19 @@ function AppContent({ children }: { children: React.ReactNode }) {
   );
 }
 
+function AppWithoutSidebar({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col h-screen bg-background">
+      <header className="flex h-14 items-center gap-4 border-b bg-background/80 px-6 backdrop-blur-lg">
+        <div className="ml-auto flex items-center gap-2">
+          <UserNav />
+        </div>
+      </header>
+      <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
+    </div>
+  );
+}
+
 
 export default function AppLayout({
   children,
@@ -50,6 +63,7 @@ export default function AppLayout({
 }) {
   const { isAuthenticated, isLoading, isUnderMaintenance } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     // If loading is finished and the user is not authenticated, or if site is under maintenance, redirect to login.
@@ -67,6 +81,8 @@ export default function AppLayout({
     );
   }
 
+  const isDashboardPage = pathname === '/dashboard';
+
   // If authenticated and not under maintenance, render the app content.
   if (isAuthenticated && !isUnderMaintenance) {
     return (
@@ -75,7 +91,11 @@ export default function AppLayout({
           <MeetingsProvider>
             <TasksProvider>
               <NotesProvider>
-                  <AppContent>{children}</AppContent>
+                  {isDashboardPage ? (
+                    <AppWithoutSidebar>{children}</AppWithoutSidebar>
+                  ) : (
+                    <AppWithSidebar>{children}</AppWithSidebar>
+                  )}
               </NotesProvider>
             </TasksProvider>
           </MeetingsProvider>
