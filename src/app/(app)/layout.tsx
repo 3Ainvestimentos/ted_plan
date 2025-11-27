@@ -62,13 +62,15 @@ export default function AppLayout({
                     <div className="flex flex-col flex-1 overflow-hidden">
                       <header className="flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-lg sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
                         {!isDashboardPage && <SidebarTrigger className="sm:hidden" />}
-                        <div className="ml-auto flex items-center gap-2">
-                           {isDashboardPage && <UserNav />}
-                        </div>
                       </header>
                       <main className="flex-1 overflow-auto p-4 md:p-6">
                         {children}
                       </main>
+                       {isDashboardPage && (
+                        <footer className="fixed bottom-0 left-0 p-3">
+                          <UserNav />
+                        </footer>
+                      )}
                     </div>
                   </div>
                 </SidebarProvider>
@@ -86,4 +88,3 @@ export default function AppLayout({
       </div>
   );
 }
-
