@@ -24,20 +24,12 @@ import {
 import { AnimatePresence, motion } from 'framer-motion';
 
 export function TodoList() {
-  const { tasks, addTask, updateTask, toggleTaskCompletion, toggleTaskPriority, archiveTask, deleteTask, isLoading } = useTasks();
-  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const { tasks, updateTask, toggleTaskCompletion, toggleTaskPriority, archiveTask, deleteTask, isLoading } = useTasks();
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTaskTitle, setEditingTaskTitle] = useState('');
 
   const activeTasks = useMemo(() => tasks.filter(t => !t.archived).sort((a, b) => (a.completed ? 1 : -1) - (b.completed ? 1 : -1)), [tasks]);
   const archivedTasks = useMemo(() => tasks.filter(t => t.archived), [tasks]);
-
-  const handleAddTask = () => {
-    if (newTaskTitle.trim()) {
-      addTask(newTaskTitle.trim());
-      setNewTaskTitle('');
-    }
-  };
 
   const handleEditStart = (id: string, title: string) => {
     setEditingTaskId(id);
@@ -120,20 +112,6 @@ export function TodoList() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex gap-2">
-            <Input
-              placeholder="Adicionar uma nova tarefa..."
-              value={newTaskTitle}
-              onChange={(e) => setNewTaskTitle(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
-            />
-            <Button onClick={handleAddTask}><PlusCircle className="mr-2"/> Adicionar</Button>
-          </div>
-        </CardContent>
-      </Card>
-      
       <div className="space-y-3">
         <h3 className="text-lg font-semibold">Tarefas Ativas</h3>
         <AnimatePresence>

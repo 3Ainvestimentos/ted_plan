@@ -11,15 +11,18 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useTasks } from '@/contexts/tasks-context';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AddTaskModal } from '@/components/tasks/add-task-modal';
 
 type ViewMode = "list" | "kanban";
 
 export default function TasksPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const { isLoading } = useTasks();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
     <DndProvider backend={HTML5Backend}>
+      <AddTaskModal isOpen={isModalOpen} onOpenChange={setIsModalOpen} />
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <PageHeader
@@ -47,11 +50,9 @@ export default function TasksPage() {
                   <span className="ml-2 hidden sm:inline">Kanban</span>
                 </Button>
               </div>
-              {viewMode === 'kanban' && (
-                <Button onClick={() => setViewMode('list')}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Tarefa
-                </Button>
-              )}
+              <Button onClick={() => setIsModalOpen(true)}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Tarefa
+              </Button>
             </div>
         </div>
 
