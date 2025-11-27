@@ -1,6 +1,5 @@
 
 import { PageHeader } from "@/components/layout/page-header";
-import { NAV_ITEMS_CONFIG } from "@/lib/constants";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { Handshake, Target, CalendarClock, ClipboardList, StickyNote } from "lucide-react";
 
