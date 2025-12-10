@@ -39,24 +39,35 @@ export function GanttTaskList({ tasks, onScroll, syncScrollRef }: GanttTaskListP
                 <div className="divide-y divide-border">
                     {tasks.map(task => (
                         <div key={task.id} className="grid grid-cols-4 items-center h-10 px-2 text-sm">
-                            <div
-                                className={cn("col-span-2 flex items-center gap-1 truncate",
-                                    task.level === 1 && "pl-4",
-                                    task.level === 2 && "pl-8"
-                                )}
-                            >
-                                {task.level === 0 && (task.isParent ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4 opacity-0"/>)}
-                                {task.level === 1 && (task.isParent ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4 opacity-0"/>)}
-                                {task.level === 2 && <CornerDownRight className="h-4 w-4 text-muted-foreground"/>}
-                                <span className={cn("truncate", task.level === 0 && "font-bold")}>{task.name}</span>
-                            </div>
-                            <div className="truncate text-muted-foreground text-center">{task.responsible}</div>
-                             <div className="flex justify-center">
-                                {task.level > 0 && <StatusBadge status={task.status as DevProjectStatus} />}
-                            </div>
-                            <div className="truncate text-muted-foreground text-center">
-                                {task.deadline ? format(parseISO(task.deadline), 'dd/MM/yy') : ''}
-                            </div>
+                           {task.level === 0 ? (
+                                <>
+                                    <div className="col-span-1 flex items-center gap-1 truncate font-bold">
+                                        {task.isParent ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4 opacity-0"/>}
+                                        <span className="truncate">{task.name}</span>
+                                    </div>
+                                    <div className="col-span-3"></div>
+                                </>
+                           ) : (
+                            <>
+                                <div
+                                    className={cn("col-span-1 flex items-center gap-1 truncate",
+                                        task.level === 1 && "pl-4",
+                                        task.level === 2 && "pl-8"
+                                    )}
+                                >
+                                    {task.level === 1 && (task.isParent ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4 opacity-0"/>)}
+                                    {task.level === 2 && <CornerDownRight className="h-4 w-4 text-muted-foreground"/>}
+                                    <span className={cn("truncate")}>{task.name}</span>
+                                </div>
+                                <div className="truncate text-muted-foreground text-center">{task.responsible}</div>
+                                <div className="flex justify-center">
+                                    <StatusBadge status={task.status as DevProjectStatus} />
+                                </div>
+                                <div className="truncate text-muted-foreground text-center">
+                                    {task.deadline ? format(parseISO(task.deadline), 'dd/MM/yy') : ''}
+                                </div>
+                             </>
+                           )}
                         </div>
                     ))}
                 </div>

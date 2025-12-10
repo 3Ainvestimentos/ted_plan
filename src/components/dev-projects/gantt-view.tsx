@@ -119,7 +119,7 @@ export function GanttView({ projects }: GanttViewProps) {
             <div className="flex flex-col overflow-hidden">
                 <div className="p-2 border-b font-semibold text-sm">
                     <div className="grid grid-cols-4 items-center">
-                        <span className="col-span-2">Projeto / Item</span>
+                        <span className="col-span-1">Projeto / Item</span>
                         <span className="text-center">Responsável</span>
                         <span className="text-center">Status</span>
                         <span className="text-center">Prazo</span>
