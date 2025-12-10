@@ -24,20 +24,21 @@ export interface GanttTask {
 
 interface GanttViewProps {
     projects: DevProject[];
+    onProjectClick: (project: DevProject) => void;
 }
 
-export function GanttView({ projects }: GanttViewProps) {
+export function GanttView({ projects, onProjectClick }: GanttViewProps) {
     const listScrollRef = useRef<HTMLDivElement>(null);
     const chartScrollRef = useRef<HTMLDivElement>(null);
 
     const { tasks, startDate, endDate, totalDays, months } = useMemo(() => {
-        const allItems: { id: string, name: string, level: number, responsible: string, status: string, startDate: string, deadline: string, isParent: boolean }[] = [];
+        const allItems: { id: string, name: string, level: number, responsible: string, status: string, startDate: string, deadline: string, isParent: boolean, originalProject: DevProject }[] = [];
         projects.forEach(p => {
-            allItems.push({ id: p.id, name: p.name, level: 0, responsible: '', status: 'Pendente', startDate: '', deadline: '', isParent: true });
+            allItems.push({ id: p.id, name: p.name, level: 0, responsible: '', status: 'Pendente', startDate: '', deadline: '', isParent: true, originalProject: p });
             p.items.forEach(i => {
-                allItems.push({ id: i.id, name: i.title, level: 1, responsible: i.responsible, status: i.status, startDate: i.startDate, deadline: i.deadline, isParent: i.subItems.length > 0 });
+                allItems.push({ id: i.id, name: i.title, level: 1, responsible: i.responsible, status: i.status, startDate: i.startDate, deadline: i.deadline, isParent: i.subItems.length > 0, originalProject: p });
                 i.subItems.forEach(si => {
-                    allItems.push({ id: si.id, name: si.title, level: 2, responsible: si.responsible, status: si.status, startDate: si.startDate, deadline: si.deadline, isParent: false });
+                    allItems.push({ id: si.id, name: si.title, level: 2, responsible: si.responsible, status: si.status, startDate: si.startDate, deadline: si.deadline, isParent: false, originalProject: p });
                 });
             });
         });
@@ -58,9 +59,9 @@ export function GanttView({ projects }: GanttViewProps) {
         const chartEndDate = endOfDay(validDates.reduce((max, d) => d > max ? d : max, validDates[0]));
         const totalDuration = differenceInDays(chartEndDate, chartStartDate) + 1;
         
-        const ganttTasks: GanttTask[] = allItems.map(task => {
+        const ganttTasks: (GanttTask & { originalProject: DevProject })[] = allItems.map(task => {
             if (!task.startDate || !task.deadline) {
-                return { id: task.id, name: task.name, level: task.level, responsible: task.responsible, status: task.status, range: [0, 0], startDateObj: new Date(), endDateObj: new Date(), isParent: task.isParent, deadline: task.deadline };
+                return { id: task.id, name: task.name, level: task.level, responsible: task.responsible, status: task.status, range: [0, 0], startDateObj: new Date(), endDateObj: new Date(), isParent: task.isParent, deadline: task.deadline, originalProject: task.originalProject };
             }
 
             const taskStartDateObj = parseISO(task.startDate);
@@ -81,6 +82,7 @@ export function GanttView({ projects }: GanttViewProps) {
                 endDateObj: taskEndDateObj,
                 isParent: task.isParent,
                 deadline: task.deadline,
+                originalProject: task.originalProject
             };
         });
 
@@ -125,7 +127,7 @@ export function GanttView({ projects }: GanttViewProps) {
                         <span className="text-center">Prazo</span>
                     </div>
                 </div>
-                <GanttTaskList tasks={tasks} onScroll={(e) => handleScroll('list')} syncScrollRef={listScrollRef} />
+                <GanttTaskList tasks={tasks} onScroll={(e) => handleScroll('list')} syncScrollRef={listScrollRef} onProjectClick={onProjectClick}/>
             </div>
             <div className="flex flex-col overflow-hidden">
                 <GanttTimeline months={months} totalDays={totalDays} />

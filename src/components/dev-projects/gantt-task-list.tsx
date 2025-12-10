@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils';
 import { ChevronDown, ChevronRight, CornerDownRight } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Badge } from '../ui/badge';
-import type { DevProjectStatus } from '@/types';
+import type { DevProjectStatus, DevProject } from '@/types';
+import { Button } from '../ui/button';
 
 const StatusBadge = ({ status }: { status: DevProjectStatus }) => {
     const colorClasses: Record<DevProjectStatus, string> = {
@@ -23,12 +24,13 @@ const StatusBadge = ({ status }: { status: DevProjectStatus }) => {
 
 
 interface GanttTaskListProps {
-    tasks: GanttTask[];
+    tasks: (GanttTask & { originalProject: DevProject })[];
     onScroll: (e: React.UIEvent<HTMLDivElement>) => void;
     syncScrollRef: React.RefObject<HTMLDivElement>;
+    onProjectClick: (project: DevProject) => void;
 }
 
-export function GanttTaskList({ tasks, onScroll, syncScrollRef }: GanttTaskListProps) {
+export function GanttTaskList({ tasks, onScroll, syncScrollRef, onProjectClick }: GanttTaskListProps) {
     return (
         <Card className="rounded-r-none border-r-0 border-t-0 h-full flex flex-col">
             <CardContent
@@ -43,7 +45,9 @@ export function GanttTaskList({ tasks, onScroll, syncScrollRef }: GanttTaskListP
                                 <>
                                     <div className="col-span-1 flex items-center gap-1 truncate font-bold">
                                         {task.isParent ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4 opacity-0"/>}
-                                        <span className="truncate">{task.name}</span>
+                                        <Button variant="link" className="p-0 h-auto text-current font-bold truncate" onClick={() => onProjectClick(task.originalProject)}>
+                                            {task.name}
+                                        </Button>
                                     </div>
                                     <div className="col-span-3"></div>
                                 </>

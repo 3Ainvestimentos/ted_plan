@@ -61,8 +61,10 @@ export const DevProjectsProvider = ({ children }: { children: ReactNode }) => {
     const responsibles = new Set<string>();
     projects.forEach(p => {
         p.items.forEach(i => {
-            responsibles.add(i.responsible);
-            i.subItems.forEach(si => responsibles.add(si.responsible));
+            if (i.responsible) responsibles.add(i.responsible);
+            i.subItems.forEach(si => {
+                if (si.responsible) responsibles.add(si.responsible)
+            });
         });
     });
     return Array.from(responsibles);
