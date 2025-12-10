@@ -7,6 +7,7 @@ import { ChartContainer } from "@/components/ui/chart";
 import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip, Cell } from "recharts";
 import { Card, CardContent } from '../ui/card';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 interface GanttChartOnlyProps {
     tasks: GanttTask[];
