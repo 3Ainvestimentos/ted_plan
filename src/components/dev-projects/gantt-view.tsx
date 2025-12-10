@@ -113,11 +113,11 @@ export function GanttView({ projects }: GanttViewProps) {
     }
 
     return (
-        <div className="grid grid-cols-[minmax(300px,30%)_1fr] h-full overflow-hidden border rounded-lg">
+        <div className="grid grid-cols-[minmax(400px,40%)_1fr] h-full overflow-hidden border rounded-lg">
             <div className="flex flex-col overflow-hidden">
                 <div className="p-2 border-b font-semibold text-sm">
-                    <div className="grid grid-cols-2">
-                        <span>Projeto / Item</span>
+                    <div className="grid grid-cols-3">
+                        <span className="col-span-2">Projeto / Item</span>
                         <span>Responsável</span>
                     </div>
                 </div>

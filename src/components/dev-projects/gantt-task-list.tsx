@@ -23,9 +23,9 @@ export function GanttTaskList({ tasks, onScroll, syncScrollRef }: GanttTaskListP
             >
                 <div className="divide-y divide-border">
                     {tasks.map(task => (
-                        <div key={task.id} className="grid grid-cols-2 items-center h-10 px-2 text-sm">
+                        <div key={task.id} className="grid grid-cols-3 items-center h-10 px-2 text-sm">
                             <div
-                                className={cn("flex items-center gap-1 truncate",
+                                className={cn("col-span-2 flex items-center gap-1 truncate",
                                     task.level === 1 && "pl-4",
                                     task.level === 2 && "pl-8"
                                 )}
