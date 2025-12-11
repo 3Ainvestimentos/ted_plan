@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useMemo, useState, useRef, useCallback } from 'react';
-import type { DevProject } from '@/types';
+import type { DevProject, DevProjectStatus } from '@/types';
 import { startOfDay, endOfDay, differenceInDays, parseISO, addDays, format, eachMonthOfInterval, startOfMonth, endOfMonth, getDaysInMonth } from 'date-fns';
 import { GanttTaskList } from './gantt-task-list';
 import { GanttChartOnly } from './gantt-chart';
@@ -25,9 +25,10 @@ export interface GanttTask {
 interface GanttViewProps {
     projects: DevProject[];
     onProjectClick: (project: DevProject) => void;
+    onStatusChange: (projectId: string, itemId: string, newStatus: DevProjectStatus) => void;
 }
 
-export function GanttView({ projects, onProjectClick }: GanttViewProps) {
+export function GanttView({ projects, onProjectClick, onStatusChange }: GanttViewProps) {
     const listScrollRef = useRef<HTMLDivElement>(null);
     const chartScrollRef = useRef<HTMLDivElement>(null);
 
@@ -127,7 +128,13 @@ export function GanttView({ projects, onProjectClick }: GanttViewProps) {
                         <span className="text-center">Prazo</span>
                     </div>
                 </div>
-                <GanttTaskList tasks={tasks} onScroll={(e) => handleScroll('list')} syncScrollRef={listScrollRef} onProjectClick={onProjectClick}/>
+                <GanttTaskList 
+                    tasks={tasks} 
+                    onScroll={(e) => handleScroll('list')} 
+                    syncScrollRef={listScrollRef} 
+                    onProjectClick={onProjectClick}
+                    onStatusChange={onStatusChange}
+                />
             </div>
             <div className="flex flex-col overflow-hidden">
                 <GanttTimeline months={months} totalDays={totalDays} />

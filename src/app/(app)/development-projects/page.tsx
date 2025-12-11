@@ -16,7 +16,7 @@ import { PlusCircle } from 'lucide-react';
 import { UpsertProjectModal } from '@/components/dev-projects/upsert-project-modal';
 
 export default function DevelopmentProjectsPage() {
-    const { projects, allResponsibles, isLoading } = useDevProjects();
+    const { projects, allResponsibles, isLoading, updateItemStatus } = useDevProjects();
     
     // Filters
     const [projectFilter, setProjectFilter] = useState('all');
@@ -77,7 +77,7 @@ export default function DevelopmentProjectsPage() {
              />
              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <PageHeader
-                    title="Projetos de Desenvolvimento"
+                    title="Desenvolvimento"
                     description="Gerencie projetos de implementação de ferramentas da área de desenvolvimento."
                 />
                 <Button onClick={() => handleOpenModal(null)}>
@@ -125,7 +125,11 @@ export default function DevelopmentProjectsPage() {
                 </div>
             ) : (
                 <div className="flex-grow overflow-hidden">
-                    <GanttView projects={filteredProjects} onProjectClick={(project) => handleOpenModal(project)} />
+                    <GanttView 
+                        projects={filteredProjects} 
+                        onProjectClick={(project) => handleOpenModal(project)}
+                        onStatusChange={updateItemStatus}
+                    />
                 </div>
             )}
         </div>

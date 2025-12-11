@@ -11,12 +11,7 @@ interface DevProjectsContextType {
   addProject: (projectData: Pick<DevProject, 'name'>) => Promise<void>;
   updateProject: (projectId: string, data: Partial<DevProject>) => Promise<void>;
   deleteProject: (projectId: string) => Promise<void>;
-  addItemToProject: (projectId: string, itemData: Omit<DevProjectItem, 'id' | 'subItems'>) => Promise<void>;
-  updateProjectItem: (projectId: string, itemId: string, data: Partial<DevProjectItem>) => Promise<void>;
-  deleteProjectItem: (projectId: string, itemId: string) => Promise<void>;
-  addSubItemToItem: (projectId: string, itemId: string, subItemData: Omit<DevProjectSubItem, 'id'>) => Promise<void>;
-  updateProjectSubItem: (projectId: string, itemId: string, subItemId: string, data: Partial<DevProjectSubItem>) => Promise<void>;
-  deleteProjectSubItem: (projectId: string, itemId: string, subItemId: string) => Promise<void>;
+  updateItemStatus: (projectId: string, itemId: string, newStatus: DevProjectStatus) => Promise<void>;
   isLoading: boolean;
   allResponsibles: string[];
 }
@@ -112,44 +107,25 @@ export const DevProjectsProvider = ({ children }: { children: ReactNode }) => {
     // fetchProjects();
     setProjects(prev => prev.filter(p => p.id !== projectId));
   };
-  
-  const modifyProjectItems = async (projectId: string, itemsModifier: (items: DevProjectItem[]) => DevProjectItem[]) => {
+
+  const updateItemStatus = async (projectId: string, itemId: string, newStatus: DevProjectStatus) => {
       const project = projects.find(p => p.id === projectId);
       if (!project) return;
-      const newItems = itemsModifier(project.items);
+      
+      const newItems = project.items.map(item => {
+          if (item.id === itemId) {
+              return { ...item, status: newStatus };
+          }
+          const subItemIndex = item.subItems.findIndex(si => si.id === itemId);
+          if (subItemIndex !== -1) {
+              const newSubItems = [...item.subItems];
+              newSubItems[subItemIndex] = { ...newSubItems[subItemIndex], status: newStatus };
+              return { ...item, subItems: newSubItems };
+          }
+          return item;
+      });
+
       await updateProject(projectId, { items: newItems });
-  };
-
-  const addItemToProject = async (projectId: string, itemData: Omit<DevProjectItem, 'id' | 'subItems'>) => {
-    const newItem = { ...itemData, id: `item-${Date.now()}`, subItems: [] };
-    await modifyProjectItems(projectId, items => [...items, newItem]);
-  };
-
-  const updateProjectItem = async (projectId: string, itemId: string, data: Partial<DevProjectItem>) => {
-    await modifyProjectItems(projectId, items => items.map(item => item.id === itemId ? { ...item, ...data } : item));
-  };
-  
-  const deleteProjectItem = async (projectId: string, itemId: string) => {
-    await modifyProjectItems(projectId, items => items.filter(item => item.id !== itemId));
-  };
-  
-  const addSubItemToItem = async (projectId: string, itemId: string, subItemData: Omit<DevProjectSubItem, 'id'>) => {
-    const newSubItem = { ...subItemData, id: `sub-${Date.now()}` };
-    await modifyProjectItems(projectId, items => items.map(item =>
-        item.id === itemId ? { ...item, subItems: [...item.subItems, newSubItem] } : item
-    ));
-  };
-
-  const updateProjectSubItem = async (projectId: string, itemId: string, subItemId: string, data: Partial<DevProjectSubItem>) => {
-    await modifyProjectItems(projectId, items => items.map(item =>
-        item.id === itemId ? { ...item, subItems: item.subItems.map(si => si.id === subItemId ? { ...si, ...data } : si) } : item
-    ));
-  };
-  
-  const deleteProjectSubItem = async (projectId: string, itemId: string, subItemId: string) => {
-    await modifyProjectItems(projectId, items => items.map(item =>
-        item.id === itemId ? { ...item, subItems: item.subItems.filter(si => si.id !== subItemId) } : item
-    ));
   };
 
 
@@ -157,8 +133,7 @@ export const DevProjectsProvider = ({ children }: { children: ReactNode }) => {
     <DevProjectsContext.Provider value={{ 
         projects, 
         addProject, updateProject, deleteProject,
-        addItemToProject, updateProjectItem, deleteProjectItem,
-        addSubItemToItem, updateProjectSubItem, deleteProjectSubItem,
+        updateItemStatus,
         isLoading,
         allResponsibles
     }}>

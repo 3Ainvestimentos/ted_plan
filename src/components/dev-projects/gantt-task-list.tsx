@@ -10,27 +10,19 @@ import { format, parseISO } from 'date-fns';
 import { Badge } from '../ui/badge';
 import type { DevProjectStatus, DevProject } from '@/types';
 import { Button } from '../ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
-const StatusBadge = ({ status }: { status: DevProjectStatus }) => {
-    const colorClasses: Record<DevProjectStatus, string> = {
-        'Pendente': 'bg-gray-200 text-gray-800',
-        'Em Andamento': 'bg-blue-200 text-blue-800',
-        'Concluído': 'bg-green-200 text-green-800',
-        'Em Espera': 'bg-yellow-200 text-yellow-800',
-        'Cancelado': 'bg-red-200 text-red-800',
-    };
-    return <Badge variant="outline" className={cn('text-xs font-medium', colorClasses[status])}>{status}</Badge>;
-}
-
+const STATUS_OPTIONS: DevProjectStatus[] = ['Pendente', 'Em Andamento', 'Concluído', 'Em Espera', 'Cancelado'];
 
 interface GanttTaskListProps {
     tasks: (GanttTask & { originalProject: DevProject })[];
     onScroll: (e: React.UIEvent<HTMLDivElement>) => void;
     syncScrollRef: React.RefObject<HTMLDivElement>;
     onProjectClick: (project: DevProject) => void;
+    onStatusChange: (projectId: string, itemId: string, newStatus: DevProjectStatus) => void;
 }
 
-export function GanttTaskList({ tasks, onScroll, syncScrollRef, onProjectClick }: GanttTaskListProps) {
+export function GanttTaskList({ tasks, onScroll, syncScrollRef, onProjectClick, onStatusChange }: GanttTaskListProps) {
     return (
         <Card className="rounded-r-none border-r-0 border-t-0 h-full flex flex-col">
             <CardContent
@@ -65,7 +57,17 @@ export function GanttTaskList({ tasks, onScroll, syncScrollRef, onProjectClick }
                                 </div>
                                 <div className="truncate text-muted-foreground text-center">{task.responsible}</div>
                                 <div className="flex justify-center">
-                                    <StatusBadge status={task.status as DevProjectStatus} />
+                                    <Select 
+                                        value={task.status} 
+                                        onValueChange={(newStatus: DevProjectStatus) => onStatusChange(task.originalProject.id, task.id, newStatus)}
+                                    >
+                                        <SelectTrigger className="h-7 text-xs px-2 w-[120px]">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div className="truncate text-muted-foreground text-center">
                                     {task.deadline ? format(parseISO(task.deadline), 'dd/MM/yy') : ''}
