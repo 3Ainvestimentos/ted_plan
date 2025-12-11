@@ -127,7 +127,7 @@ export function GanttView({ projects, onProjectClick, onStatusChange }: GanttVie
     }
     
     return (
-        <div className="border rounded-lg overflow-x-auto">
+        <div className="border-t border-b overflow-x-auto">
              <Table className="min-w-full table-fixed">
                 <TableHeader>
                     <TableRow className="bg-muted/50">
@@ -136,12 +136,12 @@ export function GanttView({ projects, onProjectClick, onStatusChange }: GanttVie
                         <TableHead className="w-40">Status</TableHead>
                         <TableHead className="w-28">Prazo</TableHead>
                         {monthHeaders.map((month, index) => {
-                            const dayWidth = 24; // Width for each day column in pixels
+                            const dayWidth = 16; 
                             return (
                                 <TableHead 
                                     key={index} 
                                     colSpan={month.colSpan} 
-                                    className="text-center border-l text-xs font-semibold p-1 whitespace-nowrap"
+                                    className="text-center border-l text-[10px] font-semibold px-0.5 whitespace-nowrap"
                                     style={{ minWidth: `${month.colSpan * dayWidth}px` }}
                                 >
                                     {month.name}
@@ -156,7 +156,7 @@ export function GanttView({ projects, onProjectClick, onStatusChange }: GanttVie
                         const statusOptions = task.isOverdue ? OVERDUE_STATUS_OPTIONS : BASE_STATUS_OPTIONS;
                         
                         return (
-                             <TableRow key={task.id} className={cn("h-10", task.isOverdue && "bg-destructive/10")}>
+                             <TableRow key={task.id} className={cn("h-8", task.isOverdue && "bg-destructive/10")}>
                                 <TableCell className="sticky left-0 bg-background z-10">
                                      <div className={cn("flex items-center gap-1 truncate",
                                         task.level === 0 && "font-bold",
@@ -195,7 +195,7 @@ export function GanttView({ projects, onProjectClick, onStatusChange }: GanttVie
                                     const isInRange = task.level > 0 && isWithinInterval(day, { start: task.startDate, end: task.endDate });
                                     const isWeekend = day.getDay() === 0 || day.getDay() === 6;
                                     return (
-                                        <TableCell key={dayIndex} className={cn("p-0 border-l w-6", isWeekend && "bg-muted/50")}>
+                                        <TableCell key={dayIndex} className={cn("p-0 border-l w-4", isWeekend && "bg-muted/50")}>
                                             {isInRange && (
                                                 <div className={cn("h-full w-full opacity-70", statusColors[statusToUse])} title={`${task.name}: ${format(task.startDate, 'dd/MM')} - ${format(task.endDate, 'dd/MM')}`}>&nbsp;</div>
                                             )}
@@ -210,3 +210,5 @@ export function GanttView({ projects, onProjectClick, onStatusChange }: GanttVie
         </div>
     );
 }
+
+    
