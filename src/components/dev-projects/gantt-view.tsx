@@ -16,13 +16,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 const OVERDUE_STATUS_OPTIONS: DevProjectStatus[] = ['Em atraso', 'Concluído'];
 const BASE_STATUS_OPTIONS: DevProjectStatus[] = ['Pendente', 'Em Andamento', 'Concluído'];
 
-const statusColors: Record<DevProjectStatus, string> = {
-    'Pendente': 'bg-gray-300 dark:bg-gray-700',
-    'Em Andamento': 'bg-blue-400 dark:bg-blue-600',
-    'Concluído': 'bg-green-400 dark:bg-green-600',
-    'Em atraso': 'bg-red-400 dark:bg-red-600',
-};
-
 interface GanttTask {
     id: string;
     name: string;
@@ -193,11 +186,20 @@ export function GanttView({ projects, onProjectClick, onStatusChange }: GanttVie
                                     const isWeekend = day.getDay() === 0 || day.getDay() === 6;
                                     const isTodayMarker = isToday(day);
 
+                                    let barColor = '';
+                                    if (isInRange) {
+                                        if (task.level === 1) {
+                                            barColor = 'bg-green-600'; // Dark green for items
+                                        } else if (task.level === 2) {
+                                            barColor = 'bg-green-400'; // Light green for sub-items
+                                        }
+                                    }
+
                                     return (
                                         <TableCell key={dayIndex} className={cn("p-0 w-4 relative", isWeekend && "bg-muted/50", isTodayMarker && "bg-red-100/50 dark:bg-red-900/20")}>
                                             {isTodayMarker && <div className="absolute inset-y-0 left-0 w-px bg-red-500"></div>}
                                             {isInRange && (
-                                                <div className={cn("h-full w-full opacity-70", statusColors[statusToUse])} title={`${task.name}: ${format(task.startDate, 'dd/MM')} - ${format(task.endDate, 'dd/MM')}`}>&nbsp;</div>
+                                                <div className={cn("h-full w-full opacity-70", barColor)} title={`${task.name}: ${format(task.startDate, 'dd/MM')} - ${format(task.endDate, 'dd/MM')}`}>&nbsp;</div>
                                             )}
                                         </TableCell>
                                     )
