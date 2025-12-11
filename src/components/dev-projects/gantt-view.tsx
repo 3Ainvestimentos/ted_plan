@@ -141,7 +141,7 @@ export function GanttView({ projects, onProjectClick, onStatusChange }: GanttVie
                                 <TableHead 
                                     key={index} 
                                     colSpan={month.colSpan} 
-                                    className="text-center border-l text-[10px] font-semibold px-0.5 whitespace-nowrap"
+                                    className="text-center text-[10px] font-semibold px-0.5 whitespace-nowrap"
                                     style={{ minWidth: `${month.colSpan * dayWidth}px` }}
                                 >
                                     {month.name}
@@ -195,7 +195,7 @@ export function GanttView({ projects, onProjectClick, onStatusChange }: GanttVie
                                     const isInRange = task.level > 0 && isWithinInterval(day, { start: task.startDate, end: task.endDate });
                                     const isWeekend = day.getDay() === 0 || day.getDay() === 6;
                                     return (
-                                        <TableCell key={dayIndex} className={cn("p-0 border-l w-4", isWeekend && "bg-muted/50")}>
+                                        <TableCell key={dayIndex} className={cn("p-0 w-4", isWeekend && "bg-muted/50")}>
                                             {isInRange && (
                                                 <div className={cn("h-full w-full opacity-70", statusColors[statusToUse])} title={`${task.name}: ${format(task.startDate, 'dd/MM')} - ${format(task.endDate, 'dd/MM')}`}>&nbsp;</div>
                                             )}
@@ -210,5 +210,3 @@ export function GanttView({ projects, onProjectClick, onStatusChange }: GanttVie
         </div>
     );
 }
-
-    
