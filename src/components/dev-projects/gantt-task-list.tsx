@@ -27,7 +27,7 @@ export function GanttTaskList({ tasks, onScroll, syncScrollRef, onProjectClick, 
     return (
         <Card className="rounded-r-none border-r-0 border-t-0 h-full flex flex-col">
             <CardContent
-                className="p-0 flex-grow overflow-y-scroll"
+                className="p-0 flex-grow overflow-y-auto"
                 ref={syncScrollRef}
                 onScroll={onScroll}
             >

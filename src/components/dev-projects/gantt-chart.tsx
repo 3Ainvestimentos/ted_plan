@@ -30,7 +30,7 @@ export function GanttChartOnly({ tasks, totalDays, startDate, onScroll, syncScro
     return (
         <Card className="rounded-l-none border-l-0 h-full flex flex-col">
             <CardContent
-                className="p-0 flex-grow relative overflow-hidden"
+                className="p-0 flex-grow relative overflow-y-auto"
                 onScroll={onScroll}
                 ref={syncScrollRef}
             >
