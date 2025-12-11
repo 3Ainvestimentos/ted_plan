@@ -11,13 +11,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "../ui/loading-spinner";
 import { useTeamControl } from "@/contexts/team-control-context";
-import type { Collaborator } from "@/types";
+import type { Collaborator, UserType } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const collaboratorSchema = z.object({
   name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres."),
   email: z.string().email("Por favor, insira um e-mail válido."),
   cargo: z.string().min(2, "O cargo é obrigatório."),
+  area: z.string().optional(),
+  userType: z.enum(['Administrador', 'Usuário padrão']),
 });
 
 type CollaboratorFormData = z.infer<typeof collaboratorSchema>;
@@ -38,19 +47,32 @@ export function UpsertCollaboratorModal({ isOpen, onOpenChange, collaborator }: 
         register,
         handleSubmit,
         reset,
+        watch,
+        setValue,
         formState: { errors },
     } = useForm<CollaboratorFormData>({
         resolver: zodResolver(collaboratorSchema),
+        defaultValues: {
+            userType: 'Usuário padrão',
+        },
     });
 
     useEffect(() => {
         if (collaborator) {
-            reset(collaborator);
+            reset({
+                name: collaborator.name,
+                email: collaborator.email,
+                cargo: collaborator.cargo,
+                area: collaborator.area || '',
+                userType: collaborator.userType || 'Usuário padrão',
+            });
         } else {
             reset({
                 name: '',
                 email: '',
                 cargo: '',
+                area: '',
+                userType: 'Usuário padrão' as UserType,
             });
         }
     }, [collaborator, reset, isOpen]);
@@ -103,10 +125,31 @@ export function UpsertCollaboratorModal({ isOpen, onOpenChange, collaborator }: 
                         <Input id="email" type="email" {...register("email")} />
                         {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
                     </div>
-                     <div className="space-y-2">
+                    <div className="space-y-2">
+                        <Label htmlFor="area">Área</Label>
+                        <Input id="area" {...register("area")} placeholder="Ex: Comercial, TI, etc." />
+                        {errors.area && <p className="text-sm text-destructive">{errors.area.message}</p>}
+                    </div>
+                    <div className="space-y-2">
                         <Label htmlFor="cargo">Cargo</Label>
                         <Input id="cargo" {...register("cargo")} />
                         {errors.cargo && <p className="text-sm text-destructive">{errors.cargo.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="userType">Tipo de Usuário</Label>
+                        <Select
+                            value={watch("userType")}
+                            onValueChange={(value) => setValue("userType", value as UserType)}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Selecione o tipo de usuário" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Administrador">Administrador</SelectItem>
+                                <SelectItem value="Usuário padrão">Usuário padrão</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        {errors.userType && <p className="text-sm text-destructive">{errors.userType.message}</p>}
                     </div>
                     <DialogFooter className="pt-4">
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>Cancelar</Button>

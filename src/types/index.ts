@@ -67,6 +67,7 @@ export interface DevProject {
 
 
 export type UserRole = 'PMO' | 'Líder' | 'Colaborador';
+export type UserType = 'Administrador' | 'Usuário padrão';
 
 export interface RemunerationHistory {
     date: string; // 'YYYY-MM-DD'
@@ -83,6 +84,8 @@ export interface Collaborator {
     name: string;
     email: string;
     cargo: string;
+    area?: string;
+    userType: UserType;
     permissions: Record<string, boolean>;
     remunerationHistory?: RemunerationHistory[];
     positionHistory?: PositionHistory[];

@@ -1,11 +1,12 @@
 
 "use client";
 
-import type { UserRole } from '@/types';
+import type { UserRole, UserType } from '@/types';
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, User as FirebaseUser, getRedirectResult, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { app } from '@/lib/firebase';
+import { app, db } from '@/lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useSettings } from './settings-context';
 import { MOCK_COLLABORATORS } from '@/lib/constants';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
@@ -15,6 +16,7 @@ interface User {
   name: string | null;
   email: string | null;
   role: UserRole;
+  userType?: UserType;
   permissions?: Record<string, boolean>;
 }
 
@@ -22,6 +24,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   isAdmin: boolean;
+  hasPermission: (page: string) => boolean;
   login: () => Promise<void>;
   logout: () => Promise<void>;
   isLoading: boolean;
@@ -44,17 +47,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const auth = getAuth(app);
     setPersistence(auth, browserLocalPersistence);
 
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser && firebaseUser.email && ALLOWED_EMAILS.includes(firebaseUser.email)) {
-        const collaboratorData = MAPPED_USERS.get(firebaseUser.email);
-        const userProfile: User = {
-          uid: firebaseUser.uid,
-          name: firebaseUser.displayName,
-          email: firebaseUser.email,
-          role: collaboratorData?.cargo as UserRole || 'Colaborador',
-          permissions: collaboratorData?.permissions || {},
-        };
-        setUser(userProfile);
+        try {
+          // Buscar colaborador no Firestore pelo email
+          const collaboratorsRef = collection(db, 'collaborators');
+          const q = query(collaboratorsRef, where('email', '==', firebaseUser.email));
+          const querySnapshot = await getDocs(q);
+          
+          let collaboratorData = null;
+          if (!querySnapshot.empty) {
+            collaboratorData = querySnapshot.docs[0].data();
+          } else {
+            // Fallback para mock data se não encontrar no Firestore
+            collaboratorData = MAPPED_USERS.get(firebaseUser.email);
+          }
+          
+          const userProfile: User = {
+            uid: firebaseUser.uid,
+            name: firebaseUser.displayName || collaboratorData?.name || null,
+            email: firebaseUser.email,
+            role: collaboratorData?.cargo as UserRole || 'Colaborador',
+            userType: collaboratorData?.userType || 'Usuário padrão',
+            permissions: collaboratorData?.permissions || {},
+          };
+          setUser(userProfile);
+        } catch (error) {
+          console.error("Error fetching collaborator data: ", error);
+          // Fallback para mock data em caso de erro
+          const collaboratorData = MAPPED_USERS.get(firebaseUser.email);
+          const userProfile: User = {
+            uid: firebaseUser.uid,
+            name: firebaseUser.displayName,
+            email: firebaseUser.email,
+            role: collaboratorData?.cargo as UserRole || 'Colaborador',
+            userType: collaboratorData?.userType || 'Usuário padrão',
+            permissions: collaboratorData?.permissions || {},
+          };
+          setUser(userProfile);
+        }
       } else {
         setUser(null);
         if (firebaseUser) {
@@ -89,8 +120,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const isAuthenticated = !!user;
-  const isAdmin = user?.role === 'PMO';
+  const userType = user?.userType || 'Usuário padrão';
+  const isAdmin = userType === 'Administrador';
   const isUnderMaintenance = !!maintenanceSettings?.isEnabled && !maintenanceSettings?.adminEmails.includes(user?.email || '');
+
+  const hasPermission = useCallback((page: string): boolean => {
+    if (!user) return false;
+    
+    const currentUserType = user.userType || 'Usuário padrão';
+    
+    // Administradores têm acesso a todas as páginas
+    if (currentUserType === 'Administrador') {
+      return true;
+    }
+    
+    // Para usuários padrão, verificar permissão específica
+    // Remove leading slash se existir
+    const key = page.startsWith('/') ? page.substring(1) : page;
+    return user.permissions?.[key] === true;
+  }, [user]);
 
   // This is a guard for the entire authenticated part of the app.
   // It handles the initial loading state.
@@ -104,7 +152,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, isAdmin, login, logout, isLoading: (isLoading || isLoadingSettings), isUnderMaintenance }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, isAdmin, hasPermission, login, logout, isLoading: (isLoading || isLoadingSettings), isUnderMaintenance }}>
       {children}
     </AuthContext.Provider>
   );

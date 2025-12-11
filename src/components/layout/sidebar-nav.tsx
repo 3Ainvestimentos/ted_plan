@@ -10,11 +10,24 @@ import {
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import type { NavItem } from "@/types";
+import { useAuth } from "@/contexts/auth-context";
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const { isAdmin, hasPermission } = useAuth();
   
-  const mainNavItems = NAV_ITEMS_CONFIG.filter(item => !item.isFooter);
+  const mainNavItems = NAV_ITEMS_CONFIG.filter(item => {
+    if (item.isFooter) return false;
+    
+    // Painel Estratégico é apenas para Administradores
+    if (item.href === '/') {
+      return isAdmin;
+    }
+    
+    // Demais páginas: verificar permissão específica
+    const permissionKey = item.href.startsWith('/') ? item.href.substring(1) : item.href;
+    return hasPermission(permissionKey);
+  });
 
   const renderNavItem = (item: NavItem) => (
     <SidebarMenuItem key={item.title}>

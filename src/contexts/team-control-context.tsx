@@ -50,7 +50,8 @@ export const TeamControlProvider = ({ children }: { children: ReactNode }) => {
   const addCollaborator = async (collaboratorData: Omit<Collaborator, 'id'| 'permissions'>) => {
     const newCollaborator = {
         ...collaboratorData,
-        permissions: {}, // Default empty permissions
+        userType: collaboratorData.userType || 'Usuário padrão',
+        permissions: {}, // Permissões vazias por padrão
         remunerationHistory: [],
         positionHistory: [],
     }
@@ -60,6 +61,16 @@ export const TeamControlProvider = ({ children }: { children: ReactNode }) => {
   
   const updateCollaborator = async (id: string, data: Partial<Collaborator>) => {
     const collaboratorDocRef = doc(db, 'collaborators', id);
+    const collaborator = collaborators.find(c => c.id === id);
+    
+    // Se mudou de Usuário padrão para Administrador, limpar permissões
+    // Se mudou de Administrador para Usuário padrão, manter permissões vazias
+    if (collaborator && data.userType && data.userType !== collaborator.userType) {
+      if (data.userType === 'Administrador') {
+        data.permissions = {};
+      }
+    }
+    
     await updateDoc(collaboratorDocRef, data);
     fetchCollaborators();
   };
@@ -75,13 +86,22 @@ export const TeamControlProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const updateCollaboratorPermissions = async (id: string, navItem: string, isEnabled: boolean) => {
+    const collaborator = collaborators.find(c => c.id === id);
+    // Não permitir atualizar permissões de administradores
+    if (collaborator?.userType === 'Administrador') {
+      return;
+    }
+    
     const key = navItem.startsWith('/') ? navItem.substring(1) : navItem;
     const collaboratorDocRef = doc(db, 'collaborators', id);
-    await setDoc(collaboratorDocRef, { 
-        permissions: { 
-            [key]: isEnabled 
-        } 
-    }, { merge: true });
+    const currentPermissions = collaborator?.permissions || {};
+    const updatedPermissions = {
+      ...currentPermissions,
+      [key]: isEnabled 
+    };
+    await updateDoc(collaboratorDocRef, { 
+        permissions: updatedPermissions
+    });
     fetchCollaborators();
   };
   

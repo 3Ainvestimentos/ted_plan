@@ -21,15 +21,49 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, isLoading, isUnderMaintenance } = useAuth();
+  const { isAuthenticated, isLoading, isUnderMaintenance, isAdmin, hasPermission } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
     if (!isLoading && (!isAuthenticated || isUnderMaintenance)) {
       router.replace('/login');
+      return;
     }
-  }, [isLoading, isAuthenticated, isUnderMaintenance, router]);
+
+    // Verificar permissões de acesso à página atual
+    if (isAuthenticated && !isLoading && !isUnderMaintenance) {
+      // Painel Estratégico: apenas Administradores
+      if (pathname === '/') {
+        if (!isAdmin) {
+          // Redirecionar para primeira página permitida
+          router.replace('/strategic-initiatives');
+        }
+        return;
+      }
+
+      // Página de Settings: apenas Administradores
+      if (pathname.startsWith('/settings')) {
+        if (!isAdmin) {
+          router.replace('/strategic-initiatives');
+        }
+        return;
+      }
+
+      // Verificar permissão para outras páginas (exceto login)
+      if (pathname !== '/login') {
+        const permissionKey = pathname.startsWith('/') ? pathname.substring(1) : pathname;
+        if (!hasPermission(permissionKey)) {
+          // Redirecionar para primeira página permitida ou dashboard se admin
+          if (isAdmin) {
+            router.replace('/');
+          } else {
+            router.replace('/strategic-initiatives');
+          }
+        }
+      }
+    }
+  }, [isLoading, isAuthenticated, isUnderMaintenance, router, pathname, isAdmin, hasPermission]);
 
   if (isLoading) {
     return (
@@ -38,8 +72,6 @@ export default function AppLayout({
       </div>
     );
   }
-
-  const isDashboardPage = pathname === '/';
 
   if (isAuthenticated && !isUnderMaintenance) {
     return (

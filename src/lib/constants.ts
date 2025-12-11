@@ -12,6 +12,25 @@ export const NAV_ITEMS_CONFIG: NavItem[] = [
   { title: 'Anotações', href: '/notes', icon: StickyNote },
 ];
 
+// Mapeamento de páginas para chaves de permissão
+export const PAGE_PERMISSIONS_MAP: Record<string, string> = {
+  'Iniciativas Estratégicas': 'strategic-initiatives',
+  'Desenvolvimento': 'development-projects',
+  'M&As': 'm-and-as',
+  'Agenda de Reuniões': 'meeting-agenda',
+  'Tarefas': 'tasks',
+  'Anotações': 'notes',
+};
+
+// Páginas que requerem permissão (excluindo Painel Estratégico que é apenas para Administradores)
+export const PERMISSIONABLE_PAGES = [
+  { title: 'Iniciativas Estratégicas', key: 'strategic-initiatives' },
+  { title: 'Desenvolvimento', key: 'development-projects' },
+  { title: 'M&As', key: 'm-and-as' },
+  { title: 'Agenda de Reuniões', key: 'meeting-agenda' },
+  { title: 'Tarefas', key: 'tasks' },
+  { title: 'Anotações', key: 'notes' },
+];
 
 export const USER_ROLES: UserRole[] = ['PMO', 'Líder', 'Colaborador'];
 
@@ -46,15 +65,8 @@ export const MOCK_COLLABORATORS: Collaborator[] = [
         name: 'Matheus',
         email: 'matheus@3ainvestimentos.com.br',
         cargo: 'PMO',
-        permissions: {
-            'strategic-initiatives': true,
-            'dashboard': true,
-            'm-and-as': true,
-            'meeting-agenda': true,
-            'team-control': true,
-            'tasks': true,
-            'notes': true,
-        },
+        userType: 'Administrador',
+        permissions: {},
         remunerationHistory: [
             { date: '2023-01-01', value: 5000 },
             { date: '2024-01-01', value: 6000 },
@@ -69,15 +81,8 @@ export const MOCK_COLLABORATORS: Collaborator[] = [
         name: 'Thiago',
         email: 'thiago@3ainvestimentos.com.br',
         cargo: 'PMO',
-        permissions: {
-            'strategic-initiatives': true,
-            'dashboard': true,
-            'm-and-as': true,
-            'meeting-agenda': true,
-            'team-control': true,
-            'tasks': true,
-            'notes': true,
-        },
+        userType: 'Administrador',
+        permissions: {},
         remunerationHistory: [
             { date: '2023-05-01', value: 4500 },
             { date: '2024-03-01', value: 5500 },
