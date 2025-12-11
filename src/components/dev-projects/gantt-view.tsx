@@ -189,7 +189,7 @@ export function GanttView({ projects, onProjectClick, onStatusChange }: GanttVie
                                     let barColor = '';
                                     if (isInRange) {
                                         if (task.level === 1) {
-                                            barColor = 'bg-green-600'; // Dark green for items
+                                            barColor = 'bg-green-800'; // Dark green for items
                                         } else if (task.level === 2) {
                                             barColor = 'bg-green-400'; // Light green for sub-items
                                         }
