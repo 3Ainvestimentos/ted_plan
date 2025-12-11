@@ -1,4 +1,6 @@
 
+"use client";
+
 import { PageHeader } from "@/components/layout/page-header";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { Handshake, Target, CalendarClock, ClipboardList, StickyNote, AppWindow } from "lucide-react";
