@@ -19,6 +19,10 @@ import { useInitiatives } from "@/contexts/initiatives-context";
 interface InitiativesTableProps {
     initiatives: Initiative[];
     onInitiativeClick: (initiative: Initiative) => void;
+    // Props opcionais para permitir uso com M&As
+    onUpdateSubItem?: (initiativeId: string, subItemId: string, completed: boolean) => void;
+    onArchive?: (initiativeId: string) => void;
+    onUnarchive?: (initiativeId: string) => void;
 }
 
 const sortInitiatives = (initiatives: Initiative[]) => {
@@ -35,8 +39,19 @@ const sortInitiatives = (initiatives: Initiative[]) => {
     });
 };
 
-export function InitiativesTable({ initiatives, onInitiativeClick }: InitiativesTableProps) {
-  const { updateSubItem, archiveInitiative, unarchiveInitiative } = useInitiatives();
+export function InitiativesTable({ 
+  initiatives, 
+  onInitiativeClick,
+  onUpdateSubItem,
+  onArchive,
+  onUnarchive 
+}: InitiativesTableProps) {
+  // Usa funções do contexto como fallback se não forem passadas como props
+  const initiativesContext = useInitiatives();
+  
+  const updateSubItem = onUpdateSubItem || initiativesContext.updateSubItem;
+  const archiveInitiative = onArchive || initiativesContext.archiveInitiative;
+  const unarchiveInitiative = onUnarchive || initiativesContext.unarchiveInitiative;
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [archiveFilter, setArchiveFilter] = useState<string>("active");

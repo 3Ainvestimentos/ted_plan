@@ -214,16 +214,26 @@ export const MnaDealsProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchDeals]);
 
   const updateSubItem = useCallback(async (dealId: string, subItemId: string, completed: boolean) => {
+      console.log('[MnaContext] updateSubItem called:', { dealId, subItemId, completed });
+      
       const localDeal = deals.find(i => i.id === dealId);
-      if (!localDeal || !localDeal.subItems) return;
+      if (!localDeal || !localDeal.subItems) {
+          console.log('[MnaContext] Deal não encontrado ou sem subItems');
+          return;
+      }
+      
+      console.log('[MnaContext] SubItems antes:', localDeal.subItems.map(si => ({ id: si.id, completed: si.completed })));
 
       const updatedSubItems = localDeal.subItems.map(si => 
           si.id === subItemId ? { ...si, completed } : si
       );
       
+      console.log('[MnaContext] SubItems depois:', updatedSubItems.map(si => ({ id: si.id, completed: si.completed })));
+      
       const dealDocRef = doc(db, 'mnaDeals', dealId);
       try {
           await setDoc(dealDocRef, { subItems: updatedSubItems, lastUpdate: new Date().toISOString() }, { merge: true });
+          console.log('[MnaContext] Firestore atualizado');
           setDeals(prevDeals => {
               const newDeals = prevDeals.map(deal => {
                   if (deal.id === dealId) {

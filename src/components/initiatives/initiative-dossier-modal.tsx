@@ -35,6 +35,13 @@ export function InitiativeDossierModal({ isOpen, onOpenChange, initiative, isMna
     const hasSubItems = initiative.subItems && initiative.subItems.length > 0;
 
     const handleSubItemToggle = (subItemId: string, completed: boolean) => {
+        console.log('[DossierModal] Toggle subItem:', {
+            dealId: initiative.id,
+            subItemId,
+            newCompleted: completed,
+            isMna
+        });
+        
         if (isMna) {
             updateMnaSubItem(initiative.id, subItemId, completed);
         } else {
@@ -106,18 +113,41 @@ export function InitiativeDossierModal({ isOpen, onOpenChange, initiative, isMna
                         <section>
                             <h3 className="text-xl font-headline mb-2 text-foreground/90 flex items-center gap-2"><ListChecks className="w-5 h-5"/> Checklist</h3>
                             <div className="space-y-2 rounded-md border p-4">
-                                {initiative.subItems?.map(subItem => (
-                                     <div key={subItem.id} className="flex items-center gap-3">
-                                        <Checkbox 
-                                            id={`dossier-subitem-${subItem.id}`}
-                                            checked={subItem.completed} 
-                                            onCheckedChange={(checked) => handleSubItemToggle(subItem.id, !!checked)}
-                                        />
-                                        <label htmlFor={`dossier-subitem-${subItem.id}`} className={cn("text-sm", subItem.completed && "line-through text-muted-foreground")}>
-                                            {subItem.title}
-                                        </label>
-                                     </div>
-                                ))}
+                                {initiative.subItems?.map((subItem, index) => {
+                                    // Debug: log para verificar o estado dos subitens
+                                    console.log(`[DossierModal] Renderizando subItem[${index}]:`, {
+                                        id: subItem.id,
+                                        title: subItem.title,
+                                        completed: subItem.completed
+                                    });
+                                    
+                                    return (
+                                        <div key={subItem.id || `subitem-${index}`} className="flex items-center gap-3">
+                                            <Checkbox 
+                                                id={`dossier-subitem-${subItem.id || index}`}
+                                                checked={subItem.completed} 
+                                                onCheckedChange={(checked) => {
+                                                    console.log(`[DossierModal] Checkbox clicked:`, { 
+                                                        subItemId: subItem.id, 
+                                                        currentCompleted: subItem.completed,
+                                                        newChecked: checked 
+                                                    });
+                                                    if (subItem.id) {
+                                                        handleSubItemToggle(subItem.id, !!checked);
+                                                    } else {
+                                                        console.error('[DossierModal] SubItem sem ID!', subItem);
+                                                    }
+                                                }}
+                                            />
+                                            <label 
+                                                htmlFor={`dossier-subitem-${subItem.id || index}`} 
+                                                className={cn("text-sm cursor-pointer", subItem.completed && "line-through text-muted-foreground")}
+                                            >
+                                                {subItem.title}
+                                            </label>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </section>
                         </>

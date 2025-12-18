@@ -32,7 +32,7 @@ export const PERMISSIONABLE_PAGES = [
   { title: 'Anotações', key: 'notes' },
 ];
 
-export const USER_ROLES: UserRole[] = ['PMO', 'Líder', 'Colaborador'];
+export const USER_ROLES: UserRole[] = ['PMO', 'gestor'];
 
 export const STATUS_ICONS: Record<InitiativeStatus, React.ElementType> = {
   'A Fazer': ListTodo,

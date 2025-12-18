@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { UserRole, UserType } from '@/types';
@@ -10,6 +9,10 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useSettings } from './settings-context';
 import { MOCK_COLLABORATORS } from '@/lib/constants';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+
+// ============================================
+// INTERFACES E TIPOS
+// ============================================
 
 interface User {
   uid: string;
@@ -31,169 +34,266 @@ interface AuthContextType {
   isUnderMaintenance: boolean;
 }
 
+// ============================================
+// CONFIGURAÇÕES E CONSTANTES
+// ============================================
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Lista de emails específicos permitidos (fallback para mock data)
 const ALLOWED_EMAILS = ['matheus@3ainvestimentos.com.br', 'thiago@3ainvestimentos.com.br'];
 const MAPPED_USERS = new Map(MOCK_COLLABORATORS.map(c => [c.email, c]));
 
+// ============================================
+// FUNÇÃO HELPER: Verificação de Email Permitido
+// ============================================
+/**
+ * Verifica se um email é permitido para acessar a aplicação.
+ * Permite:
+ * - Emails na lista ALLOWED_EMAILS
+ * - Qualquer email dos domínios @3ainvestimentos.com.br ou @3ariva.com.br
+ */
+const isAllowedEmail = (email: string | null): boolean => {
+  if (!email) return false;
+  
+  // Verificar se está na lista de emails específicos
+  if (ALLOWED_EMAILS.includes(email)) {
+    return true;
+  }
+  
+  // Verificar se é do domínio permitido
+  const allowedDomains = ['@3ainvestimentos.com.br', '@3ariva.com.br'];
+  return allowedDomains.some(domain => email.endsWith(domain));
+};
+
+// ============================================
+// COMPONENTE: AuthProvider
+// ============================================
+/**
+ * Provider que gerencia toda a autenticação da aplicação.
+ * Responsável por:
+ * - Verificar autenticação do usuário
+ * - Buscar dados do usuário no Firestore
+ * - Gerenciar login/logout
+ * - Controlar permissões e acesso
+ */
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Estados do componente
+  const [user, setUser] = useState<User | null>(null); // Usuário autenticado
+  const [isLoading, setIsLoading] = useState(true); // Estado de carregamento
+  
+  // Hooks e contextos
   const { maintenanceSettings, isLoading: isLoadingSettings } = useSettings();
   const router = useRouter();
   const pathname = usePathname();
 
+  // ============================================
+  // EFEITO: Listener de Autenticação
+  // ============================================
+  /**
+   * Este useEffect é executado uma vez quando o componente monta.
+   * Configura um listener que monitora mudanças no estado de autenticação do Firebase.
+   * 
+   * Fluxo:
+   * 1. Quando usuário faz login → firebaseUser existe
+   * 2. Verifica se email é permitido
+   * 3. Busca dados do colaborador no Firestore
+   * 4. Cria perfil do usuário com dados encontrados
+   * 5. Quando usuário faz logout → firebaseUser é null
+   */
   useEffect(() => {
     const auth = getAuth(app);
-    setPersistence(auth, browserLocalPersistence);
+    setPersistence(auth, browserLocalPersistence); // Manter sessão no navegador
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      // CASO 1: Usuário está autenticado
       if (firebaseUser && firebaseUser.email) {
+        // Verificar se o email é permitido ANTES de processar
+        if (!isAllowedEmail(firebaseUser.email)) {
+          console.log("Email não autorizado:", firebaseUser.email);
+          setUser(null);
+          signOut(auth); // Fazer logout automático
+          setIsLoading(false);
+          return;
+        }
+        
         try {
           // Buscar colaborador no Firestore pelo email
           const collaboratorsRef = collection(db, 'collaborators');
           const q = query(collaboratorsRef, where('email', '==', firebaseUser.email));
           const querySnapshot = await getDocs(q);
-          
-          let collaboratorData = null;
-          if (!querySnapshot.empty) {
-            // Colaborador encontrado no Firestore
-            collaboratorData = querySnapshot.docs[0].data();
-          } else if (ALLOWED_EMAILS.includes(firebaseUser.email)) {
-            // Fallback para mock data se não encontrar no Firestore mas estiver na lista de emails permitidos
-            collaboratorData = MAPPED_USERS.get(firebaseUser.email);
-          } else {
-            // Email não encontrado nem no Firestore nem na lista permitida
-            console.log("Email não autorizado:", firebaseUser.email);
+
+          // OBRIGATÓRIO: Usuário DEVE estar na coleção collaborators
+          if (querySnapshot.empty) {
+            console.log("Usuário não encontrado na coleção collaborators:", firebaseUser.email);
             setUser(null);
-            if (firebaseUser) {
-              signOut(auth);
-            }
+            signOut(auth);
             setIsLoading(false);
             return;
           }
           
+          // Colaborador encontrado no Firestore
+          const collaboratorData = querySnapshot.docs[0].data();
+
+          // OBRIGATÓRIO: userType DEVE estar definido
+          if (!collaboratorData.userType) {
+            console.warn("Colaborador sem userType definido:", firebaseUser.email);
+            setUser(null);
+            signOut(auth);
+            setIsLoading(false);
+            return;
+          }
+
+          // Criar perfil do usuário com os dados encontrados
           const userProfile: User = {
             uid: firebaseUser.uid,
             name: firebaseUser.displayName || collaboratorData?.name || null,
             email: firebaseUser.email,
-            role: collaboratorData?.cargo as UserRole || 'Colaborador',
-            userType: collaboratorData?.userType || 'Usuário padrão',
+            role: collaboratorData?.cargo as UserRole || 'head',
+            userType: collaboratorData.userType as UserType,
             permissions: collaboratorData?.permissions || {},
           };
           setUser(userProfile);
+          
         } catch (error: any) {
           console.error("Error fetching collaborator data: ", error);
-          // Em caso de erro (ex: permissão negada), verificar se está na lista de emails permitidos como fallback
-          if (ALLOWED_EMAILS.includes(firebaseUser.email)) {
-            const collaboratorData = MAPPED_USERS.get(firebaseUser.email);
-            const userProfile: User = {
-              uid: firebaseUser.uid,
-              name: firebaseUser.displayName,
-              email: firebaseUser.email,
-              role: collaboratorData?.cargo as UserRole || 'Colaborador',
-              userType: collaboratorData?.userType || 'Usuário padrão',
-              permissions: collaboratorData?.permissions || {},
-            };
-            setUser(userProfile);
-          } else {
-            // Se não estiver na lista permitida e deu erro, verificar se é erro de permissão
-            // Se for erro de permissão, pode ser que o usuário esteja no Firestore mas não consegue ler
-            // Nesse caso, tentar usar dados básicos do Firebase Auth
-            if (error?.code === 'permission-denied') {
-              console.warn("Permissão negada ao buscar colaborador, mas usuário autenticado. Usando dados básicos.");
-              // Criar perfil básico com dados do Firebase Auth
-              const userProfile: User = {
-                uid: firebaseUser.uid,
-                name: firebaseUser.displayName,
-                email: firebaseUser.email,
-                role: 'Colaborador' as UserRole,
-                userType: 'Usuário padrão',
-                permissions: {},
-              };
-              setUser(userProfile);
-            } else {
-              // Se não estiver na lista permitida e não for erro de permissão, fazer logout
-              console.log("Email não autorizado e erro não é de permissão:", firebaseUser.email);
-              setUser(null);
-              if (firebaseUser) {
-                signOut(auth);
-              }
-            }
-          }
+          
+          // Se der erro ao buscar no Firestore, não permitir acesso
+          console.error("Erro ao buscar colaborador. Acesso negado.");
+          setUser(null);
+          signOut(auth);
         }
-      } else {
+      } 
+      // CASO 2: Usuário NÃO está autenticado
+      else {
         setUser(null);
         if (firebaseUser) {
-           signOut(auth);
+          signOut(auth);
         }
       }
+      
       setIsLoading(false);
     });
 
+    // Cleanup: remover listener quando componente desmontar
     return () => unsubscribe();
   }, []);
 
+  // ============================================
+  // FUNÇÃO: Login
+  // ============================================
+  /**
+   * Inicia o processo de login com Google.
+   * Abre um popup para autenticação.
+   * O listener onAuthStateChanged detecta automaticamente quando login é bem-sucedido.
+   */
   const login = async () => {
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
     try {
-        await signInWithPopup(auth, provider);
-        // On successful login, the onAuthStateChanged listener will handle setting the user
-        // and the layout/page will handle the redirect.
+      await signInWithPopup(auth, provider);
+      // O onAuthStateChanged listener vai detectar o login e processar
     } catch (error) {
-        console.error("Popup login error:", error);
-        // Re-throw the error to be caught by the login page component
-        throw error;
+      console.error("Popup login error:", error);
+      throw error; // Re-lançar para ser tratado no componente de login
     }
   };
 
+  // ============================================
+  // FUNÇÃO: Logout
+  // ============================================
+  /**
+   * Faz logout do usuário e redireciona para página de login.
+   */
   const logout = async () => {
     const auth = getAuth(app);
     await signOut(auth);
-    setUser(null); // Explicitly clear user state
-    router.push('/login'); // Redirect to login after logout
+    setUser(null); // Limpar estado do usuário
+    router.push('/login'); // Redirecionar para login
   };
 
-  const isAuthenticated = !!user;
-  const userType = user?.userType || 'Usuário padrão';
-  const isAdmin = userType === 'Administrador';
-  const isUnderMaintenance = !!maintenanceSettings?.isEnabled && !maintenanceSettings?.adminEmails.includes(user?.email || '');
+  // ============================================
+  // VALORES COMPUTADOS
+  // ============================================
+  const isAuthenticated = !!user; // true se user não for null
+  const userType = user?.userType || 'head';
+  const isAdmin = userType === 'admin';
+  const isUnderMaintenance = !!maintenanceSettings?.isEnabled && 
+                            !maintenanceSettings?.adminEmails.includes(user?.email || '');
 
+  // ============================================
+  // FUNÇÃO: Verificação de Permissão
+  // ============================================
+  /**
+   * Verifica se o usuário tem permissão para acessar uma página específica.
+   * 
+   * Regras:
+   * - Administradores têm acesso a tudo
+   * - Usuários padrão precisam ter permissão explícita
+   */
   const hasPermission = useCallback((page: string): boolean => {
     if (!user) return false;
     
-    const currentUserType = user.userType || 'Usuário padrão';
+    const currentUserType = user.userType || 'head';
     
-    // Administradores têm acesso a todas as páginas
-    if (currentUserType === 'Administrador') {
+    // Administradores têm acesso total
+    if (currentUserType === 'admin') {
       return true;
     }
     
     // Para usuários padrão, verificar permissão específica
-    // Remove leading slash se existir
     const key = page.startsWith('/') ? page.substring(1) : page;
     return user.permissions?.[key] === true;
   }, [user]);
 
-  // This is a guard for the entire authenticated part of the app.
-  // It handles the initial loading state.
+  // ============================================
+  // RENDERIZAÇÃO: Loading State
+  // ============================================
+  /**
+   * Mostra spinner de carregamento enquanto:
+   * - Autenticação está sendo verificada
+   * - Settings estão sendo carregados
+   */
   if (isLoading || isLoadingSettings) {
-      return (
-        <div className="flex h-screen w-full items-center justify-center bg-background">
-          <LoadingSpinner className="h-12 w-12" />
-        </div>
-      );
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <LoadingSpinner className="h-12 w-12" />
+      </div>
+    );
   }
 
-
+  // ============================================
+  // RENDERIZAÇÃO: Provider
+  // ============================================
+  /**
+   * Fornece o contexto de autenticação para todos os componentes filhos.
+   */
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, isAdmin, hasPermission, login, logout, isLoading: (isLoading || isLoadingSettings), isUnderMaintenance }}>
+    <AuthContext.Provider value={{ 
+      isAuthenticated, 
+      user, 
+      isAdmin, 
+      hasPermission, 
+      login, 
+      logout, 
+      isLoading: (isLoading || isLoadingSettings), 
+      isUnderMaintenance 
+    }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
+// ============================================
+// HOOK: useAuth
+// ============================================
+/**
+ * Hook para acessar o contexto de autenticação.
+ * Deve ser usado dentro de um AuthProvider.
+ * 
+ * Exemplo de uso:
+ * const { user, login, logout, isAdmin } = useAuth();
+ */
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

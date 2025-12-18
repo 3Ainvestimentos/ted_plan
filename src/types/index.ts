@@ -35,7 +35,11 @@ export interface Initiative {
   auc?: number;
 }
 
-export interface MnaDeal extends Initiative {}
+export interface MnaDeal extends Initiative {
+  // Campos adicionais para visualização Gantt
+  startDate?: string | null; // Data de início 'YYYY-MM-DD'
+  responsible?: string; // Responsável pelo deal
+}
 
 // Types for Development Projects
 export type DevProjectStatus = 'Pendente' | 'Em Andamento' | 'Concluído' | 'Em atraso';
@@ -80,8 +84,8 @@ export interface ProjectComment {
     readAt?: any; // Firestore Timestamp (quando foi lido)
 }
 
-export type UserRole = 'PMO' | 'Líder' | 'Colaborador';
-export type UserType = 'Administrador' | 'Usuário padrão';
+export type UserRole = 'PMO' | 'head'; // Cargo (só 2 tipos)
+export type UserType = 'admin' | 'head' | 'pmo'; // Tipo de usuário/permissões (3 tipos)
 
 export interface RemunerationHistory {
     date: string; // 'YYYY-MM-DD'
