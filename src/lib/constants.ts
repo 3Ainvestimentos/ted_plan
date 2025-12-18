@@ -1,12 +1,10 @@
 
 import type { NavItem, UserRole, Initiative, InitiativeStatus, InitiativePriority, RecurringMeeting, Collaborator } from '@/types';
-import { LayoutDashboard, Target, CalendarClock, Settings, Shield, User, BarChart3, ListTodo, CircleCheck, AlertTriangle, Clock, CheckCircle, TrendingUp, TrendingDown, Minus, Lightbulb, FileText, Bug, PlayCircle, PauseCircle, CheckSquare, StickyNote, ClipboardList, Users, Handshake, Code, AppWindow } from 'lucide-react';
+import { LayoutDashboard, Target, CalendarClock, Settings, Shield, User, BarChart3, ListTodo, CircleCheck, AlertTriangle, Clock, CheckCircle, TrendingUp, TrendingDown, Minus, Lightbulb, FileText, Bug, PlayCircle, PauseCircle, CheckSquare, StickyNote, ClipboardList, Users } from 'lucide-react';
 
 export const NAV_ITEMS_CONFIG: NavItem[] = [
   { title: 'Painel Estratégico', href: '/', icon: LayoutDashboard },
   { title: 'Iniciativas Estratégicas', href: '/strategic-initiatives', icon: Target },
-  { title: 'Desenvolvimento', href: '/development-projects', icon: AppWindow },
-  { title: 'M&As', href: '/m-and-as', icon: Handshake },
   { title: 'Agenda de Reuniões', href: '/meeting-agenda', icon: CalendarClock },
   { title: 'Tarefas', href: '/tasks', icon: ClipboardList },
   { title: 'Anotações', href: '/notes', icon: StickyNote },
@@ -15,8 +13,6 @@ export const NAV_ITEMS_CONFIG: NavItem[] = [
 // Mapeamento de páginas para chaves de permissão
 export const PAGE_PERMISSIONS_MAP: Record<string, string> = {
   'Iniciativas Estratégicas': 'strategic-initiatives',
-  'Desenvolvimento': 'development-projects',
-  'M&As': 'm-and-as',
   'Agenda de Reuniões': 'meeting-agenda',
   'Tarefas': 'tasks',
   'Anotações': 'notes',
@@ -25,8 +21,6 @@ export const PAGE_PERMISSIONS_MAP: Record<string, string> = {
 // Páginas que requerem permissão (excluindo Painel Estratégico que é apenas para Administradores)
 export const PERMISSIONABLE_PAGES = [
   { title: 'Iniciativas Estratégicas', key: 'strategic-initiatives' },
-  { title: 'Desenvolvimento', key: 'development-projects' },
-  { title: 'M&As', key: 'm-and-as' },
   { title: 'Agenda de Reuniões', key: 'meeting-agenda' },
   { title: 'Tarefas', key: 'tasks' },
   { title: 'Anotações', key: 'notes' },

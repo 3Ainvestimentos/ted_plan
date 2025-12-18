@@ -36,7 +36,17 @@ export function KanbanColumn({ column, onDropTask, onInitiativeClick }: ColumnPr
     <div
       ref={drop}
       className={cn(
-        "w-72 md:w-80 flex-shrink-0 bg-secondary/30 rounded-lg p-1.5 flex flex-col transition-colors duration-200",
+        /**
+         * LAYOUT RESPONSIVO SEM SCROLL HORIZONTAL:
+         * 
+         * - flex-1: Distribui espaço igualmente entre todas as colunas
+         * - min-w-0: Permite que a coluna encolha abaixo do tamanho do conteúdo
+         * - max-w-full: Garante que não ultrapasse a largura do container
+         * - Removido w-72/w-80 e flex-shrink-0: Permite ajuste flexível
+         * 
+         * Isso garante que todas as colunas caibam na tela sem scroll horizontal
+         */
+        "flex-1 min-w-0 max-w-full bg-secondary/30 rounded-lg p-1.5 flex flex-col transition-colors duration-200",
         isOver && canDrop ? "bg-primary/10" : "",
         isOver && !canDrop ? "bg-destructive/10" : ""
       )}

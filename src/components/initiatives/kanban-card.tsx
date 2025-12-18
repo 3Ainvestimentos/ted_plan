@@ -56,12 +56,12 @@ export function KanbanTaskCard({ task, onClick }: KanbanTaskCardProps) {
             task.status === 'Atrasado' ? 'border-l-4 border-l-red-500' : ''
         )}>
         <CardContent className="p-3 space-y-3">
-            <div className="flex items-start space-x-2">
-                {TaskIcon && <TaskIcon className="h-4 w-4 text-muted-foreground mt-0.5" />}
-                <h4 className="text-sm font-medium text-card-foreground flex-grow" title={task.title}>
+            <div className="flex items-start space-x-2 min-w-0">
+                {TaskIcon && <TaskIcon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />}
+                <h4 className="text-sm font-medium text-card-foreground flex-grow truncate min-w-0" title={task.title}>
                     {task.title}
                 </h4>
-                {statusIndicator}
+                {statusIndicator && <div className="flex-shrink-0">{statusIndicator}</div>}
             </div>
 
             {hasSubItems && (

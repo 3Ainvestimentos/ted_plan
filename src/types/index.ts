@@ -27,6 +27,7 @@ export interface Initiative {
   progress: number; // Percentage 0-100
   priority: InitiativePriority;
   deadline?: string | null; // ISO date string 'YYYY-MM-DD'
+  startDate?: string | null; // ISO date string 'YYYY-MM-DD' - Para visualização Gantt
   keyMetrics: { name: string; value: string; trend: 'up' | 'down' | 'neutral' }[];
   icon?: React.ElementType; // Optional: for specific task icons
   subItems?: SubItem[];
