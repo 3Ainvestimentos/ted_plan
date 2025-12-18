@@ -9,6 +9,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useSettings } from './settings-context';
 import { MOCK_COLLABORATORS } from '@/lib/constants';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { canAccessPage, isAdminOnlyPage } from '@/lib/permissions-config';
 
 // ============================================
 // INTERFACES E TIPOS
@@ -227,23 +228,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   /**
    * Verifica se o usuário tem permissão para acessar uma página específica.
    * 
-   * Regras:
-   * - Administradores têm acesso a tudo
-   * - Usuários padrão precisam ter permissão explícita
+   * NOVA LÓGICA BASEADA EM ROLES:
+   * 
+   * 1. Admin: Acesso total a todas as páginas
+   * 2. PMO: Acesso a todas as páginas (exceto Settings)
+   * 3. Head: Acesso apenas a:
+   *    - Painel Estratégico (/)
+   *    - Iniciativas Estratégicas (/strategic-initiatives)
+   * 
+   * PERMISSÕES CUSTOMIZADAS:
+   * - Se o usuário tiver permissões customizadas no banco (campo permissions),
+   *   elas podem sobrescrever as regras padrão do role
+   * 
+   * @param page - Path da página (ex: '/strategic-initiatives' ou 'strategic-initiatives')
+   * @returns true se o usuário tem permissão para acessar a página
    */
   const hasPermission = useCallback((page: string): boolean => {
     if (!user) return false;
     
     const currentUserType = user.userType || 'head';
     
-    // Administradores têm acesso total
-    if (currentUserType === 'admin') {
-      return true;
+    // Normalizar a chave da página (remover barra inicial se houver)
+    const pageKey = page.startsWith('/') ? page.substring(1) : page;
+    
+    // Páginas exclusivas de admin (Settings)
+    if (isAdminOnlyPage(pageKey) && currentUserType !== 'admin') {
+      return false;
     }
     
-    // Para usuários padrão, verificar permissão específica
-    const key = page.startsWith('/') ? page.substring(1) : page;
-    return user.permissions?.[key] === true;
+    // Verificar permissão usando a configuração de roles
+    // Permite override via permissions do banco se fornecido
+    return canAccessPage(currentUserType, pageKey, user.permissions);
   }, [user]);
 
   // ============================================

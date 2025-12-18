@@ -25,10 +25,9 @@ export default function DashboardPage() {
   const { isAdmin, hasPermission } = useAuth();
   
   // Filtrar cards baseado nas permissões do usuário
+  // As permissões são baseadas no userType (admin, pmo, head)
+  // e podem ser customizadas via campo permissions no banco
   const allowedItems = dashboardItems.filter(item => {
-    // Administradores veem todos os cards
-    if (isAdmin) return true;
-    // Usuários padrão veem apenas os cards das páginas que têm permissão
     return hasPermission(item.permissionKey);
   });
 

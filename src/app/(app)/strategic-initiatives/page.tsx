@@ -3,11 +3,10 @@
 
 import React, { useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, LayoutGrid, List, Upload, Download, Loader2, GanttChart, LayoutDashboard } from "lucide-react";
+import { PlusCircle, LayoutGrid, List, Upload, LayoutDashboard } from "lucide-react";
 import { useInitiatives } from "@/contexts/initiatives-context";
-import { InitiativesTable } from "@/components/initiatives/initiatives-table";
+import { TableGanttView } from "@/components/initiatives/table-gantt-view";
 import { InitiativesKanban } from "@/components/initiatives/initiatives-kanban";
-import { InitiativeGanttView } from "@/components/initiatives/initiative-gantt-view";
 import { InitiativesDashboard } from "@/components/initiatives/initiatives-dashboard";
 import { PageHeader } from "@/components/layout/page-header";
 import { DndProvider } from 'react-dnd';
@@ -20,10 +19,10 @@ import { InitiativeDossierModal } from "@/components/initiatives/initiative-doss
 import { ImportInitiativesModal } from "@/components/initiatives/import-initiatives-modal";
 
 
-type ViewMode = "dashboard" | "table" | "kanban" | "gantt";
+type ViewMode = "dashboard" | "table-gantt" | "kanban";
 
 export default function InitiativesPage() {
-  const { initiatives, isLoading, updateInitiativeStatus } = useInitiatives();
+  const { initiatives, isLoading, updateInitiativeStatus, updateSubItem, archiveInitiative, unarchiveInitiative } = useInitiatives();
   /**
    * Dashboard é a visualização inicial/padrão da página
    * Oferece uma visão geral das métricas antes de entrar nas visualizações detalhadas
@@ -95,13 +94,13 @@ export default function InitiativesPage() {
                 <span className="ml-2 hidden sm:inline">Dashboard</span>
               </Button>
               <Button 
-                variant={viewMode === 'table' ? 'secondary' : 'ghost'} 
+                variant={viewMode === 'table-gantt' ? 'secondary' : 'ghost'} 
                 size="sm" 
-                onClick={() => setViewMode('table')}
+                onClick={() => setViewMode('table-gantt')}
                 className="h-8 px-3"
               >
                 <List className="h-4 w-4" />
-                <span className="ml-2 hidden sm:inline">Tabela</span>
+                <span className="ml-2 hidden sm:inline">Tabela/Gantt</span>
               </Button>
               <Button 
                 variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} 
@@ -111,15 +110,6 @@ export default function InitiativesPage() {
               >
                 <LayoutGrid className="h-4 w-4" />
                 <span className="ml-2 hidden sm:inline">Kanban</span>
-              </Button>
-              <Button 
-                variant={viewMode === 'gantt' ? 'secondary' : 'ghost'} 
-                size="sm" 
-                onClick={() => setViewMode('gantt')}
-                className="h-8 px-3"
-              >
-                <GanttChart className="h-4 w-4" />
-                <span className="ml-2 hidden sm:inline">Gantt</span>
               </Button>
             </div>
             <Button onClick={() => setIsCreateModalOpen(true)} className="flex-shrink-0">
@@ -146,16 +136,25 @@ export default function InitiativesPage() {
            * - Distribuições (status, prioridade, responsáveis)
            */
           <InitiativesDashboard initiatives={activeInitiatives} />
-        ) : viewMode === 'table' ? (
-          <InitiativesTable initiatives={initiatives} onInitiativeClick={openDossier} />
-        ) : viewMode === 'kanban' ? (
-          <InitiativesKanban initiatives={activeInitiatives} onInitiativeClick={openDossier} />
-        ) : (
-          <InitiativeGanttView 
-            initiatives={activeInitiatives} 
+        ) : viewMode === 'table-gantt' ? (
+          /**
+           * Tabela/Gantt - Visualização combinada
+           * 
+           * Exibe:
+           * - Tabela à esquerda com filtros e busca
+           * - Gantt à direita com timeline de 6 meses
+           * - Layout responsivo sem scroll horizontal
+           */
+          <TableGanttView 
+            initiatives={initiatives} 
             onInitiativeClick={openDossier}
+            onUpdateSubItem={updateSubItem}
+            onArchive={archiveInitiative}
+            onUnarchive={unarchiveInitiative}
             onStatusChange={handleStatusChange}
           />
+        ) : (
+          <InitiativesKanban initiatives={activeInitiatives} onInitiativeClick={openDossier} />
         )}
       </div>
     </DndProvider>
