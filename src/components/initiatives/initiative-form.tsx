@@ -1,6 +1,7 @@
 
 "use client";
 
+import React, { useEffect } from "react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -34,7 +35,7 @@ const phaseSchema = z.object({
   title: z.string().min(3, "O título da fase deve ter pelo menos 3 caracteres."),
   deadline: z.date().optional().nullable(),
   status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso', 'A Fazer', 'Em Dia', 'Em Risco', 'Atrasado']),
-  areaId: z.string().min(1, "A área é obrigatória."),
+  areaId: z.string().min(1, "A área é obrigatória."), // Será sempre igual à área do projeto
   priority: z.enum(['Baixa', 'Média', 'Alta']),
   description: z.string().min(1, "A observação é obrigatória."),
   responsible: z.string().optional().nullable(),
@@ -101,7 +102,32 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
   });
 
   const watchPhases = watch("phases");
+  const watchAreaId = watch("areaId");
   const hasPhases = watchPhases && watchPhases.length > 0;
+
+  // Quando a área do projeto mudar, atualizar todas as fases
+  useEffect(() => {
+    if (watchAreaId && watchPhases && watchPhases.length > 0) {
+      watchPhases.forEach((_, index) => {
+        const currentPhaseAreaId = getValues(`phases.${index}.areaId`);
+        // Só atualizar se for diferente para evitar loops
+        if (currentPhaseAreaId !== watchAreaId) {
+          setValue(`phases.${index}.areaId`, watchAreaId, { shouldValidate: false });
+        }
+      });
+    }
+  }, [watchAreaId, watchPhases, setValue, getValues]);
+
+  // Quando fases forem adicionadas, aplicar a área do projeto
+  useEffect(() => {
+    if (watchAreaId && watchPhases) {
+      watchPhases.forEach((phase, index) => {
+        if (!phase.areaId || phase.areaId !== watchAreaId) {
+          setValue(`phases.${index}.areaId`, watchAreaId, { shouldValidate: false });
+        }
+      });
+    }
+  }, [watchPhases?.length, watchAreaId, setValue, getValues]);
 
   // Função para adicionar subitem a uma fase específica
   const appendSubItem = (phaseIndex: number) => {
@@ -254,16 +280,19 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => appendPhase({ 
-                title: "", 
-                deadline: null,
-                status: 'Pendente',
-                areaId: '',
-                priority: 'Baixa',
-                description: '',
-                responsible: null,
-                subItems: [] as any[]
-              })}
+              onClick={() => {
+                const currentAreaId = getValues('areaId') || '';
+                appendPhase({ 
+                  title: "", 
+                  deadline: null,
+                  status: 'Pendente',
+                  areaId: currentAreaId, // Usar a área do projeto
+                  priority: 'Baixa',
+                  description: '',
+                  responsible: null,
+                  subItems: [] as any[]
+                });
+              }}
               disabled={isLimitedMode}
             >
               <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Fase
@@ -354,7 +383,14 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       name={`phases.${index}.areaId`}
                       control={control}
                       render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isLimitedMode}>
+                        <Select 
+                          onValueChange={(value) => {
+                            // Não permitir mudança - sempre usar a área do projeto
+                            field.onChange(watchAreaId || value);
+                          }} 
+                          value={watchAreaId || field.value} 
+                          disabled={true}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione a área" />
                           </SelectTrigger>
