@@ -15,8 +15,11 @@ interface KanbanTaskCardProps {
   onClick: () => void;
 }
 
-function getInitials(name: string) {
-  const parts = name.split(' ');
+function getInitials(name: string | null | undefined): string {
+  if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    return '??';
+  }
+  const parts = name.trim().split(' ').filter(part => part.length > 0);
   if (parts.length === 0) return '??';
   if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
@@ -81,8 +84,8 @@ export function KanbanTaskCard({ task, onClick }: KanbanTaskCardProps) {
                 <div className="flex items-center gap-2">
                      <span>{new Date(task.lastUpdate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={`https://placehold.co/24x24.png?text=${getInitials(task.owner)}`} alt={task.owner} data-ai-hint="assignee avatar" />
-                        <AvatarFallback className="text-xs">{getInitials(task.owner)}</AvatarFallback>
+                        <AvatarImage src={`https://placehold.co/24x24.png?text=${getInitials(task.owner || null)}`} alt={task.owner || 'Sem responsável'} data-ai-hint="assignee avatar" />
+                        <AvatarFallback className="text-xs">{getInitials(task.owner || null)}</AvatarFallback>
                     </Avatar>
                 </div>
             </div>

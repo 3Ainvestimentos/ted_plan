@@ -27,7 +27,7 @@ export function InitiativeCard({ initiative, showDetailsLink = false }: Initiati
             {initiative.status}
           </Badge>
         </div>
-        <CardDescription>Responsável: {initiative.owner}</CardDescription>
+        <CardDescription>Responsável: {initiative.owner || 'Não atribuído'}</CardDescription>
       </CardHeader>
       <CardContent className="flex-grow space-y-3">
         <p className="text-sm text-muted-foreground line-clamp-3">{initiative.description}</p>

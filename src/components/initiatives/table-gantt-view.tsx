@@ -189,43 +189,62 @@ function extractInitiativeDeadline(initiative: Initiative): Date | null {
 
 /**
  * Extrai startDate de uma Initiative
+ * 
+ * Lógica:
+ * 1. Se tem startDate explícito, usa ele
+ * 2. Se não, busca o menor deadline das fases/subitens como aproximação
+ * 3. Se não encontrar, usa 30 dias antes do deadline final como fallback
  */
 function extractInitiativeStartDate(initiative: Initiative, deadline: Date): Date {
+  // 1. Tenta usar startDate explícito da iniciativa
   const initiativeStartDate = parseFlexibleDate(initiative.startDate);
   if (initiativeStartDate) return initiativeStartDate;
   
-  // Considerar fases e subitens dentro das fases
+  // 2. Busca o menor deadline das fases e subitens como data de início aproximada
   if (initiative.phases && initiative.phases.length > 0) {
-    const allStartDates: Date[] = [];
+    const allDeadlines: Date[] = [];
     
     initiative.phases.forEach(phase => {
       const phaseDeadline = parseFlexibleDate(phase.deadline);
-      if (phaseDeadline) allStartDates.push(phaseDeadline);
+      if (phaseDeadline) allDeadlines.push(phaseDeadline);
       
       if (phase.subItems && phase.subItems.length > 0) {
         phase.subItems.forEach(subItem => {
           const subItemDeadline = parseFlexibleDate(subItem.deadline);
-          if (subItemDeadline) allStartDates.push(subItemDeadline);
+          if (subItemDeadline) allDeadlines.push(subItemDeadline);
         });
       }
     });
     
-    if (allStartDates.length > 0) {
-      return allStartDates.reduce((min, d) => d < min ? d : min, allStartDates[0]);
+    if (allDeadlines.length > 0) {
+      // Retorna o menor deadline como data de início aproximada
+      const minDeadline = allDeadlines.reduce((min, d) => d < min ? d : min, allDeadlines[0]);
+      // Se o menor deadline for muito próximo do deadline final, usa 30 dias antes
+      const daysDiff = Math.ceil((deadline.getTime() - minDeadline.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysDiff < 7) {
+        return subDays(deadline, 30);
+      }
+      return minDeadline;
     }
   }
   
-  // Fallback para estrutura antiga (compatibilidade)
+  // 3. Fallback para estrutura antiga (compatibilidade)
   if (initiative.subItems && initiative.subItems.length > 0) {
     const subItemDeadlines = initiative.subItems
       .map(si => parseFlexibleDate(si.deadline))
       .filter((d): d is Date => d !== null);
     
     if (subItemDeadlines.length > 0) {
-      return subItemDeadlines.reduce((min, d) => d < min ? d : min, subItemDeadlines[0]);
+      const minDeadline = subItemDeadlines.reduce((min, d) => d < min ? d : min, subItemDeadlines[0]);
+      const daysDiff = Math.ceil((deadline.getTime() - minDeadline.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysDiff < 7) {
+        return subDays(deadline, 30);
+      }
+      return minDeadline;
     }
   }
   
+  // 4. Fallback final: 30 dias antes do deadline
   return subDays(deadline, 30);
 }
 
@@ -371,7 +390,8 @@ export function TableGanttView({
     const fixedColumnsWidth = 64 + 32 + (onEditInitiative ? 48 : 0) + 36 + 20 + 24; // Tabela: #, Título, Responsável, Editar (opcional), Status, Progresso
     const estimatedAvailableWidth = typeof window !== 'undefined' ? window.innerWidth - 250 - 48 - fixedColumnsWidth : 800;
     const calculatedWidth = estimatedAvailableWidth / totalDays;
-    const dynamicCellWidth = Math.max(1, Math.min(2.5, calculatedWidth));
+    // Largura mínima de 2px e máxima de 4px para melhor visualização
+    const dynamicCellWidth = Math.max(2, Math.min(4, calculatedWidth));
 
     return { tasks: ganttTasks, dateHeaders, monthHeaders, cellWidth: dynamicCellWidth };
   }, [filteredInitiatives]);
@@ -404,7 +424,7 @@ export function TableGanttView({
 
   return (
     <Card className="shadow-sm">
-      <div className="w-full overflow-x-auto">
+      <div className="w-full overflow-x-auto overflow-y-visible">
         <Table className="min-w-full table-auto">
           <TableHeader>
             {/* Linha 1: Cabeçalhos principais */}
@@ -483,6 +503,15 @@ export function TableGanttView({
                 
                 // Busca task correspondente no Gantt
                 const ganttTask = tasks.find(t => t.id === initiative.id);
+                
+                // Debug: log se não encontrou task (pode indicar falta de deadline)
+                if (!ganttTask && process.env.NODE_ENV === 'development') {
+                  console.log(`[Gantt Debug] Iniciativa "${initiative.title}" não tem GanttTask (sem deadline?)`, {
+                    hasDeadline: !!initiative.deadline,
+                    hasPhases: !!(initiative.phases && initiative.phases.length > 0),
+                    phasesWithDeadline: initiative.phases?.filter(p => p.deadline).length || 0
+                  });
+                }
 
                 return (
                   <React.Fragment key={initiative.id}>
@@ -574,46 +603,104 @@ export function TableGanttView({
                       </TableCell>
                       
                       {/* Colunas do Gantt */}
-                      {dateHeaders.map((day, dayIndex) => {
-                        const isInRange = ganttTask && isWithinInterval(day, { 
-                          start: ganttTask.startDate, 
-                          end: ganttTask.endDate 
-                        });
+                      {(() => {
+                        // Calcula posição da barra do Gantt (se houver tarefa)
+                        let barStartIndex = -1;
+                        let barEndIndex = -1;
+                        let barColor = '';
                         
-                        const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-                        const isTodayMarker = isToday(day);
-
-                        const barColor = isInRange 
-                          ? (ganttTask.isOverdue ? 'bg-red-500' : STATUS_COLORS[ganttTask.status])
-                          : '';
-
-                        return (
-                          <TableCell 
-                            key={dayIndex} 
-                            className={cn(
-                              "relative p-0",
-                              isWeekend && "bg-muted/30",
-                              isTodayMarker && "bg-red-100/50 dark:bg-red-900/20"
-                            )}
-                            style={{ 
-                              width: `${cellWidth}px`, 
-                              minWidth: `${cellWidth}px`, 
-                              maxWidth: `${cellWidth}px`,
-                            }}
-                          >
-                            {isTodayMarker && (
-                              <div className="absolute inset-y-0 left-0 w-0.5 bg-red-500 z-10" />
-                            )}
-                            
-                            {isInRange && (
-                              <div 
-                                className={cn("h-4 w-full opacity-80", barColor)} 
-                                title={`${ganttTask.name}: ${format(ganttTask.startDate, 'dd/MM')} - ${format(ganttTask.endDate, 'dd/MM')}`}
-                              />
-                            )}
-                          </TableCell>
-                        );
-                      })}
+                        if (ganttTask) {
+                          const taskStart = startOfDay(ganttTask.startDate);
+                          const taskEnd = startOfDay(ganttTask.endDate);
+                          
+                          // Encontra o índice da primeira célula que corresponde ou é posterior à data de início
+                          barStartIndex = dateHeaders.findIndex(day => {
+                            const dayStart = startOfDay(day);
+                            return dayStart.getTime() >= taskStart.getTime();
+                          });
+                          
+                          // Encontra o índice da primeira célula que é posterior à data de fim
+                          barEndIndex = dateHeaders.findIndex(day => {
+                            const dayStart = startOfDay(day);
+                            return dayStart.getTime() > taskEnd.getTime();
+                          });
+                          
+                          // Se não encontrou uma célula posterior, usa a última célula
+                          if (barEndIndex < 0) {
+                            barEndIndex = dateHeaders.length;
+                          }
+                          // Ajusta para incluir a última célula do intervalo
+                          barEndIndex = barEndIndex - 1;
+                          
+                          // Se não encontrou início, usa a primeira célula
+                          if (barStartIndex < 0) {
+                            barStartIndex = 0;
+                          }
+                          
+                          // Garante que endIndex >= startIndex
+                          if (barEndIndex < barStartIndex) {
+                            barEndIndex = barStartIndex;
+                          }
+                          
+                          barColor = ganttTask.isOverdue 
+                            ? 'bg-red-500' 
+                            : STATUS_COLORS[ganttTask.status] || 'bg-blue-500';
+                        }
+                        
+                        return dateHeaders.map((day, dayIndex) => {
+                          const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                          const isTodayMarker = isToday(day);
+                          const isInBarRange = barStartIndex >= 0 && dayIndex >= barStartIndex && dayIndex <= barEndIndex;
+                          const isBarStart = dayIndex === barStartIndex;
+                          const isBarEnd = dayIndex === barEndIndex;
+                          
+                          return (
+                            <TableCell 
+                              key={dayIndex} 
+                              className={cn(
+                                "relative p-0 border-r border-border/50 overflow-visible",
+                                isWeekend && "bg-muted/30",
+                                isTodayMarker && "bg-red-100/50 dark:bg-red-900/20"
+                              )}
+                              style={{ 
+                                width: `${cellWidth}px`, 
+                                minWidth: `${cellWidth}px`, 
+                                maxWidth: `${cellWidth}px`,
+                                padding: 0,
+                                overflow: 'visible',
+                              }}
+                            >
+                              {/* Marcador de hoje */}
+                              {isTodayMarker && (
+                                <div className="absolute inset-y-0 left-0 w-0.5 bg-red-500 z-20" />
+                              )}
+                              
+                              {/* Barra do Gantt - renderiza apenas na primeira célula do intervalo */}
+                              {isBarStart && ganttTask && barStartIndex >= 0 && barEndIndex >= barStartIndex && (() => {
+                                const span = barEndIndex - barStartIndex + 1;
+                                const barWidth = Math.max(40, span * cellWidth);
+                                
+                                return (
+                                  <div 
+                                    className={cn(
+                                      "absolute top-1/2 -translate-y-1/2 h-6 rounded-md opacity-90 z-10 shadow-sm border border-white/20",
+                                      barColor
+                                    )}
+                                    style={{
+                                      left: '0px',
+                                      width: `${barWidth}px`,
+                                      height: '24px',
+                                      minWidth: '40px',
+                                      pointerEvents: 'none',
+                                    }}
+                                    title={`${ganttTask.name}: ${format(ganttTask.startDate, 'dd/MM/yyyy')} - ${format(ganttTask.endDate, 'dd/MM/yyyy')}`}
+                                  />
+                                );
+                              })()}
+                            </TableCell>
+                          );
+                        });
+                      })()}
                     </TableRow>
                     
                     {/* Fases expandidas */}
