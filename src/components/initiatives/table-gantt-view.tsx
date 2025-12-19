@@ -106,40 +106,69 @@ const STATUS_COLORS: Record<InitiativeStatus, string> = {
 /**
  * Parse flexível de datas - aceita múltiplos formatos
  */
+/**
+ * Parse flexível de datas - aceita múltiplos formatos
+ * 
+ * Formatos suportados:
+ * - Date object
+ * - ISO string com timezone (YYYY-MM-DDTHH:mm:ssZ)
+ * - ISO string sem timezone (YYYY-MM-DD) - formato padrão do sistema
+ * - Formato BR (DD/MM/YYYY ou DD/MM)
+ * - Firestore Timestamp
+ */
 function parseFlexibleDate(dateInput: any): Date | null {
   if (!dateInput) return null;
   
-  if (dateInput instanceof Date) return dateInput;
+  // Se já é um Date object
+  if (dateInput instanceof Date) {
+    if (isNaN(dateInput.getTime())) return null;
+    return dateInput;
+  }
   
   if (typeof dateInput === 'string') {
-    // ISO format
-    if (dateInput.includes('T') || dateInput.includes('Z')) {
-      const parsed = new Date(dateInput);
+    const trimmed = dateInput.trim();
+    if (!trimmed) return null;
+    
+    // ISO format com timezone (YYYY-MM-DDTHH:mm:ssZ)
+    if (trimmed.includes('T') || trimmed.includes('Z')) {
+      const parsed = new Date(trimmed);
+      if (!isNaN(parsed.getTime())) return parsed;
+    }
+    
+    // ISO format sem timezone (YYYY-MM-DD) - formato padrão do sistema
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      const parsed = new Date(trimmed + 'T00:00:00');
       if (!isNaN(parsed.getTime())) return parsed;
     }
     
     // BR format (DD/MM/YYYY ou DD/MM)
-    if (dateInput.includes('/')) {
-      const parts = dateInput.split('/');
-      if (parts.length === 2) {
+    if (trimmed.includes('/')) {
+      const parts = trimmed.split('/').map(p => parseInt(p.trim(), 10));
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
         // DD/MM - assume ano atual
-        const day = parseInt(parts[0], 10);
-        const month = parseInt(parts[1], 10) - 1;
+        const day = parts[0];
+        const month = parts[1] - 1;
         const year = new Date().getFullYear();
-        return new Date(year, month, day);
-      } else if (parts.length === 3) {
+        const parsed = new Date(year, month, day);
+        if (!isNaN(parsed.getTime())) return parsed;
+      } else if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
         // DD/MM/YYYY
-        const day = parseInt(parts[0], 10);
-        const month = parseInt(parts[1], 10) - 1;
-        const year = parseInt(parts[2], 10);
-        return new Date(year, month, day);
+        const day = parts[0];
+        const month = parts[1] - 1;
+        const year = parts[2];
+        const parsed = new Date(year, month, day);
+        if (!isNaN(parsed.getTime())) return parsed;
       }
     }
   }
   
   // Firestore Timestamp
   if (dateInput && typeof dateInput === 'object' && 'toDate' in dateInput) {
-    return dateInput.toDate();
+    try {
+      return dateInput.toDate();
+    } catch (e) {
+      return null;
+    }
   }
   
   return null;
@@ -147,43 +176,82 @@ function parseFlexibleDate(dateInput: any): Date | null {
 
 /**
  * Extrai deadline de uma Initiative
+ * 
+ * Busca o prazo (deadline) da iniciativa, considerando:
+ * 1. Deadline direto da iniciativa
+ * 2. Deadlines das fases
+ * 3. Deadlines dos subitens dentro das fases
+ * 4. Fallback para estrutura antiga (subitens diretos)
+ * 
+ * Retorna o MAIOR deadline encontrado (prazo mais distante)
  */
 function extractInitiativeDeadline(initiative: Initiative): Date | null {
+  // 1. Tenta deadline direto da iniciativa
   const initiativeDeadline = parseFlexibleDate(initiative.deadline);
-  if (initiativeDeadline) return initiativeDeadline;
+  if (initiativeDeadline) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Gantt] Iniciativa "${initiative.title}" tem deadline direto:`, initiativeDeadline);
+    }
+    return initiativeDeadline;
+  }
   
-  // Considerar fases e subitens dentro das fases
+  // 2. Busca deadlines nas fases e subitens
   if (initiative.phases && initiative.phases.length > 0) {
     const allDeadlines: Date[] = [];
     
-    initiative.phases.forEach(phase => {
+    initiative.phases.forEach((phase, phaseIndex) => {
       const phaseDeadline = parseFlexibleDate(phase.deadline);
-      if (phaseDeadline) allDeadlines.push(phaseDeadline);
+      if (phaseDeadline) {
+        allDeadlines.push(phaseDeadline);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[Gantt] Fase "${phase.title}" tem deadline:`, phaseDeadline);
+        }
+      }
       
       if (phase.subItems && phase.subItems.length > 0) {
-        phase.subItems.forEach(subItem => {
+        phase.subItems.forEach((subItem, subItemIndex) => {
           const subItemDeadline = parseFlexibleDate(subItem.deadline);
-          if (subItemDeadline) allDeadlines.push(subItemDeadline);
+          if (subItemDeadline) {
+            allDeadlines.push(subItemDeadline);
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`[Gantt] Subitem "${subItem.title}" tem deadline:`, subItemDeadline);
+            }
+          }
         });
       }
     });
     
     if (allDeadlines.length > 0) {
-      return allDeadlines.reduce((max, d) => d > max ? d : max, allDeadlines[0]);
+      const maxDeadline = allDeadlines.reduce((max, d) => d > max ? d : max, allDeadlines[0]);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[Gantt] Iniciativa "${initiative.title}" - usando maior deadline das fases/subitens:`, maxDeadline);
+      }
+      return maxDeadline;
+    } else {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[Gantt] Iniciativa "${initiative.title}" tem ${initiative.phases.length} fases mas nenhuma tem deadline`);
+      }
     }
   }
   
-  // Fallback para estrutura antiga (compatibilidade)
+  // 3. Fallback para estrutura antiga (compatibilidade)
   if (initiative.subItems && initiative.subItems.length > 0) {
     const subItemDeadlines = initiative.subItems
       .map(si => parseFlexibleDate(si.deadline))
       .filter((d): d is Date => d !== null);
     
     if (subItemDeadlines.length > 0) {
-      return subItemDeadlines.reduce((max, d) => d > max ? d : max, subItemDeadlines[0]);
+      const maxDeadline = subItemDeadlines.reduce((max, d) => d > max ? d : max, subItemDeadlines[0]);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[Gantt] Iniciativa "${initiative.title}" - usando deadline de subitens antigos:`, maxDeadline);
+      }
+      return maxDeadline;
     }
   }
   
+  if (process.env.NODE_ENV === 'development') {
+    console.warn(`[Gantt] Iniciativa "${initiative.title}" não tem nenhum deadline definido`);
+  }
   return null;
 }
 
