@@ -22,11 +22,11 @@ import { useStrategicPanel } from "@/contexts/strategic-panel-context";
 const subItemSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(3, "O título do subitem deve ter pelo menos 3 caracteres."),
-  completed: z.boolean().default(false),
+  completed: z.boolean().optional().default(false),
   deadline: z.date().optional().nullable(),
-  status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso', 'A Fazer', 'Em Dia', 'Em Risco', 'Atrasado']).default('Pendente'),
+  status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso', 'A Fazer', 'Em Dia', 'Em Risco', 'Atrasado']).optional().default('Pendente'),
   responsible: z.string().min(1, "O responsável é obrigatório."),
-  priority: z.enum(['Baixa', 'Média', 'Alta']).default('Baixa'),
+  priority: z.enum(['Baixa', 'Média', 'Alta']).optional().default('Baixa'),
   description: z.string().min(1, "A observação é obrigatória."),
 });
 
@@ -147,7 +147,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
     
     // Atualizar usando setValue do react-hook-form
     const updatedSubItems = [...currentSubItems, newSubItem];
-    setValue(`phases.${phaseIndex}.subItems`, updatedSubItems, { shouldValidate: true });
+    setValue(`phases.${phaseIndex}.subItems`, updatedSubItems, { shouldValidate: false });
   };
 
   // Função para remover subitem de uma fase específica
@@ -160,8 +160,20 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
     setValue(`phases.${phaseIndex}.subItems`, updatedSubItems, { shouldValidate: true });
   };
 
+  const onError = (errors: any) => {
+    console.error("Erros de validação:", errors);
+    // Scroll para o primeiro erro
+    const firstErrorField = Object.keys(errors)[0];
+    if (firstErrorField) {
+      const element = document.querySelector(`[name="${firstErrorField}"]`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-4">
+    <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-6 pt-4">
       <div className="space-y-2">
         <Label htmlFor="title">Título da Iniciativa</Label>
         <Input id="title" {...register("title")} placeholder="Ex: Otimizar o Funil de Vendas" disabled={isLimitedMode} />
@@ -609,7 +621,41 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                 </div>
               </div>
             ))}
-            {errors.phases && <p className="text-sm text-destructive">Verifique os erros nas fases.</p>}
+            {errors.phases && (
+              <div className="text-sm text-destructive space-y-1 p-3 border border-destructive rounded-md bg-destructive/10">
+                <p className="font-semibold">Erros encontrados nas fases:</p>
+                {Array.isArray(errors.phases) && errors.phases.map((phaseError: any, idx: number) => {
+                  if (!phaseError) return null;
+                  return (
+                    <div key={idx} className="ml-4 mt-2">
+                      <p className="font-medium">Fase {idx + 1}:</p>
+                      <ul className="list-disc list-inside ml-4 space-y-1">
+                        {phaseError.title && <li>{phaseError.title.message}</li>}
+                        {phaseError.description && <li>{phaseError.description.message}</li>}
+                        {phaseError.responsible && <li>{phaseError.responsible.message}</li>}
+                        {phaseError.areaId && <li>{phaseError.areaId.message}</li>}
+                        {phaseError.subItems && Array.isArray(phaseError.subItems) && phaseError.subItems.map((subItemError: any, subIdx: number) => {
+                          if (!subItemError) return null;
+                          return (
+                            <li key={subIdx}>
+                              Subitem {subIdx + 1}:
+                              <ul className="list-disc list-inside ml-4 space-y-1">
+                                {subItemError.title && <li>{subItemError.title.message}</li>}
+                                {subItemError.responsible && <li>{subItemError.responsible.message}</li>}
+                                {subItemError.description && <li>{subItemError.description.message}</li>}
+                              </ul>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  );
+                })}
+                {typeof errors.phases === 'object' && !Array.isArray(errors.phases) && 'message' in errors.phases && (
+                  <p className="mt-2">{String(errors.phases.message)}</p>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground text-center py-2">

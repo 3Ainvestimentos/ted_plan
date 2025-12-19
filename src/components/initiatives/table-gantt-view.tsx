@@ -39,7 +39,8 @@ import {
   CornerDownRight,
   ExternalLink,
   Archive,
-  Undo
+  Undo,
+  Pencil
 } from 'lucide-react';
 import { 
   startOfDay, 
@@ -64,6 +65,7 @@ import { ptBR } from 'date-fns/locale';
 interface TableGanttViewProps {
   initiatives: Initiative[];
   onInitiativeClick: (initiative: Initiative) => void;
+  onEditInitiative?: (initiative: Initiative) => void;
   onUpdateSubItem?: (initiativeId: string, phaseId: string, subItemId: string, completed: boolean) => void;
   onArchive?: (initiativeId: string) => void;
   onUnarchive?: (initiativeId: string) => void;
@@ -313,6 +315,7 @@ function sortInitiatives(initiatives: Initiative[]): Initiative[] {
 export function TableGanttView({ 
   initiatives, 
   onInitiativeClick,
+  onEditInitiative,
   onUpdateSubItem,
   onArchive,
   onUnarchive,
@@ -365,7 +368,7 @@ export function TableGanttView({
 
     // Calcula largura das células para evitar scroll horizontal
     const totalDays = dateHeaders.length;
-    const fixedColumnsWidth = 64 + 32 + 36 + 20 + 24; // Tabela: #, Título, Responsável, Status, Progresso
+    const fixedColumnsWidth = 64 + 32 + (onEditInitiative ? 48 : 0) + 36 + 20 + 24; // Tabela: #, Título, Responsável, Editar (opcional), Status, Progresso
     const estimatedAvailableWidth = typeof window !== 'undefined' ? window.innerWidth - 250 - 48 - fixedColumnsWidth : 800;
     const calculatedWidth = estimatedAvailableWidth / totalDays;
     const dynamicCellWidth = Math.max(1, Math.min(2.5, calculatedWidth));
@@ -409,6 +412,7 @@ export function TableGanttView({
               <TableHead className="w-16 sticky left-0 bg-muted/50 z-20">#</TableHead>
               <TableHead className="w-64 sticky left-16 bg-muted/50 z-20">Título da Iniciativa</TableHead>
               <TableHead className="w-32">Responsável</TableHead>
+              {onEditInitiative && <TableHead className="w-12"></TableHead>}
               <TableHead className="w-36">Status</TableHead>
               <TableHead className="w-20">Progresso</TableHead>
               
@@ -514,6 +518,21 @@ export function TableGanttView({
                       <TableCell className="text-sm">
                         {initiative.owner || '-'}
                       </TableCell>
+                      
+                      {/* Coluna Editar */}
+                      {onEditInitiative && (
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => onEditInitiative(initiative)}
+                            title="Editar iniciativa"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                       
                       {/* Coluna Status */}
                       <TableCell>

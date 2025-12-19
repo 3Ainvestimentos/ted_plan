@@ -18,6 +18,7 @@ import { CreateInitiativeModal } from "@/components/initiatives/create-initiativ
 import { Skeleton } from "@/components/ui/skeleton";
 import { InitiativeDossierModal } from "@/components/initiatives/initiative-dossier-modal";
 import { ImportInitiativesModal } from "@/components/initiatives/import-initiatives-modal";
+import { EditInitiativeModal } from "@/components/initiatives/edit-initiative-modal";
 import { useAuth } from "@/contexts/auth-context";
 import { useStrategicPanel } from "@/contexts/strategic-panel-context";
 import { canCreateInitiative, canViewInitiativeViewMode, canEditInitiativeStatus } from "@/lib/permissions-config";
@@ -48,6 +49,7 @@ export default function InitiativesPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedInitiativeId, setSelectedInitiativeId] = useState<string | null>(null);
+  const [editingInitiative, setEditingInitiative] = useState<Initiative | null>(null);
 
   // Verificar permissões
   const userType = user?.userType || 'head';
@@ -140,6 +142,14 @@ export default function InitiativesPage() {
           isOpen={!!selectedInitiative}
           onOpenChange={(isOpen) => !isOpen && closeDossier()}
           initiative={selectedInitiative}
+        />
+      )}
+      
+      {editingInitiative && (
+        <EditInitiativeModal
+          isOpen={!!editingInitiative}
+          onOpenChange={(isOpen) => !isOpen && setEditingInitiative(null)}
+          initiative={editingInitiative}
         />
       )}
       <div className="space-y-6">
@@ -242,6 +252,7 @@ export default function InitiativesPage() {
           <TableGanttView 
             initiatives={initiatives} 
             onInitiativeClick={openDossier}
+            onEditInitiative={(initiative) => setEditingInitiative(initiative)}
             onUpdateSubItem={updateSubItem}
             onArchive={archiveInitiative}
             onUnarchive={unarchiveInitiative}

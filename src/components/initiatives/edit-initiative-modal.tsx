@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import type { Initiative } from "@/types";
 import { Button } from '@/components/ui/button';
 import { useAuth } from "@/contexts/auth-context";
-import { canEditInitiativeResponsible, canEditInitiativeStatus } from "@/lib/permissions-config";
+import { canEditInitiativeResponsible, canEditInitiativeStatus, canDeleteInitiative } from "@/lib/permissions-config";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,6 +42,7 @@ export function EditInitiativeModal({ isOpen, onOpenChange, initiative }: EditIn
     const userArea = getUserArea();
     const canEditResponsible = canEditInitiativeResponsible(userType, userArea, initiative.areaId);
     const canEditStatus = canEditInitiativeStatus(userType, userArea, initiative.areaId);
+    const canDelete = canDeleteInitiative(userType);
     const isLimitedMode = userType === 'head' && canEditResponsible; // Head da própria área em modo limitado
 
     const handleFormSubmit = async (data: InitiativeFormData) => {
@@ -105,11 +106,12 @@ export function EditInitiativeModal({ isOpen, onOpenChange, initiative }: EditIn
                     isLimitedMode={isLimitedMode}
                     canEditStatus={canEditStatus}
                 />
-                <DialogFooter className="border-t pt-4 mt-4">
-                     <AlertDialog>
+                {canDelete && (
+                  <DialogFooter className="border-t pt-4 mt-4">
+                    <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="destructive" disabled={isDeleting}>
-                            {isDeleting ? "Excluindo..." : "Excluir Iniciativa"}
+                          {isDeleting ? "Excluindo..." : "Excluir Iniciativa"}
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
@@ -125,7 +127,8 @@ export function EditInitiativeModal({ isOpen, onOpenChange, initiative }: EditIn
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
-                </DialogFooter>
+                  </DialogFooter>
+                )}
             </DialogContent>
         </Dialog>
     );

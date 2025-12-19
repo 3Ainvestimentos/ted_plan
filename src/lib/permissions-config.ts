@@ -237,6 +237,17 @@ export function canEditInitiativeStatus(
 }
 
 /**
+ * Verifica se o usuário pode deletar iniciativas
+ * 
+ * @param userType - Tipo de usuário (admin, pmo, head)
+ * @returns true se o usuário pode deletar iniciativas
+ */
+export function canDeleteInitiative(userType: UserType): boolean {
+  // Apenas admin e PMO podem deletar iniciativas
+  return userType === 'admin' || userType === 'pmo';
+}
+
+/**
  * Verifica se o usuário pode visualizar um modo específico de visualização
  * 
  * @param userType - Tipo de usuário (admin, pmo, head)

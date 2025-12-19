@@ -3,7 +3,7 @@
 
 import { STATUS_ICONS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, ChevronDown, ChevronRight, Filter, CornerDownRight, ChevronsUpDown, Archive, Undo, DollarSign } from "lucide-react";
+import { ExternalLink, ChevronDown, ChevronRight, Filter, CornerDownRight, ChevronsUpDown, Archive, Undo, DollarSign, Pencil } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import React, { useState, useMemo } from "react";
@@ -19,6 +19,7 @@ import { useInitiatives } from "@/contexts/initiatives-context";
 interface InitiativesTableProps {
     initiatives: Initiative[];
     onInitiativeClick: (initiative: Initiative) => void;
+    onEditInitiative?: (initiative: Initiative) => void;
     // Props opcionais para permitir uso com M&As
     onUpdateSubItem?: (initiativeId: string, phaseId: string, subItemId: string, completed: boolean) => void;
     onArchive?: (initiativeId: string) => void;
@@ -42,6 +43,7 @@ const sortInitiatives = (initiatives: Initiative[]) => {
 export function InitiativesTable({ 
   initiatives, 
   onInitiativeClick,
+  onEditInitiative,
   onUpdateSubItem,
   onArchive,
   onUnarchive 
@@ -146,8 +148,9 @@ export function InitiativesTable({
             </TableHead>
             <TableHead className="w-[35%]">Título da Iniciativa</TableHead>
             { hasAuc && <TableHead>AUC</TableHead> }
-            <TableHead>Responsável</TableHead>
-            <TableHead>Status</TableHead>
+                  <TableHead>Responsável</TableHead>
+                  {onEditInitiative && <TableHead className="w-12"></TableHead>}
+                  <TableHead>Status</TableHead>
             <TableHead>Progresso</TableHead>
             <TableHead className="text-right">Ações</TableHead>
           </TableRow>
@@ -231,6 +234,19 @@ export function InitiativesTable({
                     </TableCell>
                   )}
                   <TableCell className="font-body text-current">{initiative.owner || '-'}</TableCell>
+                  {onEditInitiative && (
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => onEditInitiative(initiative)}
+                        title="Editar iniciativa"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Badge variant={initiative.archived ? 'outline' : initiative.status === 'Concluído' ? 'default' : initiative.status === 'Em Risco' || initiative.status === 'Atrasado' ? 'destructive' : 'secondary'} className="capitalize flex items-center w-fit">
                       {StatusIcon && <StatusIcon className="mr-1.5 h-3.5 w-3.5" />}
