@@ -32,20 +32,23 @@ export function InitiativeDossierModal({ isOpen, onOpenChange, initiative, isMna
     if (!initiative) return null;
 
     const StatusIcon = STATUS_ICONS[initiative.status];
-    const hasSubItems = initiative.subItems && initiative.subItems.length > 0;
+    const hasPhases = !isMna && 'phases' in initiative && initiative.phases && initiative.phases.length > 0;
+    const hasSubItems = isMna && initiative.subItems && initiative.subItems.length > 0;
 
-    const handleSubItemToggle = (subItemId: string, completed: boolean) => {
+    const handleSubItemToggle = (phaseId: string, subItemId: string, completed: boolean) => {
         console.log('[DossierModal] Toggle subItem:', {
-            dealId: initiative.id,
+            initiativeId: initiative.id,
+            phaseId,
             subItemId,
             newCompleted: completed,
             isMna
         });
         
         if (isMna) {
+            // Para M&As, manter compatibilidade com estrutura antiga
             updateMnaSubItem(initiative.id, subItemId, completed);
         } else {
-            updateInitiativeSubItem(initiative.id, subItemId, completed);
+            updateInitiativeSubItem(initiative.id, phaseId, subItemId, completed);
         }
     };
 
@@ -100,7 +103,7 @@ export function InitiativeDossierModal({ isOpen, onOpenChange, initiative, isMna
                       <p className="text-foreground/80 whitespace-pre-line">{initiative.description}</p>
                     </section>
 
-                    {hasSubItems && (
+                    {(hasPhases || hasSubItems) && (
                         <>
                         <section>
                             <h3 className="text-xl font-headline mb-2 text-foreground/90">Progresso</h3>
@@ -110,32 +113,60 @@ export function InitiativeDossierModal({ isOpen, onOpenChange, initiative, isMna
                             </div>
                             <Progress value={initiative.progress} aria-label={`${initiative.title} progresso ${initiative.progress}%`} className="h-3" />
                         </section>
-                        <section>
-                            <h3 className="text-xl font-headline mb-2 text-foreground/90 flex items-center gap-2"><ListChecks className="w-5 h-5"/> Checklist</h3>
-                            <div className="space-y-2 rounded-md border p-4">
-                                {initiative.subItems?.map((subItem, index) => {
-                                    // Debug: log para verificar o estado dos subitens
-                                    console.log(`[DossierModal] Renderizando subItem[${index}]:`, {
-                                        id: subItem.id,
-                                        title: subItem.title,
-                                        completed: subItem.completed
-                                    });
-                                    
-                                    return (
+                        {hasPhases && !isMna && 'phases' in initiative && (
+                            <section>
+                                <h3 className="text-xl font-headline mb-2 text-foreground/90 flex items-center gap-2"><ListChecks className="w-5 h-5"/> Fases e Subitens</h3>
+                                <div className="space-y-4 rounded-md border p-4">
+                                    {initiative.phases.map((phase, phaseIndex) => (
+                                        <div key={phase.id || `phase-${phaseIndex}`} className="space-y-2 border-l-2 border-primary/20 pl-4">
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="font-semibold text-sm">{phase.title}</h4>
+                                                {phase.responsible && (
+                                                    <Badge variant="outline" className="text-xs">
+                                                        {phase.responsible}
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            {phase.subItems && phase.subItems.length > 0 && (
+                                                <div className="space-y-2 ml-4">
+                                                    {phase.subItems.map((subItem, subItemIndex) => (
+                                                        <div key={subItem.id || `subitem-${subItemIndex}`} className="flex items-center gap-3">
+                                                            <Checkbox 
+                                                                id={`dossier-subitem-${subItem.id || subItemIndex}`}
+                                                                checked={subItem.completed} 
+                                                                onCheckedChange={(checked) => {
+                                                                    if (subItem.id && phase.id) {
+                                                                        handleSubItemToggle(phase.id, subItem.id, !!checked);
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <label 
+                                                                htmlFor={`dossier-subitem-${subItem.id || subItemIndex}`} 
+                                                                className={cn("text-sm cursor-pointer", subItem.completed && "line-through text-muted-foreground")}
+                                                            >
+                                                                {subItem.title}
+                                                            </label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+                        {hasSubItems && isMna && (
+                            <section>
+                                <h3 className="text-xl font-headline mb-2 text-foreground/90 flex items-center gap-2"><ListChecks className="w-5 h-5"/> Checklist</h3>
+                                <div className="space-y-2 rounded-md border p-4">
+                                    {initiative.subItems?.map((subItem, index) => (
                                         <div key={subItem.id || `subitem-${index}`} className="flex items-center gap-3">
                                             <Checkbox 
                                                 id={`dossier-subitem-${subItem.id || index}`}
                                                 checked={subItem.completed} 
                                                 onCheckedChange={(checked) => {
-                                                    console.log(`[DossierModal] Checkbox clicked:`, { 
-                                                        subItemId: subItem.id, 
-                                                        currentCompleted: subItem.completed,
-                                                        newChecked: checked 
-                                                    });
                                                     if (subItem.id) {
-                                                        handleSubItemToggle(subItem.id, !!checked);
-                                                    } else {
-                                                        console.error('[DossierModal] SubItem sem ID!', subItem);
+                                                        handleSubItemToggle('', subItem.id, !!checked);
                                                     }
                                                 }}
                                             />
@@ -146,10 +177,10 @@ export function InitiativeDossierModal({ isOpen, onOpenChange, initiative, isMna
                                                 {subItem.title}
                                             </label>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        </section>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
                         </>
                     )}
 

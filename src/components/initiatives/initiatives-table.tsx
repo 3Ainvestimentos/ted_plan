@@ -20,7 +20,7 @@ interface InitiativesTableProps {
     initiatives: Initiative[];
     onInitiativeClick: (initiative: Initiative) => void;
     // Props opcionais para permitir uso com M&As
-    onUpdateSubItem?: (initiativeId: string, subItemId: string, completed: boolean) => void;
+    onUpdateSubItem?: (initiativeId: string, phaseId: string, subItemId: string, completed: boolean) => void;
     onArchive?: (initiativeId: string) => void;
     onUnarchive?: (initiativeId: string) => void;
 }
@@ -57,29 +57,54 @@ export function InitiativesTable({
   const [archiveFilter, setArchiveFilter] = useState<string>("active");
   
   const parentInitiativeIds = useMemo(() => 
-    new Set(initiatives.filter(i => i.subItems && i.subItems.length > 0).map(i => i.id))
+    new Set(initiatives.filter(i => i.phases && i.phases.length > 0).map(i => i.id))
   , [initiatives]);
 
-  const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set());
+  const [expandedInitiatives, setExpandedInitiatives] = useState<Set<string>>(new Set());
+  const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [areAllExpanded, setAreAllExpanded] = useState(false);
 
   const toggleAllTopics = () => {
     if (areAllExpanded) {
-        setExpandedTopics(new Set());
+        setExpandedInitiatives(new Set());
+        setExpandedPhases(new Set());
     } else {
-        setExpandedTopics(new Set(parentInitiativeIds));
+        setExpandedInitiatives(new Set(parentInitiativeIds));
+        // Expandir todas as fases também
+        const allPhaseIds = new Set<string>();
+        initiatives.forEach(init => {
+          if (init.phases) {
+            init.phases.forEach(phase => {
+              if (phase.subItems && phase.subItems.length > 0) {
+                allPhaseIds.add(phase.id);
+              }
+            });
+          }
+        });
+        setExpandedPhases(allPhaseIds);
     }
     setAreAllExpanded(prev => !prev);
   };
 
-
-  const toggleTopic = (topicId: string) => {
-    setExpandedTopics(prev => {
+  const toggleInitiative = (initiativeId: string) => {
+    setExpandedInitiatives(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(topicId)) {
-        newSet.delete(topicId);
+      if (newSet.has(initiativeId)) {
+        newSet.delete(initiativeId);
       } else {
-        newSet.add(topicId);
+        newSet.add(initiativeId);
+      }
+      return newSet;
+    });
+  };
+
+  const togglePhase = (phaseId: string) => {
+    setExpandedPhases(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(phaseId)) {
+        newSet.delete(phaseId);
+      } else {
+        newSet.add(phaseId);
       }
       return newSet;
     });
@@ -89,7 +114,11 @@ export function InitiativesTable({
     const filtered = initiatives.filter(initiative => {
       const matchesSearch = initiative.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             (initiative.owner && initiative.owner.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                            initiative.description.toLowerCase().includes(searchTerm.toLowerCase());
+                            initiative.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (initiative.phases && initiative.phases.some(p => 
+                              p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              (p.responsible && p.responsible.toLowerCase().includes(searchTerm.toLowerCase()))
+                            ));
       const matchesStatus = statusFilter === "all" || initiative.status === statusFilter;
       const matchesArchive = archiveFilter === 'all' || (archiveFilter === 'active' && !initiative.archived) || (archiveFilter === 'archived' && initiative.archived)
       return matchesSearch && matchesStatus && matchesArchive;
@@ -103,7 +132,8 @@ export function InitiativesTable({
 
   return (
     <Card className="shadow-sm">
-      <Table>
+      <div className="w-full overflow-x-auto">
+        <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="w-[120px]">
@@ -164,8 +194,8 @@ export function InitiativesTable({
           {filteredInitiatives.length > 0 ? (
             filteredInitiatives.map((initiative: Initiative) => {
               const StatusIcon = STATUS_ICONS[initiative.status];
-              const hasSubItems = initiative.subItems && initiative.subItems.length > 0;
-              const isExpanded = expandedTopics.has(initiative.id);
+              const hasPhases = initiative.phases && initiative.phases.length > 0;
+              const isInitiativeExpanded = expandedInitiatives.has(initiative.id);
               const isArchivable = initiative.status === 'Concluído' || initiative.status === 'Suspenso';
 
               return (
@@ -178,12 +208,12 @@ export function InitiativesTable({
                   </TableCell>
                   <TableCell className="font-medium font-body">
                      <div className="flex items-center gap-1">
-                        {hasSubItems && (
-                          <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2" onClick={() => toggleTopic(initiative.id)}>
-                              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        {hasPhases && (
+                          <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2" onClick={() => toggleInitiative(initiative.id)}>
+                              {isInitiativeExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                           </Button>
                         )}
-                        <span className={cn(hasSubItems && "cursor-pointer", "text-current")} onClick={() => hasSubItems && toggleTopic(initiative.id)}>
+                        <span className={cn(hasPhases && "cursor-pointer", "text-current")} onClick={() => hasPhases && toggleInitiative(initiative.id)}>
                           {initiative.title}
                        </span>
                      </div>
@@ -200,7 +230,7 @@ export function InitiativesTable({
                       )}
                     </TableCell>
                   )}
-                  <TableCell className="font-body text-current">{initiative.owner}</TableCell>
+                  <TableCell className="font-body text-current">{initiative.owner || '-'}</TableCell>
                   <TableCell>
                     <Badge variant={initiative.archived ? 'outline' : initiative.status === 'Concluído' ? 'default' : initiative.status === 'Em Risco' || initiative.status === 'Atrasado' ? 'destructive' : 'secondary'} className="capitalize flex items-center w-fit">
                       {StatusIcon && <StatusIcon className="mr-1.5 h-3.5 w-3.5" />}
@@ -229,25 +259,57 @@ export function InitiativesTable({
                      )}
                   </TableCell>
                 </TableRow>
-                 {isExpanded && hasSubItems && initiative.subItems.map(subItem => (
-                    <TableRow key={subItem.id} className="bg-secondary hover:bg-secondary/80">
-                      <TableCell></TableCell>
-                      <TableCell colSpan={hasAuc ? 5 : 4} className="pl-12">
-                         <div className="flex items-center gap-2">
-                              <CornerDownRight className="h-4 w-4 text-muted-foreground" />
-                              <Checkbox 
-                                  id={`subitem-${subItem.id}`} 
-                                  checked={subItem.completed}
-                                  onCheckedChange={(checked) => updateSubItem(initiative.id, subItem.id, !!checked)}
-                              />
-                              <label htmlFor={`subitem-${subItem.id}`} className={cn("text-sm", subItem.completed && "line-through text-muted-foreground")}>
-                                {subItem.title}
-                              </label>
-                         </div>
-                      </TableCell>
-                      <TableCell></TableCell>
-                    </TableRow>
-                 ))}
+                 {/* Fases expandidas */}
+                 {isInitiativeExpanded && hasPhases && initiative.phases.map(phase => {
+                   const isPhaseExpanded = expandedPhases.has(phase.id);
+                   const hasSubItems = phase.subItems && phase.subItems.length > 0;
+                   
+                   return (
+                     <React.Fragment key={phase.id}>
+                       <TableRow className="bg-secondary/50 hover:bg-secondary/70">
+                         <TableCell></TableCell>
+                         <TableCell colSpan={hasAuc ? 5 : 4} className="pl-12">
+                           <div className="flex items-center gap-2">
+                             <CornerDownRight className="h-4 w-4 text-muted-foreground" />
+                             {hasSubItems && (
+                               <Button 
+                                 variant="ghost" 
+                                 size="icon" 
+                                 className="h-5 w-5 -ml-1" 
+                                 onClick={() => togglePhase(phase.id)}
+                               >
+                                 {isPhaseExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                               </Button>
+                             )}
+                             <span className="text-sm font-medium">{phase.title}</span>
+                           </div>
+                         </TableCell>
+                         <TableCell></TableCell>
+                       </TableRow>
+                       
+                       {/* Subitens expandidos */}
+                       {isPhaseExpanded && hasSubItems && phase.subItems.map(subItem => (
+                         <TableRow key={subItem.id} className="bg-secondary hover:bg-secondary/80">
+                           <TableCell></TableCell>
+                           <TableCell colSpan={hasAuc ? 5 : 4} className="pl-20">
+                             <div className="flex items-center gap-2">
+                               <CornerDownRight className="h-4 w-4 text-muted-foreground" />
+                               <Checkbox 
+                                 id={`subitem-${subItem.id}`} 
+                                 checked={subItem.completed}
+                                 onCheckedChange={(checked) => updateSubItem(initiative.id, phase.id, subItem.id, !!checked)}
+                               />
+                               <label htmlFor={`subitem-${subItem.id}`} className={cn("text-sm", subItem.completed && "line-through text-muted-foreground")}>
+                                 {subItem.title}
+                               </label>
+                             </div>
+                           </TableCell>
+                           <TableCell></TableCell>
+                         </TableRow>
+                       ))}
+                     </React.Fragment>
+                   );
+                 })}
                 </React.Fragment>
               )
             })
@@ -261,6 +323,7 @@ export function InitiativesTable({
           )}
         </TableBody>
       </Table>
+      </div>
     </Card>
   );
 }

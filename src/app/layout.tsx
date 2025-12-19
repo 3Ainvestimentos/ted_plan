@@ -7,6 +7,7 @@ import { AuditLogProvider } from '@/contexts/audit-log-context';
 import { SettingsProvider } from '@/contexts/settings-context';
 import { TeamControlProvider } from '@/contexts/team-control-context';
 import { ProjectCommentsProvider } from '@/contexts/project-comments-context';
+import { StrategicPanelProvider } from '@/contexts/strategic-panel-context';
 
 
 export const metadata: Metadata = {
@@ -38,7 +39,9 @@ export default function RootLayout({
               <AuditLogProvider>
                 <TeamControlProvider>
                   <ProjectCommentsProvider>
-                    {children}
+                    <StrategicPanelProvider>
+                      {children}
+                    </StrategicPanelProvider>
                   </ProjectCommentsProvider>
                 </TeamControlProvider>
                 <Toaster />

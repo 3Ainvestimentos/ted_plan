@@ -64,7 +64,7 @@ import { ptBR } from 'date-fns/locale';
 interface TableGanttViewProps {
   initiatives: Initiative[];
   onInitiativeClick: (initiative: Initiative) => void;
-  onUpdateSubItem?: (initiativeId: string, subItemId: string, completed: boolean) => void;
+  onUpdateSubItem?: (initiativeId: string, phaseId: string, subItemId: string, completed: boolean) => void;
   onArchive?: (initiativeId: string) => void;
   onUnarchive?: (initiativeId: string) => void;
   onStatusChange?: (initiativeId: string, newStatus: InitiativeStatus) => void;
@@ -150,6 +150,28 @@ function extractInitiativeDeadline(initiative: Initiative): Date | null {
   const initiativeDeadline = parseFlexibleDate(initiative.deadline);
   if (initiativeDeadline) return initiativeDeadline;
   
+  // Considerar fases e subitens dentro das fases
+  if (initiative.phases && initiative.phases.length > 0) {
+    const allDeadlines: Date[] = [];
+    
+    initiative.phases.forEach(phase => {
+      const phaseDeadline = parseFlexibleDate(phase.deadline);
+      if (phaseDeadline) allDeadlines.push(phaseDeadline);
+      
+      if (phase.subItems && phase.subItems.length > 0) {
+        phase.subItems.forEach(subItem => {
+          const subItemDeadline = parseFlexibleDate(subItem.deadline);
+          if (subItemDeadline) allDeadlines.push(subItemDeadline);
+        });
+      }
+    });
+    
+    if (allDeadlines.length > 0) {
+      return allDeadlines.reduce((max, d) => d > max ? d : max, allDeadlines[0]);
+    }
+  }
+  
+  // Fallback para estrutura antiga (compatibilidade)
   if (initiative.subItems && initiative.subItems.length > 0) {
     const subItemDeadlines = initiative.subItems
       .map(si => parseFlexibleDate(si.deadline))
@@ -170,6 +192,28 @@ function extractInitiativeStartDate(initiative: Initiative, deadline: Date): Dat
   const initiativeStartDate = parseFlexibleDate(initiative.startDate);
   if (initiativeStartDate) return initiativeStartDate;
   
+  // Considerar fases e subitens dentro das fases
+  if (initiative.phases && initiative.phases.length > 0) {
+    const allStartDates: Date[] = [];
+    
+    initiative.phases.forEach(phase => {
+      const phaseDeadline = parseFlexibleDate(phase.deadline);
+      if (phaseDeadline) allStartDates.push(phaseDeadline);
+      
+      if (phase.subItems && phase.subItems.length > 0) {
+        phase.subItems.forEach(subItem => {
+          const subItemDeadline = parseFlexibleDate(subItem.deadline);
+          if (subItemDeadline) allStartDates.push(subItemDeadline);
+        });
+      }
+    });
+    
+    if (allStartDates.length > 0) {
+      return allStartDates.reduce((min, d) => d < min ? d : min, allStartDates[0]);
+    }
+  }
+  
+  // Fallback para estrutura antiga (compatibilidade)
   if (initiative.subItems && initiative.subItems.length > 0) {
     const subItemDeadlines = initiative.subItems
       .map(si => parseFlexibleDate(si.deadline))
@@ -277,14 +321,19 @@ export function TableGanttView({
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [archiveFilter, setArchiveFilter] = useState<string>("active");
-  const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set());
+  const [expandedInitiatives, setExpandedInitiatives] = useState<Set<string>>(new Set());
+  const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
 
   // Filtra iniciativas
   const filteredInitiatives = useMemo(() => {
     const filtered = initiatives.filter(initiative => {
       const matchesSearch = initiative.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             (initiative.owner && initiative.owner.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                            initiative.description.toLowerCase().includes(searchTerm.toLowerCase());
+                            initiative.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (initiative.phases && initiative.phases.some(p => 
+                              p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              (p.responsible && p.responsible.toLowerCase().includes(searchTerm.toLowerCase()))
+                            ));
       const matchesStatus = statusFilter === "all" || initiative.status === statusFilter;
       const matchesArchive = archiveFilter === 'all' || (archiveFilter === 'active' && !initiative.archived) || (archiveFilter === 'archived' && initiative.archived);
       return matchesSearch && matchesStatus && matchesArchive;
@@ -324,13 +373,25 @@ export function TableGanttView({
     return { tasks: ganttTasks, dateHeaders, monthHeaders, cellWidth: dynamicCellWidth };
   }, [filteredInitiatives]);
 
-  const toggleTopic = (topicId: string) => {
-    setExpandedTopics(prev => {
+  const toggleInitiative = (initiativeId: string) => {
+    setExpandedInitiatives(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(topicId)) {
-        newSet.delete(topicId);
+      if (newSet.has(initiativeId)) {
+        newSet.delete(initiativeId);
       } else {
-        newSet.add(topicId);
+        newSet.add(initiativeId);
+      }
+      return newSet;
+    });
+  };
+
+  const togglePhase = (phaseId: string) => {
+    setExpandedPhases(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(phaseId)) {
+        newSet.delete(phaseId);
+      } else {
+        newSet.add(phaseId);
       }
       return newSet;
     });
@@ -340,7 +401,7 @@ export function TableGanttView({
 
   return (
     <Card className="shadow-sm">
-      <div className="w-full overflow-hidden">
+      <div className="w-full overflow-x-auto">
         <Table className="min-w-full table-auto">
           <TableHeader>
             {/* Linha 1: Cabeçalhos principais */}
@@ -412,8 +473,8 @@ export function TableGanttView({
             {filteredInitiatives.length > 0 ? (
               filteredInitiatives.map((initiative: Initiative) => {
                 const StatusIcon = STATUS_ICONS[initiative.status];
-                const hasSubItems = initiative.subItems && initiative.subItems.length > 0;
-                const isExpanded = expandedTopics.has(initiative.id);
+                const hasPhases = initiative.phases && initiative.phases.length > 0;
+                const isInitiativeExpanded = expandedInitiatives.has(initiative.id);
                 const isArchivable = initiative.status === 'Concluído' || initiative.status === 'Suspenso';
                 
                 // Busca task correspondente no Gantt
@@ -430,19 +491,19 @@ export function TableGanttView({
                       {/* Coluna Título */}
                       <TableCell className="font-medium sticky left-16 bg-background z-10">
                         <div className="flex items-center gap-1">
-                          {hasSubItems && (
+                          {hasPhases && (
                             <Button 
                               variant="ghost" 
                               size="icon" 
                               className="h-6 w-6 -ml-2" 
-                              onClick={() => toggleTopic(initiative.id)}
+                              onClick={() => toggleInitiative(initiative.id)}
                             >
-                              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                              {isInitiativeExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                             </Button>
                           )}
                           <span 
-                            className={cn(hasSubItems && "cursor-pointer", "text-current")} 
-                            onClick={() => hasSubItems && toggleTopic(initiative.id)}
+                            className={cn(hasPhases && "cursor-pointer", "text-current")} 
+                            onClick={() => hasPhases && toggleInitiative(initiative.id)}
                           >
                             {initiative.title}
                           </span>
@@ -451,7 +512,7 @@ export function TableGanttView({
                       
                       {/* Coluna Responsável */}
                       <TableCell className="text-sm">
-                        {initiative.owner}
+                        {initiative.owner || '-'}
                       </TableCell>
                       
                       {/* Coluna Status */}
@@ -536,29 +597,60 @@ export function TableGanttView({
                       })}
                     </TableRow>
                     
-                    {/* Subitens expandidos */}
-                    {isExpanded && hasSubItems && initiative.subItems.map(subItem => (
-                      <TableRow key={subItem.id} className="bg-secondary hover:bg-secondary/80">
-                        <TableCell className="sticky left-0 bg-secondary z-10"></TableCell>
-                        <TableCell colSpan={4} className="pl-12 sticky left-16 bg-secondary z-10">
-                          <div className="flex items-center gap-2">
-                            <CornerDownRight className="h-4 w-4 text-muted-foreground" />
-                            <Checkbox 
-                              id={`subitem-${subItem.id}`} 
-                              checked={subItem.completed}
-                              onCheckedChange={(checked) => onUpdateSubItem?.(initiative.id, subItem.id, !!checked)}
-                            />
-                            <label 
-                              htmlFor={`subitem-${subItem.id}`} 
-                              className={cn("text-sm", subItem.completed && "line-through text-muted-foreground")}
-                            >
-                              {subItem.title}
-                            </label>
-                          </div>
-                        </TableCell>
-                        <TableCell colSpan={dateHeaders.length}></TableCell>
-                      </TableRow>
-                    ))}
+                    {/* Fases expandidas */}
+                    {isInitiativeExpanded && hasPhases && initiative.phases.map(phase => {
+                      const isPhaseExpanded = expandedPhases.has(phase.id);
+                      const hasSubItems = phase.subItems && phase.subItems.length > 0;
+                      
+                      return (
+                        <React.Fragment key={phase.id}>
+                          <TableRow className="bg-secondary/50 hover:bg-secondary/70">
+                            <TableCell className="sticky left-0 bg-secondary/50 z-10"></TableCell>
+                            <TableCell colSpan={4} className="pl-12 sticky left-16 bg-secondary/50 z-10">
+                              <div className="flex items-center gap-2">
+                                <CornerDownRight className="h-4 w-4 text-muted-foreground" />
+                                {hasSubItems && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-5 w-5 -ml-1" 
+                                    onClick={() => togglePhase(phase.id)}
+                                  >
+                                    {isPhaseExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                                  </Button>
+                                )}
+                                <span className="text-sm font-medium">{phase.title}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell colSpan={dateHeaders.length}></TableCell>
+                          </TableRow>
+                          
+                          {/* Subitens expandidos */}
+                          {isPhaseExpanded && hasSubItems && phase.subItems.map(subItem => (
+                            <TableRow key={subItem.id} className="bg-secondary hover:bg-secondary/80">
+                              <TableCell className="sticky left-0 bg-secondary z-10"></TableCell>
+                              <TableCell colSpan={4} className="pl-20 sticky left-16 bg-secondary z-10">
+                                <div className="flex items-center gap-2">
+                                  <CornerDownRight className="h-4 w-4 text-muted-foreground" />
+                                  <Checkbox 
+                                    id={`subitem-${subItem.id}`} 
+                                    checked={subItem.completed}
+                                    onCheckedChange={(checked) => onUpdateSubItem?.(initiative.id, phase.id, subItem.id, !!checked)}
+                                  />
+                                  <label 
+                                    htmlFor={`subitem-${subItem.id}`} 
+                                    className={cn("text-sm", subItem.completed && "line-through text-muted-foreground")}
+                                  >
+                                    {subItem.title}
+                                  </label>
+                                </div>
+                              </TableCell>
+                              <TableCell colSpan={dateHeaders.length}></TableCell>
+                            </TableRow>
+                          ))}
+                        </React.Fragment>
+                      );
+                    })}
                   </React.Fragment>
                 );
               })

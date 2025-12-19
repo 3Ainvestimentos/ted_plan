@@ -13,6 +13,22 @@ export interface SubItem {
   title: string;
   completed: boolean;
   deadline?: string | null; // ISO date string 'YYYY-MM-DD'
+  status: InitiativeStatus;
+  responsible: string; // Responsável obrigatório
+  priority: InitiativePriority;
+  description: string; // Observações
+}
+
+export interface InitiativePhase {
+  id: string;
+  title: string;
+  deadline?: string | null; // ISO date string 'YYYY-MM-DD'
+  status: InitiativeStatus;
+  areaId: string; // Área obrigatória
+  priority: InitiativePriority;
+  description: string; // Observações
+  responsible?: string | null; // Responsável opcional
+  subItems?: SubItem[];
 }
 
 export interface Initiative {
@@ -21,7 +37,7 @@ export interface Initiative {
   parentId?: string | null; // ID of the parent initiative
   title: string;
   status: InitiativeStatus;
-  owner: string; // Assignee
+  owner?: string; // Assignee (opcional - removido, mantido para compatibilidade)
   description: string;
   lastUpdate: string; // Date string
   progress: number; // Percentage 0-100
@@ -30,10 +46,13 @@ export interface Initiative {
   startDate?: string | null; // ISO date string 'YYYY-MM-DD' - Para visualização Gantt
   keyMetrics: { name: string; value: string; trend: 'up' | 'down' | 'neutral' }[];
   icon?: React.ElementType; // Optional: for specific task icons
-  subItems?: SubItem[];
+  areaId: string; // Área obrigatória (seletor com áreas de negócio)
+  phases: InitiativePhase[]; // Fases obrigatórias (mínimo 1)
   archived?: boolean;
   cidade?: string;
   auc?: number;
+  // Campo legado para migração - será removido após migração completa
+  subItems?: SubItem[];
 }
 
 export interface MnaDeal extends Initiative {
