@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -67,6 +67,9 @@ export function UpsertKpiModal({ isOpen, onOpenChange, areaId, kpi }: UpsertKpiM
     const startDate = watch('startDate');
     const endDate = watch('endDate');
     const currentSeries = watch('series');
+    
+    // Usar ref para rastrear as datas anteriores e evitar loops
+    const prevDatesRef = useRef<{ startDate?: Date; endDate?: Date }>({});
 
     useEffect(() => {
         if (isOpen) {
@@ -79,6 +82,11 @@ export function UpsertKpiModal({ isOpen, onOpenChange, areaId, kpi }: UpsertKpiM
                     endDate: kpi.endDate ? new Date(kpi.endDate) : undefined,
                     series: kpi.series,
                 });
+                // Atualizar ref quando resetar com dados do KPI
+                prevDatesRef.current = {
+                    startDate: kpi.startDate ? new Date(kpi.startDate) : undefined,
+                    endDate: kpi.endDate ? new Date(kpi.endDate) : undefined,
+                };
             } else {
                 reset({
                     name: '',
@@ -88,30 +96,54 @@ export function UpsertKpiModal({ isOpen, onOpenChange, areaId, kpi }: UpsertKpiM
                     endDate: undefined,
                     series: [],
                 });
+                prevDatesRef.current = {};
             }
         }
     }, [kpi, reset, isOpen]);
 
     useEffect(() => {
+        if (!isOpen) {
+            prevDatesRef.current = {};
+            return;
+        }
+        
+        // Verificar se as datas realmente mudaram
+        const prevStart = prevDatesRef.current.startDate;
+        const prevEnd = prevDatesRef.current.endDate;
+        const datesChanged = 
+            prevStart?.getTime() !== startDate?.getTime() || 
+            prevEnd?.getTime() !== endDate?.getTime();
+        
+        if (!datesChanged && prevStart && prevEnd) {
+            return; // Datas não mudaram, não precisa atualizar
+        }
+        
         if (startDate && endDate && isValid(startDate) && isValid(endDate) && endDate >= startDate) {
             const intervalMonths = eachMonthOfInterval({
                 start: startOfMonth(startDate),
                 end: endOfMonth(endDate)
             });
 
+            // Usar currentSeries apenas para preservar valores existentes
+            const seriesSnapshot = currentSeries || [];
             const newSeries = intervalMonths.map(monthDate => {
                 const monthStr = format(monthDate, 'MMM', { locale: ptBR });
-                const existingMonth = currentSeries.find(s => s.month === monthStr);
+                const existingMonth = seriesSnapshot.find(s => s.month === monthStr);
                 return {
                     month: monthStr,
                     Realizado: existingMonth ? existingMonth.Realizado : null
                 };
             });
+            
+            // Atualizar ref antes de chamar replace
+            prevDatesRef.current = { startDate, endDate };
             replace(newSeries);
-        } else {
+        } else if (currentSeries && currentSeries.length > 0) {
+            // Limpar séries se não houver datas válidas
+            prevDatesRef.current = {};
             replace([]);
         }
-    }, [startDate, endDate, replace, currentSeries]);
+    }, [startDate, endDate, replace, isOpen]); // currentSeries removido das dependências
     
     const onSubmit = async (data: UpsertKpiFormData) => {
         setIsLoading(true);

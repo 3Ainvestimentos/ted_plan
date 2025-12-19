@@ -1,6 +1,10 @@
 
 "use client";
 
+import { useAuth } from "@/contexts/auth-context";
+import { useToast } from "@/hooks/use-toast";
+import { canEditInitiativeStatus } from "@/lib/permissions-config";
+
 /**
  * ============================================
  * COMPONENTE: InitiativesKanban
@@ -46,6 +50,8 @@ interface Column {
 
 export function InitiativesKanban({ initiatives, onInitiativeClick }: InitiativesKanbanProps) {
     const { updateInitiativeStatus } = useInitiatives();
+    const { user, getUserArea } = useAuth();
+    const { toast } = useToast();
 
     /**
      * Handler para quando uma tarefa é arrastada e solta em outra coluna
@@ -54,6 +60,23 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
      * @param newStatus - Novo status (coluna de destino)
      */
     const handleDropTask = (taskId: string, newStatus: InitiativeStatus) => {
+        const initiative = initiatives.find(i => i.id === taskId);
+        if (!initiative) return;
+
+        // Verificar permissão para editar status
+        const userType = user?.userType || 'head';
+        const userArea = getUserArea();
+        const canEdit = canEditInitiativeStatus(userType, userArea, initiative.areaId);
+
+        if (!canEdit) {
+            toast({
+                variant: 'destructive',
+                title: "Acesso Negado",
+                description: "Você não tem permissão para alterar o status desta iniciativa.",
+            });
+            return;
+        }
+
         updateInitiativeStatus(taskId, newStatus);
     };
 

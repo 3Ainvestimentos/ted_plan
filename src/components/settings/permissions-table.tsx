@@ -13,6 +13,7 @@ import type { Collaborator } from '@/types';
 import { PERMISSIONABLE_PAGES } from '@/lib/constants';
 import { hasDefaultPermission } from '@/lib/permissions-config';
 import { Search } from 'lucide-react';
+import { useStrategicPanel } from '@/contexts/strategic-panel-context';
 
 const getInitials = (name: string) => {
   if (!name) return '??';
@@ -24,8 +25,15 @@ const getInitials = (name: string) => {
 
 export function PermissionsTable() {
   const { collaborators, isLoading, updateCollaboratorPermissions } = useTeamControl();
+  const { businessAreas } = useStrategicPanel();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
+
+  const getAreaName = (areaId: string | undefined): string => {
+    if (!areaId) return '-';
+    const area = businessAreas.find(a => a.id === areaId);
+    return area?.name || areaId;
+  };
 
   const filteredCollaborators = useMemo(() => {
     if (!searchQuery.trim()) return collaborators;
@@ -151,7 +159,7 @@ export function PermissionsTable() {
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {collaborator.area || '-'}
+                      {getAreaName(collaborator.area)}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{collaborator.userType}</TableCell>
                     {PERMISSIONABLE_PAGES.map((page) => (

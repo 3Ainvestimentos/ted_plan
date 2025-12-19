@@ -8,6 +8,7 @@ import { useTeamControl } from '@/contexts/team-control-context';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Collaborator } from '@/types';
+import { useStrategicPanel } from '@/contexts/strategic-panel-context';
 import { UpsertCollaboratorModal } from './upsert-collaborator-modal';
 import { Button } from '../ui/button';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
@@ -40,7 +41,14 @@ const getInitials = (name: string) => {
 
 export function CollaboratorsManager() {
   const { collaborators, isLoading, deleteCollaborator } = useTeamControl();
+  const { businessAreas } = useStrategicPanel();
   const { toast } = useToast();
+
+  const getAreaName = (areaId: string | undefined): string => {
+    if (!areaId) return '-';
+    const area = businessAreas.find(a => a.id === areaId);
+    return area?.name || areaId;
+  };
   const [isUpsertModalOpen, setIsUpsertModalOpen] = useState(false);
   const [selectedCollaborator, setSelectedCollaborator] = useState<Collaborator | null>(null);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
@@ -148,7 +156,7 @@ export function CollaboratorsManager() {
                     </TableCell>
                     <TableCell className="text-muted-foreground">{user.email}</TableCell>
                     <TableCell className="text-muted-foreground">{user.userType}</TableCell>
-                    <TableCell className="text-muted-foreground">{user.area || '-'}</TableCell>
+                    <TableCell className="text-muted-foreground">{getAreaName(user.area)}</TableCell>
                     <TableCell className="text-right">
                         <DropdownMenu>
                         <DropdownMenuTrigger asChild>

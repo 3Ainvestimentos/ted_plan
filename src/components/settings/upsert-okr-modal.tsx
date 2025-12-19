@@ -52,6 +52,8 @@ export function UpsertOkrModal({ isOpen, onOpenChange, areaId, okr }: UpsertOkrM
     const progressValue = watch('progress', isEditing && okr ? okr.progress : 0);
 
     useEffect(() => {
+        if (!isOpen) return; // Só executar quando o modal estiver aberto
+        
         if (okr) {
             reset({
                 ...okr,

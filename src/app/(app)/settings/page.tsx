@@ -4,9 +4,10 @@
 import { PageHeader } from '@/components/layout/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
-import { Users, HardHat } from 'lucide-react';
+import { Users, HardHat, Briefcase } from 'lucide-react';
 import { MaintenanceModeManager } from '@/components/settings/maintenance-mode-manager';
 import { CollaboratorsManager } from '@/components/settings/collaborators-manager';
+import { BusinessAreasManager } from '@/components/settings/business-areas-manager';
 
 
 function CollaboratorsTabContent() {
@@ -25,12 +26,27 @@ function MaintenanceModeTabContent() {
     );
 }
 
+function BusinessAreasTabContent() {
+    return (
+        <Card className="shadow-lg mt-6">
+            <BusinessAreasManager />
+        </Card>
+    );
+}
+
 const adminModules = [
     {
         name: "collaborators",
         title: "Colaboradores",
         icon: Users,
         component: <CollaboratorsTabContent />,
+        disabled: false,
+    },
+    {
+        name: "business-areas",
+        title: "Áreas de Negócio",
+        icon: Briefcase,
+        component: <BusinessAreasTabContent />,
         disabled: false,
     },
     {
@@ -47,11 +63,11 @@ export default function SettingsHubPage() {
     <div className="space-y-6">
        <PageHeader
             title="Administração do Sistema"
-            description="Gerencie colaboradores e o estado da plataforma."
+            description="Gerencie colaboradores, áreas de negócio e o estado da plataforma."
         />
 
         <Tabs defaultValue="collaborators" className="w-full">
-            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 h-auto">
+            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto">
                  {adminModules.map((mod) => (
                     <TabsTrigger key={mod.name} value={mod.name} className="py-2 flex-col h-auto" disabled={mod.disabled}>
                         <span>{mod.title}</span>

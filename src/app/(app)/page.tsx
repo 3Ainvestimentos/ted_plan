@@ -3,33 +3,44 @@
 
 import { PageHeader } from "@/components/layout/page-header";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
-import { Target, CalendarClock, ClipboardList, StickyNote } from "lucide-react";
+import { DollarSign, Target, Briefcase } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
+import { useStrategicPanel } from "@/contexts/strategic-panel-context";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useRouter } from "next/navigation";
 
-const dashboardItems: { title: string; href: string; icon: string; description: string; permissionKey: string; }[] = [
-    { title: 'Iniciativas Estratégicas', href: '/strategic-initiatives', icon: 'Target', description: 'Acompanhe e gerencie as iniciativas chave.', permissionKey: 'strategic-initiatives' },
-    { title: 'Agenda de Reuniões', href: '/meeting-agenda', icon: 'CalendarClock', description: 'Visualize e organize seus compromissos.', permissionKey: 'meeting-agenda' },
-    { title: 'Tarefas', href: '/tasks', icon: 'ClipboardList', description: 'Gerencie sua lista de tarefas diárias.', permissionKey: 'tasks' },
-    { title: 'Anotações', href: '/notes', icon: 'StickyNote', description: 'Seu bloco de notas pessoal para acesso rápido.', permissionKey: 'notes' },
-];
-
+// Mapeamento de ícones disponíveis
 const iconMap: Record<string, LucideIcon> = {
-    Target,
-    CalendarClock,
-    ClipboardList,
-    StickyNote,
+  DollarSign,
+  Target,
+  Briefcase,
 };
 
 export default function DashboardPage() {
-  const { isAdmin, hasPermission } = useAuth();
-  
-  // Filtrar cards baseado nas permissões do usuário
-  // As permissões são baseadas no userType (admin, pmo, head)
-  // e podem ser customizadas via campo permissions no banco
-  const allowedItems = dashboardItems.filter(item => {
-    return hasPermission(item.permissionKey);
-  });
+  const { businessAreas, isLoading: isLoadingAreas } = useStrategicPanel();
+  const router = useRouter();
+
+  const handleAreaClick = (areaId: string) => {
+    // Navegar para página de iniciativas com filtro de área
+    router.push(`/strategic-initiatives?area=${areaId}`);
+  };
+
+  if (isLoadingAreas) {
+    return (
+      <div className="space-y-8">
+        <PageHeader
+          title="Painel Estratégico"
+          description="Acesso rápido às principais áreas da plataforma."
+        />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -37,23 +48,31 @@ export default function DashboardPage() {
         title="Painel Estratégico"
         description="Acesso rápido às principais áreas da plataforma."
       />
-      {allowedItems.length > 0 ? (
+      {businessAreas.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {allowedItems.map((item) => (
-              <DashboardCard
-                  key={item.title}
-                  title={item.title}
-                  description={item.description}
-                  href={item.href}
-                  iconName={item.icon}
+          {businessAreas.map((area) => {
+            const Icon = iconMap[area.icon] || Target; // Fallback para Target se ícone não encontrado
+            return (
+              <div
+                key={area.id}
+                onClick={() => handleAreaClick(area.id)}
+                className="cursor-pointer"
+              >
+                <DashboardCard
+                  title={area.name}
+                  description={`Acompanhe e gerencie as iniciativas da área ${area.name}.`}
+                  href={`/strategic-initiatives?area=${area.id}`}
+                  iconName={area.icon}
                   iconMap={iconMap}
-              />
-          ))}
+                />
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-12 text-muted-foreground">
-          <p>Você não tem permissão para acessar nenhuma área da plataforma.</p>
-          <p className="text-sm mt-2">Entre em contato com o administrador para solicitar acesso.</p>
+          <p>Nenhuma área de negócio cadastrada.</p>
+          <p className="text-sm mt-2">Entre em contato com o administrador para configurar as áreas.</p>
         </div>
       )}
     </div>

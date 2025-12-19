@@ -69,9 +69,11 @@ interface InitiativeFormProps {
     onCancel: () => void;
     initialData?: Partial<InitiativeFormData>;
     isLoading?: boolean;
+    isLimitedMode?: boolean; // Modo limitado para heads (só pode editar responsible e status)
+    canEditStatus?: boolean; // Se pode editar status de execução
 }
 
-export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: InitiativeFormProps) {
+export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isLimitedMode = false, canEditStatus = true }: InitiativeFormProps) {
   const { businessAreas } = useStrategicPanel();
   
   const {
@@ -136,7 +138,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-4">
       <div className="space-y-2">
         <Label htmlFor="title">Título da Iniciativa</Label>
-        <Input id="title" {...register("title")} placeholder="Ex: Otimizar o Funil de Vendas" />
+        <Input id="title" {...register("title")} placeholder="Ex: Otimizar o Funil de Vendas" disabled={isLimitedMode} />
         {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
       </div>
 
@@ -152,6 +154,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                       <Button
                           variant={"outline"}
                           className="w-full justify-start text-left font-normal"
+                          disabled={isLimitedMode}
                       >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione uma data</span>}
@@ -176,7 +179,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                   name="areaId"
                   control={control}
                   render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isLimitedMode}>
                           <SelectTrigger>
                               <SelectValue placeholder="Selecione a área" />
                           </SelectTrigger>
@@ -201,7 +204,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                   name="status"
                   control={control}
                   render={({ field }) => (
-                       <Select onValueChange={field.onChange} defaultValue={field.value}>
+                       <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!canEditStatus}>
                           <SelectTrigger>
                               <SelectValue placeholder="Selecione o status inicial" />
                           </SelectTrigger>
@@ -222,7 +225,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                   name="priority"
                   control={control}
                   render={({ field }) => (
-                       <Select onValueChange={field.onChange} defaultValue={field.value}>
+                       <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLimitedMode}>
                           <SelectTrigger>
                               <SelectValue placeholder="Selecione a prioridade" />
                           </SelectTrigger>
@@ -240,7 +243,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
 
       <div className="space-y-2">
         <Label htmlFor="description">Observações (Descrição)</Label>
-        <Textarea id="description" {...register("description")} placeholder="Descreva o objetivo principal, escopo e os resultados esperados desta iniciativa." rows={5} />
+        <Textarea id="description" {...register("description")} placeholder="Descreva o objetivo principal, escopo e os resultados esperados desta iniciativa." rows={5} disabled={isLimitedMode} />
         {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
       </div>
       
@@ -261,6 +264,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                 responsible: null,
                 subItems: [] as any[]
               })}
+              disabled={isLimitedMode}
             >
               <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Fase
             </Button>
@@ -277,6 +281,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                     size="icon"
                     className="text-destructive hover:text-destructive"
                     onClick={() => removePhase(index)}
+                    disabled={isLimitedMode}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -289,6 +294,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                       {...register(`phases.${index}.title`)}
                       placeholder="Ex: Planejamento"
                       className={cn(errors.phases?.[index]?.title && "border-destructive")}
+                      disabled={isLimitedMode}
                     />
                     {errors.phases?.[index]?.title && (
                       <p className="text-sm text-destructive">{errors.phases[index]?.title?.message}</p>
@@ -303,7 +309,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                       render={({ field }) => (
                         <Popover>
                           <PopoverTrigger asChild>
-                            <Button variant="outline" className="w-full justify-start text-left font-normal">
+                            <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={isLimitedMode}>
                               <CalendarIcon className="mr-2 h-4 w-4" />
                               {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
                             </Button>
@@ -327,7 +333,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                       name={`phases.${index}.status`}
                       control={control}
                       render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={!canEditStatus}>
                           <SelectTrigger>
                             <SelectValue placeholder="Status" />
                           </SelectTrigger>
@@ -348,7 +354,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                       name={`phases.${index}.areaId`}
                       control={control}
                       render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isLimitedMode}>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione a área" />
                           </SelectTrigger>
@@ -373,7 +379,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                       name={`phases.${index}.priority`}
                       control={control}
                       render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isLimitedMode}>
                           <SelectTrigger>
                             <SelectValue placeholder="Prioridade" />
                           </SelectTrigger>
@@ -409,6 +415,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                     placeholder="Descreva a fase..."
                     rows={2}
                     className={cn(errors.phases?.[index]?.description && "border-destructive")}
+                    disabled={isLimitedMode}
                   />
                   {errors.phases?.[index]?.description && (
                     <p className="text-sm text-destructive">{errors.phases[index]?.description?.message}</p>
@@ -424,6 +431,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                       variant="outline"
                       size="sm"
                       onClick={() => appendSubItem(index)}
+                      disabled={isLimitedMode}
                     >
                       <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Subitem
                     </Button>
@@ -441,6 +449,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                               size="icon"
                               className="h-6 w-6 text-destructive hover:text-destructive"
                               onClick={() => removeSubItem(index, subItemIndex)}
+                              disabled={isLimitedMode}
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -453,6 +462,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                                 {...register(`phases.${index}.subItems.${subItemIndex}.title`)}
                                 placeholder="Título do subitem"
                                 className="h-8 text-sm"
+                                disabled={isLimitedMode}
                               />
                               {errors.phases?.[index]?.subItems?.[subItemIndex]?.title && (
                                 <p className="text-xs text-destructive">{errors.phases[index]?.subItems?.[subItemIndex]?.title?.message}</p>
@@ -479,7 +489,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                                 render={({ field }) => (
                                   <Popover>
                                     <PopoverTrigger asChild>
-                                      <Button variant="outline" className="w-full justify-start text-left font-normal h-8 text-sm">
+                                      <Button variant="outline" className="w-full justify-start text-left font-normal h-8 text-sm" disabled={isLimitedMode}>
                                         <CalendarIcon className="mr-2 h-3 w-3" />
                                         {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
                                       </Button>
@@ -503,7 +513,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                                 name={`phases.${index}.subItems.${subItemIndex}.status`}
                                 control={control}
                                 render={({ field }) => (
-                                  <Select onValueChange={field.onChange} value={field.value}>
+                                  <Select onValueChange={field.onChange} value={field.value} disabled={!canEditStatus}>
                                     <SelectTrigger className="h-8 text-sm">
                                       <SelectValue placeholder="Status" />
                                     </SelectTrigger>
@@ -524,7 +534,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                                 name={`phases.${index}.subItems.${subItemIndex}.priority`}
                                 control={control}
                                 render={({ field }) => (
-                                  <Select onValueChange={field.onChange} value={field.value}>
+                                  <Select onValueChange={field.onChange} value={field.value} disabled={isLimitedMode}>
                                     <SelectTrigger className="h-8 text-sm">
                                       <SelectValue placeholder="Prioridade" />
                                     </SelectTrigger>
@@ -546,6 +556,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading }: I
                               placeholder="Observações do subitem"
                               rows={2}
                               className="text-sm"
+                              disabled={isLimitedMode}
                             />
                             {errors.phases?.[index]?.subItems?.[subItemIndex]?.description && (
                               <p className="text-xs text-destructive">{errors.phases[index]?.subItems?.[subItemIndex]?.description?.message}</p>

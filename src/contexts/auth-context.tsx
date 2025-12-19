@@ -20,6 +20,7 @@ interface User {
   name: string | null;
   email: string | null;
   userType?: UserType;
+  userArea?: string; // Área do usuário (ID da BusinessArea)
 }
 
 interface AuthContextType {
@@ -27,6 +28,7 @@ interface AuthContextType {
   user: User | null;
   isAdmin: boolean;
   hasPermission: (page: string) => boolean;
+  getUserArea: () => string | undefined;
   login: () => Promise<void>;
   logout: () => Promise<void>;
   isLoading: boolean;
@@ -161,6 +163,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 name: firebaseUser.displayName || collaboratorData?.name || null,
                 email: firebaseUser.email,
                 userType: collaboratorData.userType as UserType,
+                userArea: collaboratorData?.area || undefined,
               };
               setUser(userProfile);
               setIsLoading(false);
@@ -295,6 +298,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   // ============================================
+  // FUNÇÃO: Obter Área do Usuário
+  // ============================================
+  /**
+   * Retorna a área do usuário (name da BusinessArea)
+   * 
+   * @returns Área do usuário ou undefined se não houver
+   */
+  const getUserArea = useCallback((): string | undefined => {
+    return user?.userArea;
+  }, [user]);
+
+  // ============================================
   // RENDERIZAÇÃO: Loading State
   // ============================================
   /**
@@ -322,6 +337,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       user, 
       isAdmin, 
       hasPermission, 
+      getUserArea,
       login, 
       logout, 
       isLoading: (isLoading || isLoadingSettings), 

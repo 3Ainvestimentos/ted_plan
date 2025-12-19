@@ -13,6 +13,7 @@ import { LoadingSpinner } from "../ui/loading-spinner";
 import { useTeamControl } from "@/contexts/team-control-context";
 import type { Collaborator, UserType } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { useStrategicPanel } from "@/contexts/strategic-panel-context";
 import {
   Select,
   SelectContent,
@@ -38,6 +39,7 @@ interface UpsertCollaboratorModalProps {
 
 export function UpsertCollaboratorModal({ isOpen, onOpenChange, collaborator }: UpsertCollaboratorModalProps) {
     const { addCollaborator, updateCollaborator } = useTeamControl();
+    const { businessAreas } = useStrategicPanel();
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const isEditing = !!collaborator;
@@ -57,34 +59,42 @@ export function UpsertCollaboratorModal({ isOpen, onOpenChange, collaborator }: 
     });
 
     useEffect(() => {
+        if (!isOpen) return; // Só resetar quando o modal estiver aberto
+        
         if (collaborator) {
             reset({
                 name: collaborator.name,
                 email: collaborator.email,
-                area: collaborator.area || '',
+                area: collaborator.area || 'none',
                 userType: collaborator.userType || 'head',
             });
         } else {
             reset({
                 name: '',
                 email: '',
-                area: '',
+                area: 'none',
                 userType: 'head' as UserType,
             });
         }
-    }, [collaborator, reset, isOpen]);
+    }, [collaborator?.id, isOpen, reset]); // Usar collaborator?.id ao invés do objeto inteiro
     
     const onSubmit = async (data: CollaboratorFormData) => {
         setIsLoading(true);
         try {
+            // Converter "none" para undefined antes de salvar
+            const collaboratorData = {
+                ...data,
+                area: data.area === "none" || !data.area ? undefined : data.area,
+            };
+            
             if (isEditing && collaborator) {
-                await updateCollaborator(collaborator.id, data);
+                await updateCollaborator(collaborator.id, collaboratorData);
                 toast({
                     title: "Colaborador Atualizado!",
                     description: `Os dados de ${data.name} foram atualizados.`,
                 });
             } else {
-                await addCollaborator(data as Omit<Collaborator, 'id'>);
+                await addCollaborator(collaboratorData as Omit<Collaborator, 'id'>);
                 toast({
                     title: "Colaborador Adicionado!",
                     description: `${data.name} foi adicionado à lista.`,
@@ -124,7 +134,22 @@ export function UpsertCollaboratorModal({ isOpen, onOpenChange, collaborator }: 
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="area">Área</Label>
-                        <Input id="area" {...register("area")} placeholder="Ex: Comercial, TI, etc." />
+                        <Select
+                            value={watch("area") || "none"}
+                            onValueChange={(value) => setValue("area", value === "none" ? undefined : value)}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Selecione a área de negócio" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">Nenhuma</SelectItem>
+                                {businessAreas.map(area => (
+                                    <SelectItem key={area.id} value={area.id}>
+                                        {area.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                         {errors.area && <p className="text-sm text-destructive">{errors.area.message}</p>}
                     </div>
                     <div className="space-y-2">

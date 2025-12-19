@@ -7,7 +7,9 @@ import { useInitiatives } from "@/contexts/initiatives-context";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import type { InitiativeFormData } from "./initiative-form";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/auth-context";
+import { canCreateInitiative } from "@/lib/permissions-config";
 
 interface CreateInitiativeModalProps {
     isOpen: boolean;
@@ -18,9 +20,35 @@ export function CreateInitiativeModal({ isOpen, onOpenChange }: CreateInitiative
     const { addInitiative } = useInitiatives();
     const { toast } = useToast();
     const router = useRouter();
+    const { user } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
 
+    // Verificar permissão para criar
+    const userType = user?.userType || 'head';
+    const canCreate = canCreateInitiative(userType);
+
+    // Fechar modal se não tiver permissão
+    useEffect(() => {
+        if (isOpen && !canCreate) {
+            toast({
+                variant: 'destructive',
+                title: "Acesso Negado",
+                description: "Você não tem permissão para criar iniciativas. Apenas PMO e Administradores podem criar iniciativas.",
+            });
+            onOpenChange(false);
+        }
+    }, [isOpen, canCreate, onOpenChange, toast]);
+
     const handleFormSubmit = async (data: InitiativeFormData) => {
+        if (!canCreate) {
+            toast({
+                variant: 'destructive',
+                title: "Acesso Negado",
+                description: "Você não tem permissão para criar iniciativas.",
+            });
+            return;
+        }
+
         setIsLoading(true);
         await addInitiative(data);
         setIsLoading(false);
@@ -32,6 +60,10 @@ export function CreateInitiativeModal({ isOpen, onOpenChange }: CreateInitiative
         
         onOpenChange(false);
     };
+
+    if (!canCreate) {
+        return null; // Não renderizar se não tiver permissão
+    }
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>

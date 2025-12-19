@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import type { Initiative } from "@/types";
 import { Button } from '@/components/ui/button';
+import { useAuth } from "@/contexts/auth-context";
+import { canEditInitiativeResponsible, canEditInitiativeStatus } from "@/lib/permissions-config";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,8 +33,16 @@ export function EditInitiativeModal({ isOpen, onOpenChange, initiative }: EditIn
     const { updateInitiative, deleteInitiative } = useInitiatives();
     const { toast } = useToast();
     const router = useRouter();
+    const { user, getUserArea } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // Verificar permissões
+    const userType = user?.userType || 'head';
+    const userArea = getUserArea();
+    const canEditResponsible = canEditInitiativeResponsible(userType, userArea, initiative.areaId);
+    const canEditStatus = canEditInitiativeStatus(userType, userArea, initiative.areaId);
+    const isLimitedMode = userType === 'head' && canEditResponsible; // Head da própria área em modo limitado
 
     const handleFormSubmit = async (data: InitiativeFormData) => {
         setIsSaving(true);
@@ -92,6 +102,8 @@ export function EditInitiativeModal({ isOpen, onOpenChange, initiative }: EditIn
                     onCancel={() => onOpenChange(false)} 
                     initialData={initialData}
                     isLoading={isSaving}
+                    isLimitedMode={isLimitedMode}
+                    canEditStatus={canEditStatus}
                 />
                 <DialogFooter className="border-t pt-4 mt-4">
                      <AlertDialog>

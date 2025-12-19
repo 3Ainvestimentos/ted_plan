@@ -138,3 +138,137 @@ export function isAdminOnlyPage(pageKey: string): boolean {
   return ADMIN_ONLY_PAGES.includes(pageKey);
 }
 
+/**
+ * ============================================
+ * PERMISSÕES BASEADAS EM ÁREA
+ * ============================================
+ * 
+ * Funções para verificar permissões específicas de iniciativas
+ * baseadas na área do usuário e da iniciativa
+ */
+
+/**
+ * Verifica se o usuário pode visualizar iniciativas de uma área específica
+ * 
+ * @param userType - Tipo de usuário (admin, pmo, head)
+ * @param userArea - Área do usuário (ID da BusinessArea)
+ * @param initiativeAreaId - ID da área da iniciativa
+ * @returns true se o usuário pode visualizar iniciativas da área
+ */
+export function canViewInitiativeArea(
+  userType: UserType,
+  userArea: string | undefined,
+  initiativeAreaId: string
+): boolean {
+  // Admin e PMO sempre podem ver todas as áreas
+  if (userType === 'admin' || userType === 'pmo') {
+    return true;
+  }
+  
+  // Head precisa verificar se é da mesma área (comparar IDs)
+  if (userType === 'head') {
+    return userArea === initiativeAreaId;
+  }
+  
+  return false;
+}
+
+/**
+ * Verifica se o usuário pode criar iniciativas
+ * 
+ * @param userType - Tipo de usuário (admin, pmo, head)
+ * @returns true se o usuário pode criar iniciativas
+ */
+export function canCreateInitiative(userType: UserType): boolean {
+  // Apenas admin e PMO podem criar iniciativas
+  return userType === 'admin' || userType === 'pmo';
+}
+
+/**
+ * Verifica se o usuário pode editar o campo responsible das fases
+ * 
+ * @param userType - Tipo de usuário (admin, pmo, head)
+ * @param userArea - Área do usuário (ID da BusinessArea)
+ * @param initiativeAreaId - ID da área da iniciativa
+ * @returns true se o usuário pode editar o responsible
+ */
+export function canEditInitiativeResponsible(
+  userType: UserType,
+  userArea: string | undefined,
+  initiativeAreaId: string
+): boolean {
+  // Admin e PMO sempre podem editar
+  if (userType === 'admin' || userType === 'pmo') {
+    return true;
+  }
+  
+  // Head só pode editar da própria área (comparar IDs)
+  if (userType === 'head') {
+    return userArea === initiativeAreaId;
+  }
+  
+  return false;
+}
+
+/**
+ * Verifica se o usuário pode editar o status de execução (projeto, fase ou subitem)
+ * 
+ * @param userType - Tipo de usuário (admin, pmo, head)
+ * @param userArea - Área do usuário (ID da BusinessArea)
+ * @param initiativeAreaId - ID da área da iniciativa
+ * @returns true se o usuário pode editar o status
+ */
+export function canEditInitiativeStatus(
+  userType: UserType,
+  userArea: string | undefined,
+  initiativeAreaId: string
+): boolean {
+  // Admin e PMO sempre podem editar
+  if (userType === 'admin' || userType === 'pmo') {
+    return true;
+  }
+  
+  // Head só pode editar status da própria área (comparar IDs)
+  if (userType === 'head') {
+    return userArea === initiativeAreaId;
+  }
+  
+  return false;
+}
+
+/**
+ * Verifica se o usuário pode visualizar um modo específico de visualização
+ * 
+ * @param userType - Tipo de usuário (admin, pmo, head)
+ * @param userArea - Área do usuário (ID da BusinessArea)
+ * @param initiativeAreaId - ID da área da iniciativa
+ * @param viewMode - Modo de visualização (dashboard, table-gantt, kanban)
+ * @returns true se o usuário pode visualizar no modo especificado
+ */
+export function canViewInitiativeViewMode(
+  userType: UserType,
+  userArea: string | undefined,
+  initiativeAreaId: string,
+  viewMode: 'dashboard' | 'table-gantt' | 'kanban'
+): boolean {
+  // Admin e PMO sempre podem ver tudo
+  if (userType === 'admin' || userType === 'pmo') {
+    return true;
+  }
+  
+  // Head precisa verificar área (comparar IDs)
+  if (userType === 'head') {
+    const isOwnArea = userArea === initiativeAreaId;
+    
+    if (isOwnArea) {
+      // Head da própria área: pode ver todas as visualizações
+      return true;
+    } else {
+      // Head de outra área: só pode ver dashboard
+      return viewMode === 'dashboard';
+    }
+  }
+  
+  return false;
+}
+
