@@ -58,9 +58,7 @@ export const MOCK_COLLABORATORS: Collaborator[] = [
         id: 'mock-matheus-uid',
         name: 'Matheus',
         email: 'matheus@3ainvestimentos.com.br',
-        cargo: 'PMO',
-        userType: 'Administrador',
-        permissions: {},
+        userType: 'admin',
         remunerationHistory: [
             { date: '2023-01-01', value: 5000 },
             { date: '2024-01-01', value: 6000 },
@@ -74,9 +72,7 @@ export const MOCK_COLLABORATORS: Collaborator[] = [
         id: 'mock-thiago-uid',
         name: 'Thiago',
         email: 'thiago@3ainvestimentos.com.br',
-        cargo: 'PMO',
-        userType: 'Administrador',
-        permissions: {},
+        userType: 'admin',
         remunerationHistory: [
             { date: '2023-05-01', value: 4500 },
             { date: '2024-03-01', value: 5500 },

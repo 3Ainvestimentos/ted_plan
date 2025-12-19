@@ -1,11 +1,11 @@
 "use client";
 
-import type { UserRole, UserType } from '@/types';
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import type { UserType } from '@/types';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, User as FirebaseUser, getRedirectResult, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { app, db } from '@/lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { useSettings } from './settings-context';
 import { MOCK_COLLABORATORS } from '@/lib/constants';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
@@ -19,9 +19,7 @@ interface User {
   uid: string;
   name: string | null;
   email: string | null;
-  role: UserRole;
   userType?: UserType;
-  permissions?: Record<string, boolean>;
 }
 
 interface AuthContextType {
@@ -83,6 +81,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null); // Usuário autenticado
   const [isLoading, setIsLoading] = useState(true); // Estado de carregamento
   
+  // Ref para armazenar unsubscribe do listener do Firestore
+  const collaboratorUnsubscribeRef = useRef<(() => void) | null>(null);
+  
   // Hooks e contextos
   const { maintenanceSettings, isLoading: isLoadingSettings } = useSettings();
   const router = useRouter();
@@ -119,65 +120,95 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         
         try {
-          // Buscar colaborador no Firestore pelo email
-          const collaboratorsRef = collection(db, 'collaborators');
-          const q = query(collaboratorsRef, where('email', '==', firebaseUser.email));
-          const querySnapshot = await getDocs(q);
-
-          // OBRIGATÓRIO: Usuário DEVE estar na coleção collaborators
-          if (querySnapshot.empty) {
-            console.log("Usuário não encontrado na coleção collaborators:", firebaseUser.email);
-            setUser(null);
-            signOut(auth);
-            setIsLoading(false);
-            return;
+          // Limpar listener anterior se existir
+          if (collaboratorUnsubscribeRef.current) {
+            collaboratorUnsubscribeRef.current();
+            collaboratorUnsubscribeRef.current = null;
           }
           
-          // Colaborador encontrado no Firestore
-          const collaboratorData = querySnapshot.docs[0].data();
+          // Buscar colaborador no Firestore usando email como ID
+          const collaboratorDocRef = doc(db, 'collaborators', firebaseUser.email);
+          
+          // Usar onSnapshot para monitorar mudanças no documento em tempo real
+          const unsubscribeCollaborator = onSnapshot(
+            collaboratorDocRef,
+            (collaboratorDoc) => {
+              // OBRIGATÓRIO: Usuário DEVE estar na coleção collaborators
+              if (!collaboratorDoc.exists()) {
+                console.log("Usuário não encontrado na coleção collaborators:", firebaseUser.email);
+                setUser(null);
+                signOut(auth);
+                setIsLoading(false);
+                return;
+              }
+              
+              // Colaborador encontrado no Firestore
+              const collaboratorData = collaboratorDoc.data();
 
-          // OBRIGATÓRIO: userType DEVE estar definido
-          if (!collaboratorData.userType) {
-            console.warn("Colaborador sem userType definido:", firebaseUser.email);
-            setUser(null);
-            signOut(auth);
-            setIsLoading(false);
-            return;
-          }
+              // OBRIGATÓRIO: userType DEVE estar definido
+              if (!collaboratorData.userType) {
+                console.warn("Colaborador sem userType definido:", firebaseUser.email);
+                setUser(null);
+                signOut(auth);
+                setIsLoading(false);
+                return;
+              }
 
-          // Criar perfil do usuário com os dados encontrados
-          const userProfile: User = {
-            uid: firebaseUser.uid,
-            name: firebaseUser.displayName || collaboratorData?.name || null,
-            email: firebaseUser.email,
-            role: collaboratorData?.cargo as UserRole || 'head',
-            userType: collaboratorData.userType as UserType,
-            permissions: collaboratorData?.permissions || {},
-          };
-          setUser(userProfile);
+              // Criar perfil do usuário com os dados encontrados
+              // Isso será atualizado automaticamente quando o documento mudar
+              const userProfile: User = {
+                uid: firebaseUser.uid,
+                name: firebaseUser.displayName || collaboratorData?.name || null,
+                email: firebaseUser.email,
+                userType: collaboratorData.userType as UserType,
+              };
+              setUser(userProfile);
+              setIsLoading(false);
+            },
+            (error) => {
+              console.error("Error listening to collaborator data: ", error);
+              setUser(null);
+              signOut(auth);
+              setIsLoading(false);
+            }
+          );
+          
+          // Armazenar unsubscribe para limpar quando necessário
+          collaboratorUnsubscribeRef.current = unsubscribeCollaborator;
           
         } catch (error: any) {
-          console.error("Error fetching collaborator data: ", error);
+          console.error("Error setting up collaborator listener: ", error);
           
-          // Se der erro ao buscar no Firestore, não permitir acesso
-          console.error("Erro ao buscar colaborador. Acesso negado.");
+          // Se der erro ao configurar o listener, não permitir acesso
+          console.error("Erro ao configurar listener do colaborador. Acesso negado.");
           setUser(null);
           signOut(auth);
+          setIsLoading(false);
         }
       } 
       // CASO 2: Usuário NÃO está autenticado
       else {
+        // Limpar listener do Firestore quando usuário fizer logout
+        if (collaboratorUnsubscribeRef.current) {
+          collaboratorUnsubscribeRef.current();
+          collaboratorUnsubscribeRef.current = null;
+        }
         setUser(null);
         if (firebaseUser) {
           signOut(auth);
         }
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     });
 
-    // Cleanup: remover listener quando componente desmontar
-    return () => unsubscribe();
+    // Cleanup: remover listeners quando componente desmontar
+    return () => {
+      unsubscribe();
+      if (collaboratorUnsubscribeRef.current) {
+        collaboratorUnsubscribeRef.current();
+        collaboratorUnsubscribeRef.current = null;
+      }
+    };
   }, []);
 
   // ============================================
@@ -219,7 +250,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = !!user; // true se user não for null
   const userType = user?.userType || 'head';
   const isAdmin = userType === 'admin';
+  // Modo de manutenção: bloqueia todos exceto admins (userType === 'admin')
+  // Também verifica se o email está na lista de adminEmails como fallback
   const isUnderMaintenance = !!maintenanceSettings?.isEnabled && 
+                            !isAdmin && 
                             !maintenanceSettings?.adminEmails.includes(user?.email || '');
 
   // ============================================
@@ -256,9 +290,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
     
-    // Verificar permissão usando a configuração de roles
-    // Permite override via permissions do banco se fornecido
-    return canAccessPage(currentUserType, pageKey, user.permissions);
+    // Verificar permissão usando a configuração de roles baseada apenas no userType
+    return canAccessPage(currentUserType, pageKey);
   }, [user]);
 
   // ============================================

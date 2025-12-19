@@ -102,10 +102,8 @@ export interface Collaborator {
     id: string;
     name: string;
     email: string;
-    cargo: string;
     area?: string;
     userType: UserType;
-    permissions: Record<string, boolean>;
     remunerationHistory?: RemunerationHistory[];
     positionHistory?: PositionHistory[];
 }

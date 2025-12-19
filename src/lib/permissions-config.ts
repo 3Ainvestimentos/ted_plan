@@ -101,30 +101,22 @@ export function hasDefaultPermission(userType: UserType, pageKey: string): boole
  * 
  * LÓGICA:
  * 1. Admin sempre tem acesso (exceto se explicitamente negado)
- * 2. Verifica permissão padrão do role
- * 3. Permite override via permissions do banco (se fornecido)
+ * 2. Verifica permissão padrão do role baseada no userType
  * 
  * @param userType - Tipo de usuário
  * @param pageKey - Chave da página
- * @param customPermissions - Permissões customizadas do banco (opcional)
  * @returns true se o usuário tem acesso
  */
 export function canAccessPage(
   userType: UserType,
-  pageKey: string,
-  customPermissions?: Record<string, boolean>
+  pageKey: string
 ): boolean {
   // Admin sempre tem acesso (exceto Settings que é verificado separadamente)
   if (userType === 'admin') {
     return true;
   }
 
-  // Se há permissões customizadas do banco, verificar primeiro
-  if (customPermissions && customPermissions[pageKey] !== undefined) {
-    return customPermissions[pageKey] === true;
-  }
-
-  // Caso contrário, usar permissão padrão do role
+  // Usar permissão padrão do role
   return hasDefaultPermission(userType, pageKey);
 }
 
@@ -132,9 +124,9 @@ export function canAccessPage(
  * Páginas que são exclusivas de admin
  * Mesmo com permissão customizada, apenas admins podem acessar
  */
-export const ADMIN_ONLY_PAGES = [
+export const ADMIN_ONLY_PAGES: readonly string[] = [
   PAGE_KEYS.SETTINGS,
-];
+] as const;
 
 /**
  * Verifica se uma página é exclusiva de admin

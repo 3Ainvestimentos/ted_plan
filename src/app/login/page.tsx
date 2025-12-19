@@ -20,18 +20,19 @@ import { useRouter } from "next/navigation";
 
 
 export default function LoginPage() {
-  const { login, isLoading, isAuthenticated } = useAuth();
+  const { login, isLoading, isAuthenticated, isUnderMaintenance } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Redirect if user is already authenticated
+  // Redirect if user is already authenticated AND not under maintenance
+  // Se estiver em manutenção, não redirecionar (deixar mostrar a página de login)
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+    if (!isLoading && isAuthenticated && !isUnderMaintenance) {
       router.replace('/');
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, isUnderMaintenance, router]);
 
   const handleLogin = async () => {
     setError('');
@@ -54,11 +55,42 @@ export default function LoginPage() {
 
   // The main layout and auth provider will show a spinner while loading
   // We also handle the case where the user is already logged in and we are just waiting for redirect.
-  if (isLoading || isAuthenticated) {
+  // Se estiver em manutenção, mostrar a página de login mesmo se autenticado
+  if (isLoading || (isAuthenticated && !isUnderMaintenance)) {
     return (
         <div className="flex items-center justify-center min-h-screen bg-background">
             <LoadingSpinner className="h-8 w-8" />
         </div>
+    );
+  }
+  
+  // Se estiver em modo de manutenção e autenticado, mostrar mensagem
+  if (isAuthenticated && isUnderMaintenance) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background p-4">
+        <Card className="w-full max-w-md shadow-2xl bg-card text-card-foreground rounded-xl">
+          <CardHeader className="flex items-center justify-center p-8 pb-4">
+            <Image 
+              src="https://firebasestorage.googleapis.com/v0/b/a-riva-hub.firebasestorage.app/o/Imagens%20institucionais%20(logos%20e%20etc)%2Flogo%20oficial%20preta.png?alt=media&token=ce88dc80-01cd-4295-b443-951e6c0210aa"
+              alt="3A Riva Investimentos Logo"
+              width={200}
+              height={80}
+              className="h-auto"
+              priority
+            />
+          </CardHeader>
+          <CardContent className="p-8 pt-4">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Plataforma em Manutenção</AlertTitle>
+              <AlertDescription>
+                A plataforma está temporariamente indisponível para manutenção. 
+                Apenas administradores podem acessar no momento.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 

@@ -10,8 +10,7 @@ interface TeamControlContextType {
   collaborators: Collaborator[];
   addCollaborator: (collaborator: Omit<Collaborator, 'id'>) => Promise<void>;
   updateCollaborator: (id: string, data: Partial<Collaborator>) => Promise<void>;
-  deleteCollaborator: (id: string, email: string) => Promise<void>;
-  updateCollaboratorPermissions: (id: string, navItem: string, isEnabled: boolean) => Promise<void>;
+  deleteCollaborator: (emailOrId: string) => Promise<void>;
   updateCollaboratorHistory: (id: string, historyType: 'remunerationHistory' | 'positionHistory', history: any[]) => Promise<void>;
   bulkUpdatePositions: (updates: {email: string, date: string, position: string}[]) => Promise<void>;
   addHistoryEntry: (id: string, historyType: 'remunerationHistory' | 'positionHistory', entry: any) => Promise<void>;
@@ -32,7 +31,7 @@ export const TeamControlProvider = ({ children }: { children: ReactNode }) => {
       const q = query(collaboratorsCollectionRef, orderBy('name'));
       const querySnapshot = await getDocs(q);
       const collaboratorsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
+        id: doc.id, // ID agora é o email
         ...doc.data()
       } as Collaborator));
       setCollaborators(collaboratorsData);
@@ -47,61 +46,38 @@ export const TeamControlProvider = ({ children }: { children: ReactNode }) => {
     fetchCollaborators();
   }, [fetchCollaborators]);
 
-  const addCollaborator = async (collaboratorData: Omit<Collaborator, 'id'| 'permissions'>) => {
+  const addCollaborator = async (collaboratorData: Omit<Collaborator, 'id'>) => {
+    if (!collaboratorData.email) {
+      throw new Error("Email é obrigatório para criar um colaborador.");
+    }
+    
     const newCollaborator = {
         ...collaboratorData,
-        userType: collaboratorData.userType || 'Usuário padrão',
-        permissions: {}, // Permissões vazias por padrão
+        userType: collaboratorData.userType || 'head',
         remunerationHistory: [],
         positionHistory: [],
     }
-    await addDoc(collaboratorsCollectionRef, newCollaborator);
+    
+    // Usar email como ID do documento
+    const collaboratorDocRef = doc(db, 'collaborators', collaboratorData.email);
+    await setDoc(collaboratorDocRef, newCollaborator);
     fetchCollaborators();
   };
   
   const updateCollaborator = async (id: string, data: Partial<Collaborator>) => {
     const collaboratorDocRef = doc(db, 'collaborators', id);
-    const collaborator = collaborators.find(c => c.id === id);
-    
-    // Se mudou de Usuário padrão para Administrador, limpar permissões
-    // Se mudou de Administrador para Usuário padrão, manter permissões vazias
-    if (collaborator && data.userType && data.userType !== collaborator.userType) {
-      if (data.userType === 'Administrador') {
-        data.permissions = {};
-      }
-    }
-    
     await updateDoc(collaboratorDocRef, data);
     fetchCollaborators();
   };
 
-  const deleteCollaborator = async (id: string, email: string) => {
+  const deleteCollaborator = async (emailOrId: string) => {
     // Check against hardcoded emails
-    if (['matheus@3ainvestimentos.com.br', 'thiago@3ainvestimentos.com.br'].includes(email)) {
+    if (['matheus@3ainvestimentos.com.br', 'thiago@3ainvestimentos.com.br'].includes(emailOrId)) {
         throw new Error("Não é possível remover usuários principais.");
     }
-    const collaboratorDocRef = doc(db, 'collaborators', id);
+    // Usar email como ID (agora id e email são a mesma coisa)
+    const collaboratorDocRef = doc(db, 'collaborators', emailOrId);
     await deleteDoc(collaboratorDocRef);
-    fetchCollaborators();
-  };
-  
-  const updateCollaboratorPermissions = async (id: string, navItem: string, isEnabled: boolean) => {
-    const collaborator = collaborators.find(c => c.id === id);
-    // Não permitir atualizar permissões de administradores
-    if (collaborator?.userType === 'Administrador') {
-      return;
-    }
-    
-    const key = navItem.startsWith('/') ? navItem.substring(1) : navItem;
-    const collaboratorDocRef = doc(db, 'collaborators', id);
-    const currentPermissions = collaborator?.permissions || {};
-    const updatedPermissions = {
-      ...currentPermissions,
-      [key]: isEnabled 
-    };
-    await updateDoc(collaboratorDocRef, { 
-        permissions: updatedPermissions
-    });
     fetchCollaborators();
   };
   
@@ -128,10 +104,11 @@ export const TeamControlProvider = ({ children }: { children: ReactNode }) => {
       updates.forEach(update => {
           const collaborator = collaboratorsByEmail.get(update.email);
           if (collaborator) {
+              // Usar email como ID (que agora é o mesmo que collaborator.id)
               const newEntry = { date: update.date, position: update.position };
               const history = collaborator.positionHistory || [];
               const updatedHistory = [...history, newEntry];
-              promises.push(updateCollaboratorHistory(collaborator.id, 'positionHistory', updatedHistory));
+              promises.push(updateCollaboratorHistory(update.email, 'positionHistory', updatedHistory));
           }
       });
       
@@ -141,7 +118,7 @@ export const TeamControlProvider = ({ children }: { children: ReactNode }) => {
 
 
   return (
-    <TeamControlContext.Provider value={{ collaborators, isLoading, addCollaborator, updateCollaborator, deleteCollaborator, updateCollaboratorPermissions, updateCollaboratorHistory, bulkUpdatePositions, addHistoryEntry }}>
+    <TeamControlContext.Provider value={{ collaborators, isLoading, addCollaborator, updateCollaborator, deleteCollaborator, updateCollaboratorHistory, bulkUpdatePositions, addHistoryEntry }}>
       {children}
     </TeamControlContext.Provider>
   );

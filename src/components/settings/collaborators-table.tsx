@@ -105,7 +105,7 @@ export function CollaboratorsTable({ onEdit }: CollaboratorsTableProps) {
                     <TableRow>
                     <TableHead className="w-[40%]">Nome</TableHead>
                     <TableHead className="w-[30%]">Email</TableHead>
-                    <TableHead>Cargo Atual</TableHead>
+                    <TableHead>Tipo</TableHead>
                     <TableHead className="text-right w-[50px]">Ações</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -125,7 +125,7 @@ export function CollaboratorsTable({ onEdit }: CollaboratorsTableProps) {
                             </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                        <TableCell className="text-muted-foreground">{user.cargo}</TableCell>
+                        <TableCell className="text-muted-foreground">{user.userType}</TableCell>
                         <TableCell className="text-right">
                             <DropdownMenu>
                             <DropdownMenuTrigger asChild>

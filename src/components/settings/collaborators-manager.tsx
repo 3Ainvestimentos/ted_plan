@@ -64,7 +64,7 @@ export function CollaboratorsManager() {
   const handleDeleteConfirm = async () => {
       if (!collaboratorToDelete) return;
       try {
-          await deleteCollaborator(collaboratorToDelete.id, collaboratorToDelete.email);
+          await deleteCollaborator(collaboratorToDelete.email || collaboratorToDelete.id);
           toast({
               title: "Usuário Removido",
               description: `${collaboratorToDelete.name} foi removido com sucesso.`,
@@ -120,10 +120,10 @@ export function CollaboratorsManager() {
             <Table>
             <TableHeader>
                 <TableRow>
-                <TableHead className="w-[40%]">Nome</TableHead>
-                <TableHead className="w-[30%]">Email</TableHead>
-                <TableHead>Cargo Atual</TableHead>
-                <TableHead>Tipo</TableHead>
+                <TableHead className="w-[30%]">Nome</TableHead>
+                <TableHead className="w-[25%]">Email</TableHead>
+                <TableHead className="w-[15%]">Tipo</TableHead>
+                <TableHead className="w-[20%]">Área</TableHead>
                 <TableHead className="text-right w-[50px]">Ações</TableHead>
                 </TableRow>
             </TableHeader>
@@ -147,8 +147,8 @@ export function CollaboratorsManager() {
                         </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                    <TableCell className="text-muted-foreground">{user.cargo}</TableCell>
                     <TableCell className="text-muted-foreground">{user.userType}</TableCell>
+                    <TableCell className="text-muted-foreground">{user.area || '-'}</TableCell>
                     <TableCell className="text-right">
                         <DropdownMenu>
                         <DropdownMenuTrigger asChild>

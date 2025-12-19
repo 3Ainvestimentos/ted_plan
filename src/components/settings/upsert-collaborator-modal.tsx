@@ -24,9 +24,8 @@ import {
 const collaboratorSchema = z.object({
   name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres."),
   email: z.string().email("Por favor, insira um e-mail válido."),
-  cargo: z.string().min(2, "O cargo é obrigatório."),
   area: z.string().optional(),
-  userType: z.enum(['Administrador', 'Usuário padrão']),
+  userType: z.enum(['admin', 'pmo', 'head']),
 });
 
 type CollaboratorFormData = z.infer<typeof collaboratorSchema>;
@@ -53,7 +52,7 @@ export function UpsertCollaboratorModal({ isOpen, onOpenChange, collaborator }: 
     } = useForm<CollaboratorFormData>({
         resolver: zodResolver(collaboratorSchema),
         defaultValues: {
-            userType: 'Usuário padrão',
+            userType: 'head',
         },
     });
 
@@ -62,17 +61,15 @@ export function UpsertCollaboratorModal({ isOpen, onOpenChange, collaborator }: 
             reset({
                 name: collaborator.name,
                 email: collaborator.email,
-                cargo: collaborator.cargo,
                 area: collaborator.area || '',
-                userType: collaborator.userType || 'Usuário padrão',
+                userType: collaborator.userType || 'head',
             });
         } else {
             reset({
                 name: '',
                 email: '',
-                cargo: '',
                 area: '',
-                userType: 'Usuário padrão' as UserType,
+                userType: 'head' as UserType,
             });
         }
     }, [collaborator, reset, isOpen]);
@@ -131,11 +128,6 @@ export function UpsertCollaboratorModal({ isOpen, onOpenChange, collaborator }: 
                         {errors.area && <p className="text-sm text-destructive">{errors.area.message}</p>}
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="cargo">Cargo</Label>
-                        <Input id="cargo" {...register("cargo")} />
-                        {errors.cargo && <p className="text-sm text-destructive">{errors.cargo.message}</p>}
-                    </div>
-                    <div className="space-y-2">
                         <Label htmlFor="userType">Tipo de Usuário</Label>
                         <Select
                             value={watch("userType")}
@@ -145,8 +137,9 @@ export function UpsertCollaboratorModal({ isOpen, onOpenChange, collaborator }: 
                                 <SelectValue placeholder="Selecione o tipo de usuário" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Administrador">Administrador</SelectItem>
-                                <SelectItem value="Usuário padrão">Usuário padrão</SelectItem>
+                                <SelectItem value="admin">Administrador</SelectItem>
+                                <SelectItem value="pmo">PMO</SelectItem>
+                                <SelectItem value="head">Head</SelectItem>
                             </SelectContent>
                         </Select>
                         {errors.userType && <p className="text-sm text-destructive">{errors.userType.message}</p>}

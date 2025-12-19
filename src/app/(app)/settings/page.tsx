@@ -4,24 +4,15 @@
 import { PageHeader } from '@/components/layout/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
-import { Users, HardHat, Shield } from 'lucide-react';
+import { Users, HardHat } from 'lucide-react';
 import { MaintenanceModeManager } from '@/components/settings/maintenance-mode-manager';
 import { CollaboratorsManager } from '@/components/settings/collaborators-manager';
-import { PermissionsTable } from '@/components/settings/permissions-table';
 
 
 function CollaboratorsTabContent() {
     return (
         <Card className="shadow-lg mt-6">
             <CollaboratorsManager />
-        </Card>
-    );
-}
-
-function PermissionsTabContent() {
-    return (
-        <Card className="shadow-lg mt-6">
-            <PermissionsTable />
         </Card>
     );
 }
@@ -43,13 +34,6 @@ const adminModules = [
         disabled: false,
     },
     {
-        name: "permissions",
-        title: "Permissões",
-        icon: Shield,
-        component: <PermissionsTabContent />,
-        disabled: false,
-    },
-    {
         name: "maintenance",
         title: "Configurações",
         icon: HardHat,
@@ -63,11 +47,11 @@ export default function SettingsHubPage() {
     <div className="space-y-6">
        <PageHeader
             title="Administração do Sistema"
-            description="Gerencie colaboradores, permissões de acesso e o estado da plataforma."
+            description="Gerencie colaboradores e o estado da plataforma."
         />
 
         <Tabs defaultValue="collaborators" className="w-full">
-            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto">
+            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 h-auto">
                  {adminModules.map((mod) => (
                     <TabsTrigger key={mod.name} value={mod.name} className="py-2 flex-col h-auto" disabled={mod.disabled}>
                         <span>{mod.title}</span>

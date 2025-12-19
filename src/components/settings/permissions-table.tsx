@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Collaborator } from '@/types';
 import { PERMISSIONABLE_PAGES } from '@/lib/constants';
+import { hasDefaultPermission } from '@/lib/permissions-config';
 import { Search } from 'lucide-react';
 
 const getInitials = (name: string) => {
@@ -42,8 +43,8 @@ export function PermissionsTable() {
     isEnabled: boolean
   ) => {
     // Administradores não podem ter permissões alteradas
-    const userType = collaborator.userType || 'Usuário padrão';
-    if (userType === 'Administrador') {
+    const userType = collaborator.userType || 'head';
+    if (userType === 'admin') {
       return;
     }
 
@@ -63,16 +64,27 @@ export function PermissionsTable() {
   };
 
   const getPermissionValue = (collaborator: Collaborator, permissionKey: string): boolean => {
-    const userType = collaborator.userType || 'Usuário padrão';
-    if (userType === 'Administrador') {
-      return true; // Administradores sempre têm acesso
+    const userType = collaborator.userType || 'head';
+    
+    // Administradores sempre têm acesso
+    if (userType === 'admin') {
+      return true;
     }
-    return collaborator.permissions?.[permissionKey] === true;
+    
+    // Se há permissão customizada explicitamente definida como TRUE no banco, usar ela
+    // Se for false ou undefined, usar a permissão padrão do role
+    // Isso garante que as permissões padrão sejam sempre respeitadas
+    if (collaborator.permissions && collaborator.permissions[permissionKey] === true) {
+      return true;
+    }
+    
+    // Caso contrário (false, undefined ou não existe), usar permissão padrão do role
+    return hasDefaultPermission(userType, permissionKey);
   };
 
   const isPermissionDisabled = (collaborator: Collaborator): boolean => {
-    const userType = collaborator.userType || 'Usuário padrão';
-    return userType === 'Administrador';
+    const userType = collaborator.userType || 'head';
+    return userType === 'admin';
   };
 
   return (
@@ -103,7 +115,7 @@ export function PermissionsTable() {
               <TableRow>
                 <TableHead className="min-w-[200px]">Colaborador</TableHead>
                 <TableHead className="min-w-[120px]">Área</TableHead>
-                <TableHead className="min-w-[120px]">Cargo</TableHead>
+                <TableHead className="min-w-[120px]">Tipo</TableHead>
                 {PERMISSIONABLE_PAGES.map((page) => (
                   <TableHead key={page.key} className="text-center min-w-[120px]">
                     {page.title}
@@ -141,7 +153,7 @@ export function PermissionsTable() {
                     <TableCell className="text-muted-foreground">
                       {collaborator.area || '-'}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{collaborator.cargo}</TableCell>
+                    <TableCell className="text-muted-foreground">{collaborator.userType}</TableCell>
                     {PERMISSIONABLE_PAGES.map((page) => (
                       <TableCell key={page.key} className="text-center">
                         <Switch

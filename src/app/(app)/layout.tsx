@@ -26,8 +26,12 @@ export default function AppLayout({
   const pathname = usePathname();
 
   useEffect(() => {
+    // Se não estiver autenticado ou estiver em manutenção, redirecionar para login
+    // Mas só se não estiver já na página de login (evitar loop)
     if (!isLoading && (!isAuthenticated || isUnderMaintenance)) {
-      router.replace('/login');
+      if (pathname !== '/login') {
+        router.replace('/login');
+      }
       return;
     }
 
