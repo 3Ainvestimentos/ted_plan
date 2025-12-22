@@ -491,75 +491,74 @@ export function TableGanttView({
   const initiativeStatuses: (string | InitiativeStatus)[] = ["all", "Pendente", "Em execução", "Concluído", "Suspenso"];
 
   return (
-    <Card className="shadow-sm">
-      <div className="w-full overflow-x-auto overflow-y-visible">
-        <Table className="min-w-full table-auto">
-          <TableHeader>
-            {/* Linha 1: Cabeçalhos principais */}
-            <TableRow className="bg-muted/50">
-              <TableHead className="w-16 sticky left-0 bg-muted/50 z-20">#</TableHead>
-              <TableHead className="w-64 sticky left-16 bg-muted/50 z-20">Título da Iniciativa</TableHead>
-              <TableHead className="w-32">Responsável</TableHead>
-              {onEditInitiative && <TableHead className="w-12"></TableHead>}
-              <TableHead className="w-36">Status</TableHead>
-              <TableHead className="w-20">Progresso</TableHead>
-              
-              {/* Cabeçalhos dos meses do Gantt */}
-              {monthHeaders.map((month, index) => (
-                <TableHead 
-                  key={index} 
-                  colSpan={month.colSpan} 
-                  className="text-center text-[10px] font-semibold whitespace-nowrap border-b"
-                  style={{ padding: '4px 1px' }}
-                >
-                  {month.name}
-                </TableHead>
-              ))}
-            </TableRow>
-            
-            {/* Linha 2: Filtros */}
-            <TableRow className="bg-muted/30">
-              <TableCell className="p-2 sticky left-0 bg-muted/30 z-10"></TableCell>
-              <TableCell className="p-2 sticky left-16 bg-muted/30 z-10">
-                <Input 
-                  placeholder="Buscar..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-8"
-                />
-              </TableCell>
-              <TableCell className="p-2"></TableCell>
-              <TableCell className="p-2">
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="h-8">
-                    <SelectValue placeholder="Filtrar por status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {initiativeStatuses.map(status => (
-                      <SelectItem key={status} value={status} className="capitalize">
-                        {status === "all" ? "Todos os Status" : status}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </TableCell>
-              <TableCell className="p-2">
-                <Select value={archiveFilter} onValueChange={setArchiveFilter}>
-                  <SelectTrigger className="h-8">
-                    <SelectValue placeholder="Filtrar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Ativas</SelectItem>
-                    <SelectItem value="archived">Arquivadas</SelectItem>
-                    <SelectItem value="all">Todas</SelectItem>
-                  </SelectContent>
-                </Select>
-              </TableCell>
-              
-              {/* Espaço para o Gantt na linha de filtros */}
-              <TableCell colSpan={dateHeaders.length} className="p-2"></TableCell>
-            </TableRow>
-          </TableHeader>
+    <div className="space-y-4">
+      {/* Seção de Filtros - acima da tabela */}
+      <Card className="p-4 shadow-sm">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex-1 min-w-[200px]">
+            <Input 
+              placeholder="Buscar..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="h-8"
+            />
+          </div>
+          <div className="w-[180px]">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-8">
+                <SelectValue placeholder="Filtrar por status" />
+              </SelectTrigger>
+              <SelectContent>
+                {initiativeStatuses.map(status => (
+                  <SelectItem key={status} value={status} className="capitalize">
+                    {status === "all" ? "Todos os Status" : status}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="w-[150px]">
+            <Select value={archiveFilter} onValueChange={setArchiveFilter}>
+              <SelectTrigger className="h-8">
+                <SelectValue placeholder="Filtrar" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Ativas</SelectItem>
+                <SelectItem value="archived">Arquivadas</SelectItem>
+                <SelectItem value="all">Todas</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </Card>
+
+      {/* Tabela com Gantt */}
+      <Card className="shadow-sm">
+        <div className="w-full overflow-x-auto overflow-y-visible">
+          <Table className="min-w-full table-auto">
+            <TableHeader>
+              {/* Linha 1: Cabeçalhos principais */}
+              <TableRow className="bg-muted/50">
+                <TableHead className="w-16 sticky left-0 bg-muted/50 z-20">#</TableHead>
+                <TableHead className="w-64 sticky left-16 bg-muted/50 z-20">Título da Iniciativa</TableHead>
+                <TableHead className="w-32">Responsável</TableHead>
+                {onEditInitiative && <TableHead className="w-12"></TableHead>}
+                <TableHead className="w-36">Status</TableHead>
+                <TableHead className="w-20">Progresso</TableHead>
+                
+                {/* Cabeçalhos dos meses do Gantt */}
+                {monthHeaders.map((month, index) => (
+                  <TableHead 
+                    key={index} 
+                    colSpan={month.colSpan} 
+                    className="text-center text-[10px] font-semibold whitespace-nowrap border-b"
+                    style={{ padding: '4px 1px' }}
+                  >
+                    {month.name}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
           
           <TableBody>
             {filteredInitiatives.length > 0 ? (
@@ -840,6 +839,7 @@ export function TableGanttView({
         </Table>
       </div>
     </Card>
+    </div>
   );
 }
 
