@@ -281,20 +281,46 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
               <Controller
                   name="status"
                   control={control}
-                  render={({ field }) => (
-                       <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!canEditStatus}>
-                          <SelectTrigger>
-                              <SelectValue placeholder="Selecione o status inicial" />
-                          </SelectTrigger>
-                          <SelectContent>
-                              <SelectItem value="Pendente">Pendente</SelectItem>
-                              <SelectItem value="Em execução">Em execução</SelectItem>
-                              <SelectItem value="Concluído">Concluído</SelectItem>
-                              <SelectItem value="Suspenso">Suspenso</SelectItem>
-                          </SelectContent>
+                  render={({ field }) => {
+                    // Verificar se todas as fases estão concluídas
+                    const allPhasesCompleted = watchPhases && watchPhases.length > 0
+                      ? watchPhases.every((phase: any) => phase.status === 'Concluído')
+                      : false;
+                    
+                    // Status disponíveis - remover "Concluído" se nem todas fases estão concluídas
+                    let availableStatuses = ['Pendente', 'Em execução', 'Concluído', 'Suspenso'] as const;
+                    if (!allPhasesCompleted && watchPhases && watchPhases.length > 0) {
+                      availableStatuses = availableStatuses.filter(s => s !== 'Concluído') as any;
+                    }
+                    
+                    return (
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!canEditStatus}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o status inicial" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableStatuses.map(status => (
+                            <SelectItem key={status} value={status}>{status}</SelectItem>
+                          ))}
+                        </SelectContent>
                       </Select>
-                  )}
+                    );
+                  }}
               />
+              {(() => {
+                const allPhasesCompleted = watchPhases && watchPhases.length > 0
+                  ? watchPhases.every((phase: any) => phase.status === 'Concluído')
+                  : false;
+                
+                if (!allPhasesCompleted && watchPhases && watchPhases.length > 0) {
+                  return (
+                    <p className="text-sm text-destructive">
+                      Não é possível concluir: todas as fases devem estar concluídas
+                    </p>
+                  );
+                }
+                return null;
+              })()}
                {errors.status && <p className="text-sm text-destructive">{errors.status.message}</p>}
           </div>
           <div className="space-y-2">
@@ -425,9 +451,22 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                         const phaseDeadline = watchPhases?.[index]?.deadline;
                         const phaseStatus = field.value;
                         const phaseIsOverdue = phaseDeadline ? isOverdue(phaseDeadline, phaseStatus) : false;
-                        const availableStatuses = phaseIsOverdue 
+                        
+                        // Verificar se todos os subitens estão concluídos
+                        const phaseSubItems = watchPhases?.[index]?.subItems || [];
+                        const allSubItemsCompleted = phaseSubItems.length > 0 
+                          ? phaseSubItems.every((si: any) => si.status === 'Concluído')
+                          : true; // Se não tem subitens, pode concluir
+                        
+                        // Status disponíveis baseado em atraso
+                        let availableStatuses = phaseIsOverdue 
                           ? getAvailableStatuses(true)
                           : ['Pendente', 'Em execução', 'Concluído', 'Suspenso', 'A Fazer', 'Em Dia', 'Em Risco', 'Atrasado'] as const;
+                        
+                        // Se não está atrasado mas tenta concluir sem todos subitens concluídos, remover "Concluído"
+                        if (!phaseIsOverdue && !allSubItemsCompleted && phaseSubItems.length > 0) {
+                          availableStatuses = availableStatuses.filter(s => s !== 'Concluído') as any;
+                        }
                         
                         return (
                           <Select onValueChange={field.onChange} value={field.value} disabled={!canEditStatus}>
@@ -447,11 +486,28 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       const phaseDeadline = watchPhases?.[index]?.deadline;
                       const phaseStatus = watchPhases?.[index]?.status;
                       const phaseIsOverdue = phaseDeadline ? isOverdue(phaseDeadline, phaseStatus) : false;
-                      return phaseIsOverdue ? (
-                        <p className="text-xs text-muted-foreground">
-                          Fase em atraso: apenas Atrasado ou Concluído disponíveis
-                        </p>
-                      ) : null;
+                      const phaseSubItems = watchPhases?.[index]?.subItems || [];
+                      const allSubItemsCompleted = phaseSubItems.length > 0 
+                        ? phaseSubItems.every((si: any) => si.status === 'Concluído')
+                        : true;
+                      
+                      if (phaseIsOverdue) {
+                        return (
+                          <p className="text-xs text-muted-foreground">
+                            Fase em atraso: apenas Atrasado ou Concluído disponíveis
+                          </p>
+                        );
+                      }
+                      
+                      if (!allSubItemsCompleted && phaseSubItems.length > 0) {
+                        return (
+                          <p className="text-xs text-destructive">
+                            Não é possível concluir: todos os subitens devem estar concluídos
+                          </p>
+                        );
+                      }
+                      
+                      return null;
                     })()}
                   </div>
                   
