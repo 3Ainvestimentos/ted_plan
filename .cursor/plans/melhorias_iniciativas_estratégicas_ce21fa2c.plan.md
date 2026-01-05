@@ -15,29 +15,29 @@ todos:
       - default-area-filter
   - id: remove-checklist-card
     content: Remover card 'Com Checklist' do dashboard de iniciativas
-    status: pending
+    status: completed
   - id: add-priority-visualization
     content: Adicionar coluna de prioridade na visualização Tabela/Gantt e garantir visibilidade no Kanban
-    status: pending
+    status: completed
   - id: overdue-cards
     content: Implementar detecção de atraso e mudança de cor para vermelho claro nos cards quando deadline passou
-    status: pending
+    status: completed
   - id: limited-status-selector
     content: Limitar seletor de status para apenas Atrasado/Concluído quando item está em atraso
-    status: pending
+    status: completed
     dependencies:
       - overdue-cards
   - id: auto-completion-rules
     content: "Implementar regras de conclusão automática: fase conclui quando todos subitens concluídos, iniciativa conclui quando todas fases concluídas"
-    status: pending
+    status: completed
     dependencies:
       - required-fields
   - id: deadline-edit-permission
     content: "Restringir edição de prazo: Head não pode alterar deadline, apenas PMO pode"
-    status: pending
+    status: completed
   - id: gantt-multi-layer
     content: "Implementar Gantt multi-camadas: exibir Iniciativas, Fases e Subitens como linhas expandíveis com barras no timeline"
-    status: pending
+    status: completed
     dependencies:
       - required-fields
   - id: hierarchical-kanban
@@ -640,25 +640,7 @@ Implementar melhorias na gestão de Iniciativas Estratégicas com foco em difere
 
 ## Resumo do Cronograma
 
-| Fase | Complexidade | Tempo Estimado | Prioridade | Dependências |
-
-|------|--------------|----------------|------------|--------------|
-
-| 1. Fundação e Validações | Média | 2-3h | Crítica | - |
-
-| 2. Permissões e Filtros | Média | 2-3h | Alta | Fase 1 |
-
-| 3. Melhorias Simples UI | Baixa | 1h | Média | - |
-
-| 4. Lógica de Atraso | Média | 2-3h | Alta | Fase 1 |
-
-| 5. Conclusão Automática | Alta | 3-4h | Alta | Fase 1 |
-
-| 6. Permissões de Edição | Baixa | 1-2h | Média | Fase 2 |
-
-| 7. Gantt Multi-Camadas | Alta | 4-5h | Média | Fase 1 |
-
-| 8. Kanban Hierárquico | Muito Alta | 5-6h | Baixa | Fase 1 |**Tempo Total Estimado:** 20-27 horas
+| Fase | Complexidade | Tempo Estimado | Prioridade | Dependências ||------|--------------|----------------|------------|--------------|| 1. Fundação e Validações | Média | 2-3h | Crítica | - || 2. Permissões e Filtros | Média | 2-3h | Alta | Fase 1 || 3. Melhorias Simples UI | Baixa | 1h | Média | - || 4. Lógica de Atraso | Média | 2-3h | Alta | Fase 1 || 5. Conclusão Automática | Alta | 3-4h | Alta | Fase 1 || 6. Permissões de Edição | Baixa | 1-2h | Média | Fase 2 || 7. Gantt Multi-Camadas | Alta | 4-5h | Média | Fase 1 || 8. Kanban Hierárquico | Muito Alta | 5-6h | Baixa | Fase 1 |**Tempo Total Estimado:** 20-27 horas
 
 ## Ordem de Execução Recomendada
 
@@ -705,4 +687,3 @@ Implementar melhorias na gestão de Iniciativas Estratégicas com foco em difere
 - Usar `useMemo` para cálculos pesados
 - Validar dados antes de salvar no Firestore
 - **Todas as funções devem ter docstrings JSDoc completas**
-- **Código deve ser modular e bem organizado para facilitar manutenção futura**
