@@ -85,7 +85,7 @@ export default function AppLayout({
                           <UserNav />
                         </SidebarFooter>
                       </Sidebar>
-                      <div className="flex flex-col flex-1 overflow-hidden">
+                      <div className="flex flex-col flex-1 overflow-hidden text-xs">
                         <header className="flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-lg sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
                           <SidebarTrigger className="sm:hidden" />
                         </header>

@@ -29,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import * as ProgressPrimitive from "@radix-ui/react-progress";
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -105,6 +106,65 @@ const STATUS_COLORS: Record<InitiativeStatus, string> = {
   'Em Risco': 'bg-orange-500',
   'Atrasado': 'bg-red-500',
 };
+
+/**
+ * Cores das barras do Gantt por hierarquia (independente do status)
+ * - Iniciativa: verde escuro
+ * - Fase: verde médio
+ * - Subitem: verde claro
+ */
+const HIERARCHY_COLORS = {
+  initiative: 'bg-green-900',      // Verde escuro
+  phase: 'bg-green-600',           // Verde médio
+  subitem: 'bg-green-300'          // Verde claro
+};
+
+/**
+ * Cores da barra de progresso por status
+ * - Concluído: verde
+ * - Em execução: azul
+ * - Pendente: amarelo
+ * - Suspenso: cinza
+ */
+const PROGRESS_COLORS: Record<InitiativeStatus, string> = {
+  'Concluído': 'bg-green-500',
+  'Em execução': 'bg-blue-500',
+  'Pendente': 'bg-yellow-500',
+  'Suspenso': 'bg-gray-400',
+  'A Fazer': 'bg-slate-400',
+  'Em Dia': 'bg-emerald-500',
+  'Em Risco': 'bg-orange-500',
+  'Atrasado': 'bg-red-500',
+};
+
+/**
+ * Componente Progress com cor customizada no indicador
+ * 
+ * @param value - Valor do progresso (0-100)
+ * @param className - Classes CSS adicionais
+ * @param indicatorColor - Cor do indicador (classe Tailwind)
+ */
+const ProgressWithColor = React.forwardRef<
+  React.ElementRef<typeof ProgressPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root> & {
+    indicatorColor?: string;
+  }
+>(({ className, value, indicatorColor = 'bg-primary', ...props }, ref) => (
+  <ProgressPrimitive.Root
+    ref={ref}
+    className={cn(
+      "relative h-4 w-full overflow-hidden rounded-full bg-secondary",
+      className
+    )}
+    {...props}
+  >
+    <ProgressPrimitive.Indicator
+      className={cn("h-full w-full flex-1 transition-all", indicatorColor)}
+      style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
+    />
+  </ProgressPrimitive.Root>
+));
+ProgressWithColor.displayName = "ProgressWithColor";
 
 // ============================================
 // SEÇÃO 4: FUNÇÕES HELPER
@@ -854,7 +914,11 @@ export function TableGanttView({
                       {/* Coluna Progresso */}
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Progress value={initiative.progress} className="h-2 w-12" />
+                          <ProgressWithColor 
+                            value={initiative.progress} 
+                            className="h-2 w-12" 
+                            indicatorColor={PROGRESS_COLORS[initiative.status]}
+                          />
                           <span className="text-xs text-muted-foreground">
                             {initiative.progress}%
                           </span>
@@ -901,9 +965,8 @@ export function TableGanttView({
                             barEndIndex = barStartIndex;
                           }
                           
-                          barColor = ganttTask.isOverdue 
-                            ? 'bg-red-500' 
-                            : STATUS_COLORS[ganttTask.status] || 'bg-blue-500';
+                          // Usar cor por hierarquia (verde escuro para iniciativas)
+                          barColor = HIERARCHY_COLORS.initiative;
                         }
                         
                         return dateHeaders.map((day, dayIndex) => {
@@ -917,8 +980,8 @@ export function TableGanttView({
                             <TableCell 
                               key={dayIndex} 
                               className={cn(
-                                "relative p-0 border-r border-border/50 overflow-visible",
-                                isWeekend && "bg-muted/30",
+                                "relative p-0 overflow-visible",
+                                isWeekend && "bg-muted/30 border-r border-border/50",
                                 isTodayMarker && "bg-red-100/50 dark:bg-red-900/20"
                               )}
                               style={{ 
@@ -931,7 +994,7 @@ export function TableGanttView({
                             >
                               {/* Marcador de hoje */}
                               {isTodayMarker && (
-                                <div className="absolute inset-y-0 left-0 w-0.5 bg-red-500 z-20" />
+                                <div className="absolute inset-y-0 left-0 w-px bg-red-500 z-20" />
                               )}
                               
                               {/* Barra do Gantt - renderiza apenas na primeira célula do intervalo */}
@@ -942,7 +1005,7 @@ export function TableGanttView({
                                 return (
                                   <div 
                                     className={cn(
-                                      "absolute top-1/2 -translate-y-1/2 h-6 rounded-md opacity-90 z-10 shadow-sm border border-white/20",
+                                      "absolute top-1/2 -translate-y-1/2 h-6 opacity-90 z-10 shadow-sm border border-white/20",
                                       barColor
                                     )}
                                     style={{
@@ -1112,7 +1175,11 @@ export function TableGanttView({
                             {/* Coluna Progresso */}
                             <TableCell className="bg-secondary/50">
                               <div className="flex items-center gap-2">
-                                <Progress value={phaseGanttTask?.progress || 0} className="h-2 w-12" />
+                                <ProgressWithColor 
+                                  value={phaseGanttTask?.progress || 0} 
+                                  className="h-2 w-12" 
+                                  indicatorColor={PROGRESS_COLORS[phase.status]}
+                                />
                                 <span className="text-xs text-muted-foreground">
                                   {phaseGanttTask?.progress || 0}%
                                 </span>
@@ -1122,22 +1189,25 @@ export function TableGanttView({
                             {/* Colunas do Gantt para Fase */}
                             {(() => {
                               if (!phaseGanttTask) {
-                                return dateHeaders.map((day, dayIndex) => (
-                                  <TableCell 
-                                    key={dayIndex} 
-                                    className={cn(
-                                      "relative p-0 border-r border-border/50",
-                                      (day.getDay() === 0 || day.getDay() === 6) && "bg-muted/30",
-                                      isToday(day) && "bg-red-100/50 dark:bg-red-900/20"
-                                    )}
-                                    style={{ 
-                                      width: `${cellWidth}px`, 
-                                      minWidth: `${cellWidth}px`, 
-                                      maxWidth: `${cellWidth}px`,
-                                      padding: 0,
-                                    }}
-                                  />
-                                ));
+                                return dateHeaders.map((day, dayIndex) => {
+                                  const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                                  return (
+                                    <TableCell 
+                                      key={dayIndex} 
+                                      className={cn(
+                                        "relative p-0",
+                                        isWeekend && "bg-muted/30 border-r border-border/50",
+                                        isToday(day) && "bg-red-100/50 dark:bg-red-900/20"
+                                      )}
+                                      style={{ 
+                                        width: `${cellWidth}px`, 
+                                        minWidth: `${cellWidth}px`, 
+                                        maxWidth: `${cellWidth}px`,
+                                        padding: 0,
+                                      }}
+                                    />
+                                  );
+                                });
                               }
                               
                               const taskStart = startOfDay(phaseGanttTask.startDate);
@@ -1166,9 +1236,8 @@ export function TableGanttView({
                                 barEndIndex = barStartIndex;
                               }
                               
-                              const barColor = phaseGanttTask.isOverdue 
-                                ? 'bg-red-500' 
-                                : STATUS_COLORS[phaseGanttTask.status] || 'bg-blue-500';
+                              // Usar cor por hierarquia (verde médio para fases)
+                              const barColor = HIERARCHY_COLORS.phase;
                               
                               return dateHeaders.map((day, dayIndex) => {
                                 const isWeekend = day.getDay() === 0 || day.getDay() === 6;
@@ -1180,8 +1249,8 @@ export function TableGanttView({
                                   <TableCell 
                                     key={dayIndex} 
                                     className={cn(
-                                      "relative p-0 border-r border-border/50 overflow-visible bg-secondary/50",
-                                      isWeekend && "bg-muted/30",
+                                      "relative p-0 overflow-visible bg-secondary/50",
+                                      isWeekend && "bg-muted/30 border-r border-border/50",
                                       isTodayMarker && "bg-red-100/50 dark:bg-red-900/20"
                                     )}
                                     style={{ 
@@ -1193,7 +1262,7 @@ export function TableGanttView({
                                     }}
                                   >
                                     {isTodayMarker && (
-                                      <div className="absolute inset-y-0 left-0 w-0.5 bg-red-500 z-20" />
+                                      <div className="absolute inset-y-0 left-0 w-px bg-red-500 z-20" />
                                     )}
                                     
                                     {isBarStart && phaseGanttTask && barStartIndex >= 0 && barEndIndex >= barStartIndex && (() => {
@@ -1203,7 +1272,7 @@ export function TableGanttView({
                                       return (
                                         <div 
                                           className={cn(
-                                            "absolute top-1/2 -translate-y-1/2 h-5 rounded-md opacity-90 z-10 shadow-sm border border-white/20",
+                                            "absolute top-1/2 -translate-y-1/2 h-5 opacity-90 z-10 shadow-sm border border-white/20",
                                             barColor
                                           )}
                                           style={{
@@ -1224,7 +1293,7 @@ export function TableGanttView({
                           </TableRow>
                           
                           {/* Subitens expandidos */}
-                          {isPhaseExpanded && hasSubItems && phase.subItems.map(subItem => {
+                          {isPhaseExpanded && hasSubItems && phase.subItems && phase.subItems.map(subItem => {
                             const subItemGanttTask = transformSubItemToGanttTask(subItem, phase, initiative);
                             const subItemIsOverdue = subItemGanttTask ? subItemGanttTask.isOverdue : false;
                             const SubItemStatusIcon = STATUS_ICONS[subItem.status];
@@ -1245,7 +1314,7 @@ export function TableGanttView({
                                           onSubItemStatusChange(initiative.id, phase.id, subItem.id, newStatus);
                                         } else if (onUpdateSubItem) {
                                           // Fallback: usar updateSubItem se onSubItemStatusChange não estiver disponível
-                                          onUpdateSubItem(initiative.id, phase.id, subItem.id, checked);
+                                          onUpdateSubItem(initiative.id, phase.id, subItem.id, !!checked);
                                         }
                                       }}
                                     />
@@ -1338,7 +1407,11 @@ export function TableGanttView({
                                 {/* Coluna Progresso */}
                                 <TableCell className="bg-secondary">
                                   <div className="flex items-center gap-2">
-                                    <Progress value={subItemGanttTask?.progress || 0} className="h-2 w-12" />
+                                    <ProgressWithColor 
+                                      value={subItemGanttTask?.progress || 0} 
+                                      className="h-2 w-12" 
+                                      indicatorColor={PROGRESS_COLORS[subItem.status]}
+                                    />
                                     <span className="text-xs text-muted-foreground">
                                       {subItemGanttTask?.progress || 0}%
                                     </span>
@@ -1348,22 +1421,25 @@ export function TableGanttView({
                                 {/* Colunas do Gantt para Subitem */}
                                 {(() => {
                                   if (!subItemGanttTask) {
-                                    return dateHeaders.map((day, dayIndex) => (
-                                      <TableCell 
-                                        key={dayIndex} 
-                                        className={cn(
-                                          "relative p-0 border-r border-border/50 bg-secondary",
-                                          (day.getDay() === 0 || day.getDay() === 6) && "bg-muted/30",
-                                          isToday(day) && "bg-red-100/50 dark:bg-red-900/20"
-                                        )}
-                                        style={{ 
-                                          width: `${cellWidth}px`, 
-                                          minWidth: `${cellWidth}px`, 
-                                          maxWidth: `${cellWidth}px`,
-                                          padding: 0,
-                                        }}
-                                      />
-                                    ));
+                                    return dateHeaders.map((day, dayIndex) => {
+                                      const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                                      return (
+                                        <TableCell 
+                                          key={dayIndex} 
+                                          className={cn(
+                                            "relative p-0 bg-secondary",
+                                            isWeekend && "bg-muted/30 border-r border-border/50",
+                                            isToday(day) && "bg-red-100/50 dark:bg-red-900/20"
+                                          )}
+                                          style={{ 
+                                            width: `${cellWidth}px`, 
+                                            minWidth: `${cellWidth}px`, 
+                                            maxWidth: `${cellWidth}px`,
+                                            padding: 0,
+                                          }}
+                                        />
+                                      );
+                                    });
                                   }
                                   
                                   const taskStart = startOfDay(subItemGanttTask.startDate);
@@ -1392,9 +1468,8 @@ export function TableGanttView({
                                     barEndIndex = barStartIndex;
                                   }
                                   
-                                  const barColor = subItemGanttTask.isOverdue 
-                                    ? 'bg-red-500' 
-                                    : STATUS_COLORS[subItemGanttTask.status] || 'bg-blue-500';
+                                  // Usar cor por hierarquia (verde claro para subitens)
+                                  const barColor = HIERARCHY_COLORS.subitem;
                                   
                                   return dateHeaders.map((day, dayIndex) => {
                                     const isWeekend = day.getDay() === 0 || day.getDay() === 6;
@@ -1406,8 +1481,8 @@ export function TableGanttView({
                                       <TableCell 
                                         key={dayIndex} 
                                         className={cn(
-                                          "relative p-0 border-r border-border/50 overflow-visible bg-secondary",
-                                          isWeekend && "bg-muted/30",
+                                          "relative p-0 overflow-visible bg-secondary",
+                                          isWeekend && "bg-muted/30 border-r border-border/50",
                                           isTodayMarker && "bg-red-100/50 dark:bg-red-900/20"
                                         )}
                                         style={{ 
@@ -1419,7 +1494,7 @@ export function TableGanttView({
                                         }}
                                       >
                                         {isTodayMarker && (
-                                          <div className="absolute inset-y-0 left-0 w-0.5 bg-red-500 z-20" />
+                                          <div className="absolute inset-y-0 left-0 w-px bg-red-500 z-20" />
                                         )}
                                         
                                         {isBarStart && subItemGanttTask && barStartIndex >= 0 && barEndIndex >= barStartIndex && (() => {
@@ -1429,7 +1504,7 @@ export function TableGanttView({
                                           return (
                                             <div 
                                               className={cn(
-                                                "absolute top-1/2 -translate-y-1/2 h-4 rounded-md opacity-90 z-10 shadow-sm border border-white/20",
+                                                "absolute top-1/2 -translate-y-1/2 h-4 opacity-90 z-10 shadow-sm border border-white/20",
                                                 barColor
                                               )}
                                               style={{
