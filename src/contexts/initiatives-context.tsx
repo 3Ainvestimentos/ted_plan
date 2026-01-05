@@ -250,6 +250,7 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
     
     const newInitiative = {
         title: initiativeData.title,
+        owner: initiativeData.owner,
         description: initiativeData.description,
         status: initiativeData.status,
         priority: initiativeData.priority,
@@ -330,6 +331,7 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
     try {
       const updatedData = {
           title: data.title,
+          owner: data.owner,
           description: data.description,
           status: data.status,
           priority: data.priority,

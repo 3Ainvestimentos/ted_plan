@@ -23,7 +23,9 @@ const subItemSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(3, "O título do subitem deve ter pelo menos 3 caracteres."),
   completed: z.boolean().optional().default(false),
-  deadline: z.date().optional().nullable(),
+  deadline: z.date({
+    required_error: "A data de prazo é obrigatória.",
+  }),
   status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso', 'A Fazer', 'Em Dia', 'Em Risco', 'Atrasado']).optional().default('Pendente'),
   responsible: z.string().min(1, "O responsável é obrigatório."),
   priority: z.enum(['Baixa', 'Média', 'Alta']).optional().default('Baixa'),
@@ -33,31 +35,25 @@ const subItemSchema = z.object({
 const phaseSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(3, "O título da fase deve ter pelo menos 3 caracteres."),
-  deadline: z.date().optional().nullable(),
+  deadline: z.date({
+    required_error: "A data de prazo é obrigatória.",
+  }),
   status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso', 'A Fazer', 'Em Dia', 'Em Risco', 'Atrasado']),
   areaId: z.string().min(1, "A área é obrigatória."), // Será sempre igual à área do projeto
   priority: z.enum(['Baixa', 'Média', 'Alta']),
   description: z.string().min(1, "A observação é obrigatória."),
-  responsible: z.string().optional().nullable(),
+  responsible: z.string().min(1, "O responsável é obrigatório."),
   subItems: z.array(subItemSchema).optional(),
-}).refine((data) => {
-  // Se não tem subitens, responsável é obrigatório
-  if (!data.subItems || data.subItems.length === 0) {
-    return !!data.responsible && data.responsible.trim().length > 0;
-  }
-  return true;
-}, {
-  message: "O responsável é obrigatório quando a fase não tem subitens.",
-  path: ["responsible"],
 });
 
 const initiativeSchema = z.object({
   title: z.string().min(5, "O título deve ter pelo menos 5 caracteres."),
+  owner: z.string().min(1, "O responsável é obrigatório."),
   description: z.string().min(10, "A descrição deve ter pelo menos 10 caracteres."),
   status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso']),
   deadline: z.date({
     required_error: "A data de prazo é obrigatória.",
-  }).optional().nullable(),
+  }),
   priority: z.enum(['Baixa', 'Média', 'Alta']),
   areaId: z.string().min(1, "A área é obrigatória."),
   phases: z.array(phaseSchema).min(1, "É necessário pelo menos uma fase."),
@@ -91,6 +87,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
       status: 'Pendente',
       priority: 'Baixa',
       areaId: '',
+      owner: '',
       phases: [],
     },
     mode: 'onChange' // Para validação em tempo real
@@ -138,7 +135,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
     const newSubItem = {
       title: "",
       completed: false,
-      deadline: null,
+      deadline: undefined as any, // Obrigatório, usuário deve preencher antes de salvar
       status: 'Pendente' as const,
       responsible: "",
       priority: 'Baixa' as const,
@@ -182,7 +179,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-              <Label>Prazo (Conclusão Alvo)</Label>
+              <Label>Prazo (Conclusão Alvo) <span className="text-destructive">*</span></Label>
               <Controller
                   name="deadline"
                   control={control}
@@ -191,7 +188,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       <PopoverTrigger asChild>
                       <Button
                           variant={"outline"}
-                          className="w-full justify-start text-left font-normal"
+                          className={cn("w-full justify-start text-left font-normal", errors.deadline && "border-destructive")}
                           disabled={isLimitedMode}
                       >
                           <CalendarIcon className="mr-2 h-4 w-4" />
@@ -233,6 +230,18 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
               />
               {errors.areaId && <p className="text-sm text-destructive">{errors.areaId.message}</p>}
           </div>
+      </div>
+
+      <div className="space-y-2">
+          <Label htmlFor="owner">Responsável <span className="text-destructive">*</span></Label>
+          <Input 
+              id="owner" 
+              {...register("owner")} 
+              placeholder="Ex: João da Silva" 
+              className={cn(errors.owner && "border-destructive")}
+              disabled={isLimitedMode}
+          />
+          {errors.owner && <p className="text-sm text-destructive">{errors.owner.message}</p>}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -296,12 +305,12 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                 const currentAreaId = getValues('areaId') || '';
                 appendPhase({ 
                   title: "", 
-                  deadline: null,
+                  deadline: undefined as any, // Obrigatório, usuário deve preencher antes de salvar
                   status: 'Pendente',
                   areaId: currentAreaId, // Usar a área do projeto
                   priority: 'Baixa',
                   description: '',
-                  responsible: null,
+                  responsible: "", // Obrigatório
                   subItems: [] as any[]
                 });
               }}
@@ -343,14 +352,18 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                   </div>
                   
                   <div className="space-y-2">
-                    <Label>Prazo</Label>
+                    <Label>Prazo <span className="text-destructive">*</span></Label>
                     <Controller
                       name={`phases.${index}.deadline`}
                       control={control}
                       render={({ field }) => (
                         <Popover>
                           <PopoverTrigger asChild>
-                            <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={isLimitedMode}>
+                            <Button 
+                              variant="outline" 
+                              className={cn("w-full justify-start text-left font-normal", errors.phases?.[index]?.deadline && "border-destructive")} 
+                              disabled={isLimitedMode}
+                            >
                               <CalendarIcon className="mr-2 h-4 w-4" />
                               {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
                             </Button>
@@ -366,6 +379,9 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                         </Popover>
                       )}
                     />
+                    {errors.phases?.[index]?.deadline && (
+                      <p className="text-sm text-destructive">{errors.phases[index]?.deadline?.message}</p>
+                    )}
                   </div>
                   
                   <div className="space-y-2">
@@ -443,12 +459,13 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                   
                   <div className="space-y-2">
                     <Label>
-                      Responsável {(!watchPhases?.[index]?.subItems || watchPhases[index].subItems.length === 0) && <span className="text-destructive">*</span>}
+                      Responsável <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       {...register(`phases.${index}.responsible`)}
                       placeholder="Ex: Maria Silva"
                       className={cn(errors.phases?.[index]?.responsible && "border-destructive")}
+                      disabled={isLimitedMode}
                     />
                     {errors.phases?.[index]?.responsible && (
                       <p className="text-sm text-destructive">{errors.phases[index]?.responsible?.message}</p>
@@ -530,14 +547,18 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                             </div>
                             
                             <div className="space-y-1">
-                              <Label className="text-xs">Prazo</Label>
+                              <Label className="text-xs">Prazo <span className="text-destructive">*</span></Label>
                               <Controller
                                 name={`phases.${index}.subItems.${subItemIndex}.deadline`}
                                 control={control}
                                 render={({ field }) => (
                                   <Popover>
                                     <PopoverTrigger asChild>
-                                      <Button variant="outline" className="w-full justify-start text-left font-normal h-8 text-sm" disabled={isLimitedMode}>
+                                      <Button 
+                                        variant="outline" 
+                                        className={cn("w-full justify-start text-left font-normal h-8 text-sm", errors.phases?.[index]?.subItems?.[subItemIndex]?.deadline && "border-destructive")} 
+                                        disabled={isLimitedMode}
+                                      >
                                         <CalendarIcon className="mr-2 h-3 w-3" />
                                         {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
                                       </Button>
@@ -553,6 +574,9 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                   </Popover>
                                 )}
                               />
+                              {errors.phases?.[index]?.subItems?.[subItemIndex]?.deadline && (
+                                <p className="text-xs text-destructive">{errors.phases[index]?.subItems?.[subItemIndex]?.deadline?.message}</p>
+                              )}
                             </div>
                             
                             <div className="space-y-1">
