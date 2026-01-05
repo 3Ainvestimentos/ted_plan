@@ -69,9 +69,10 @@ interface InitiativeFormProps {
     isLoading?: boolean;
     isLimitedMode?: boolean; // Modo limitado para heads (só pode editar responsible e status)
     canEditStatus?: boolean; // Se pode editar status de execução
+    canEditDeadline?: boolean; // Se pode editar prazo (deadline) - PMO pode, Head não pode
 }
 
-export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isLimitedMode = false, canEditStatus = true }: InitiativeFormProps) {
+export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isLimitedMode = false, canEditStatus = true, canEditDeadline = true }: InitiativeFormProps) {
   const { businessAreas } = useStrategicPanel();
   
   const {
@@ -220,7 +221,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       <Button
                           variant={"outline"}
                           className={cn("w-full justify-start text-left font-normal", errors.deadline && "border-destructive")}
-                          disabled={isLimitedMode}
+                          disabled={!canEditDeadline}
                       >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione uma data</span>}
@@ -232,11 +233,17 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                               selected={field.value || undefined}
                               onSelect={field.onChange}
                               initialFocus
+                              disabled={!canEditDeadline}
                           />
                       </PopoverContent>
                   </Popover>
                   )}
               />
+              {!canEditDeadline && (
+                <p className="text-xs text-muted-foreground">
+                  Você não tem permissão para editar o prazo. Apenas PMO pode alterar prazos.
+                </p>
+              )}
               {errors.deadline && <p className="text-sm text-destructive">{errors.deadline.message}</p>}
           </div>
           <div className="space-y-2">
@@ -419,7 +426,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                             <Button 
                               variant="outline" 
                               className={cn("w-full justify-start text-left font-normal", errors.phases?.[index]?.deadline && "border-destructive")} 
-                              disabled={isLimitedMode}
+                              disabled={!canEditDeadline}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
                               {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
@@ -431,11 +438,17 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                               selected={field.value || undefined}
                               onSelect={field.onChange}
                               initialFocus
+                              disabled={!canEditDeadline}
                             />
                           </PopoverContent>
                         </Popover>
                       )}
                     />
+                    {!canEditDeadline && (
+                      <p className="text-xs text-muted-foreground">
+                        Você não tem permissão para editar o prazo. Apenas PMO pode alterar prazos.
+                      </p>
+                    )}
                     {errors.phases?.[index]?.deadline && (
                       <p className="text-sm text-destructive">{errors.phases[index]?.deadline?.message}</p>
                     )}
@@ -663,7 +676,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                       <Button 
                                         variant="outline" 
                                         className={cn("w-full justify-start text-left font-normal h-8 text-sm", errors.phases?.[index]?.subItems?.[subItemIndex]?.deadline && "border-destructive")} 
-                                        disabled={isLimitedMode}
+                                        disabled={!canEditDeadline}
                                       >
                                         <CalendarIcon className="mr-2 h-3 w-3" />
                                         {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
@@ -675,11 +688,17 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                         selected={field.value || undefined}
                                         onSelect={field.onChange}
                                         initialFocus
+                                        disabled={!canEditDeadline}
                                       />
                                     </PopoverContent>
                                   </Popover>
                                 )}
                               />
+                              {!canEditDeadline && (
+                                <p className="text-xs text-muted-foreground">
+                                  Você não tem permissão para editar o prazo. Apenas PMO pode alterar prazos.
+                                </p>
+                              )}
                               {errors.phases?.[index]?.subItems?.[subItemIndex]?.deadline && (
                                 <p className="text-xs text-destructive">{errors.phases[index]?.subItems?.[subItemIndex]?.deadline?.message}</p>
                               )}

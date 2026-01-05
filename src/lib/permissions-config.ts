@@ -248,6 +248,36 @@ export function canDeleteInitiative(userType: UserType): boolean {
 }
 
 /**
+ * Verifica se o usuário pode editar o prazo (deadline) de iniciativas, fases ou subitens.
+ * 
+ * REGRAS:
+ * - Admin e PMO: Sempre podem editar prazo
+ * - Head: NUNCA pode editar prazo (mesmo da própria área)
+ * 
+ * @param userType - Tipo de usuário (admin, pmo, head)
+ * @returns true se o usuário pode editar o prazo, false caso contrário
+ * 
+ * @example
+ * // PMO pode editar
+ * canEditDeadline('pmo');
+ * // Retorna: true
+ * 
+ * @example
+ * // Head não pode editar
+ * canEditDeadline('head');
+ * // Retorna: false
+ */
+export function canEditDeadline(userType: UserType): boolean {
+  // Admin e PMO sempre podem editar prazo
+  if (userType === 'admin' || userType === 'pmo') {
+    return true;
+  }
+  
+  // Head nunca pode editar prazo
+  return false;
+}
+
+/**
  * Verifica se o usuário pode visualizar um modo específico de visualização.
  * 
  * Esta função verifica permissões baseadas na área efetiva (effectiveAreaId),

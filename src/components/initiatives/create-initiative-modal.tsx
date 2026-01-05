@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import type { InitiativeFormData } from "./initiative-form";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/auth-context";
-import { canCreateInitiative } from "@/lib/permissions-config";
+import { canCreateInitiative, canEditDeadline } from "@/lib/permissions-config";
 
 interface CreateInitiativeModalProps {
     isOpen: boolean;
@@ -26,6 +26,7 @@ export function CreateInitiativeModal({ isOpen, onOpenChange }: CreateInitiative
     // Verificar permissão para criar
     const userType = user?.userType || 'head';
     const canCreate = canCreateInitiative(userType);
+    const canEditDeadlineValue = canEditDeadline(userType);
 
     // Fechar modal se não tiver permissão
     useEffect(() => {
@@ -78,6 +79,7 @@ export function CreateInitiativeModal({ isOpen, onOpenChange }: CreateInitiative
                     onSubmit={handleFormSubmit} 
                     onCancel={() => onOpenChange(false)} 
                     isLoading={isLoading}
+                    canEditDeadline={canEditDeadlineValue}
                 />
             </DialogContent>
         </Dialog>
