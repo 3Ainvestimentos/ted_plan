@@ -20,13 +20,43 @@ import { cn } from "@/lib/utils";
 import { useStrategicPanel } from "@/contexts/strategic-panel-context";
 import { isOverdue, getAvailableStatuses } from "@/lib/initiatives-helpers";
 
+/**
+ * Schema Zod para converter string de data para Date.
+ * Aceita strings no formato ISO 'YYYY-MM-DD' ou objetos Date.
+ */
+const dateSchema = z.preprocess((val) => {
+  // Se já é um Date, retornar como está
+  if (val instanceof Date) {
+    return val;
+  }
+  
+  // Se é string, converter para Date
+  if (typeof val === 'string') {
+    // Formato ISO 'YYYY-MM-DD'
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+      const [year, month, day] = val.split('-').map(Number);
+      // Usar horário local do meio-dia para evitar problemas de timezone
+      return new Date(year, month - 1, day, 12, 0, 0);
+    }
+    
+    // Tentar parsear como ISO string completa ou timestamp
+    const parsed = new Date(val);
+    if (!isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+  
+  // Se é null ou undefined, retornar como está (será tratado pelo required_error)
+  return val;
+}, z.date({
+  required_error: "A data de prazo é obrigatória.",
+}));
+
 const subItemSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(3, "O título do subitem deve ter pelo menos 3 caracteres."),
   completed: z.boolean().optional().default(false),
-  deadline: z.date({
-    required_error: "A data de prazo é obrigatória.",
-  }),
+  deadline: dateSchema,
   status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso', 'A Fazer', 'Em Dia', 'Em Risco', 'Atrasado']).optional().default('Pendente'),
   responsible: z.string().min(1, "O responsável é obrigatório."),
   priority: z.enum(['Baixa', 'Média', 'Alta']).optional().default('Baixa'),
@@ -36,9 +66,7 @@ const subItemSchema = z.object({
 const phaseSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(3, "O título da fase deve ter pelo menos 3 caracteres."),
-  deadline: z.date({
-    required_error: "A data de prazo é obrigatória.",
-  }),
+  deadline: dateSchema,
   status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso', 'A Fazer', 'Em Dia', 'Em Risco', 'Atrasado']),
   areaId: z.string().min(1, "A área é obrigatória."), // Será sempre igual à área do projeto
   priority: z.enum(['Baixa', 'Média', 'Alta']),
@@ -52,9 +80,7 @@ const initiativeSchema = z.object({
   owner: z.string().min(1, "O responsável é obrigatório."),
   description: z.string().min(10, "A descrição deve ter pelo menos 10 caracteres."),
   status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso']),
-  deadline: z.date({
-    required_error: "A data de prazo é obrigatória.",
-  }),
+  deadline: dateSchema,
   priority: z.enum(['Baixa', 'Média', 'Alta']),
   areaId: z.string().min(1, "A área é obrigatória."),
   phases: z.array(phaseSchema).min(1, "É necessário pelo menos uma fase."),

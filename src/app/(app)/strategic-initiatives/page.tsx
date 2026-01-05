@@ -327,14 +327,9 @@ export default function InitiativesPage() {
 
     // Atualizar subitem: sincronizar completed com status
     // IMPORTANTE: "Concluído" = completed true, outros status = completed false
-    const updatedSubItems = phase.subItems.map(si => 
-      si.id === subItemId 
-        ? { ...si, status: newStatus, completed: newStatus === 'Concluído' }
-        : si
-    );
-
-    // Atualizar fase com subitens atualizados
-    updatePhase(initiativeId, phaseId, { subItems: updatedSubItems });
+    const completed = newStatus === 'Concluído';
+    // Usar updateSubItem com o novo status diretamente para permitir qualquer status (Pendente, Suspenso, etc.)
+    updateSubItem(initiativeId, phaseId, subItemId, completed, newStatus);
   }
   
   // Filtrar iniciativas por área efetiva (aplicar filtro automático quando não há selectedAreaId)

@@ -18,7 +18,7 @@ interface InitiativesContextType {
   archiveInitiative: (initiativeId: string) => Promise<void>;
   unarchiveInitiative: (initiativeId: string) => Promise<void>;
   updateInitiativeStatus: (initiativeId: string, newStatus: InitiativeStatus) => void;
-  updateSubItem: (initiativeId: string, phaseId: string, subItemId: string, completed: boolean) => Promise<void>;
+  updateSubItem: (initiativeId: string, phaseId: string, subItemId: string, completed: boolean, newStatus?: InitiativeStatus) => Promise<void>;
   addPhase: (initiativeId: string, phase: Omit<InitiativePhase, 'id'>) => Promise<void>;
   updatePhase: (initiativeId: string, phaseId: string, phase: Partial<InitiativePhase>) => Promise<void>;
   deletePhase: (initiativeId: string, phaseId: string) => Promise<void>;
@@ -579,21 +579,36 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
    * @param subItemId - ID do subitem
    * @param completed - Novo estado de conclusão
    */
-  const updateSubItem = useCallback(async (initiativeId: string, phaseId: string, subItemId: string, completed: boolean) => {
+  /**
+   * Atualiza um subitem, podendo alterar o campo completed e/ou o status diretamente.
+   * 
+   * @param initiativeId - ID da iniciativa
+   * @param phaseId - ID da fase
+   * @param subItemId - ID do subitem
+   * @param completed - Novo valor de completed (true/false)
+   * @param newStatus - Novo status (opcional). Se fornecido, será usado em vez de calcular baseado em completed
+   * 
+   * REGRAS:
+   * - Se newStatus for fornecido, ele será usado diretamente
+   * - Se newStatus não for fornecido, o status será calculado: completed=true → "Concluído", completed=false → "Em execução"
+   * - O campo completed sempre será atualizado conforme o parâmetro
+   */
+  const updateSubItem = useCallback(async (initiativeId: string, phaseId: string, subItemId: string, completed: boolean, newStatus?: InitiativeStatus) => {
       const localInitiative = initiatives.find(i => i.id === initiativeId);
       if (!localInitiative || !localInitiative.phases) return;
 
-      // Atualizar subitem: quando completed muda, também atualizar status
-      // IMPORTANTE: Marcado = "Concluído", Desmarcado = "Em execução"
+      // Atualizar subitem
       const updatedPhases = localInitiative.phases.map(phase => {
           if (phase.id === phaseId && phase.subItems) {
               const updatedSubItems = phase.subItems.map(si => {
                   if (si.id === subItemId) {
-                      // Sincronizar completed e status: marcado = "Concluído", desmarcado = "Em execução"
+                      // Se newStatus foi fornecido, usar diretamente; senão, calcular baseado em completed
+                      const finalStatus = newStatus || (completed ? 'Concluído' as InitiativeStatus : 'Em execução' as InitiativeStatus);
+                      
                       return { 
                           ...si, 
                           completed,
-                          status: completed ? 'Concluído' as InitiativeStatus : 'Em execução' as InitiativeStatus
+                          status: finalStatus
                       };
                   }
                   return si;

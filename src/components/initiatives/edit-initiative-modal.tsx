@@ -73,12 +73,58 @@ export function EditInitiativeModal({ isOpen, onOpenChange, initiative }: EditIn
         // Do not redirect, just close the modal.
     }
 
-    const getDeadlineDate = (dateString?: string | null) => {
-        if (!dateString) return null;
-        // Firestore timestamps can be tricky. Ensure it's handled correctly.
-        // If deadline is stored as 'YYYY-MM-DD', we need to account for timezone.
-        const [year, month, day] = dateString.split('-').map(Number);
-        return new Date(Date.UTC(year, month - 1, day));
+    /**
+     * Converte uma string de data (ISO format 'YYYY-MM-DD' ou timestamp) para um objeto Date.
+     * 
+     * Esta função é usada para converter datas que vêm do Firestore (como strings) para objetos Date
+     * que o formulário espera. Usa horário local (não UTC) para evitar problemas de timezone.
+     * 
+     * @param dateString - String de data no formato ISO 'YYYY-MM-DD' ou timestamp, ou objeto Date
+     * @returns Objeto Date ou undefined se a string for inválida/null
+     * 
+     * @example
+     * getDeadlineDate('2026-01-22') // Retorna Date para 22/01/2026
+     * getDeadlineDate(null) // Retorna undefined
+     */
+    const getDeadlineDate = (dateString?: string | null | Date): Date | undefined => {
+        if (!dateString) return undefined;
+        
+        try {
+            // Se já é um objeto Date, retornar como está
+            if (dateString instanceof Date) {
+                // Verificar se é válido
+                if (isNaN(dateString.getTime())) {
+                    return undefined;
+                }
+                return dateString;
+            }
+            
+            // Se é string no formato ISO 'YYYY-MM-DD'
+            if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+                // Criar data local (não UTC) para evitar problemas de timezone
+                // Usar horário local do meio-dia para evitar mudanças de data por timezone
+                const [year, month, day] = dateString.split('-').map(Number);
+                return new Date(year, month - 1, day, 12, 0, 0);
+            }
+            
+            // Tentar parsear como ISO string completa ou timestamp
+            if (typeof dateString === 'string') {
+                const parsedDate = new Date(dateString);
+                
+                // Verificar se a data é válida
+                if (isNaN(parsedDate.getTime())) {
+                    console.warn(`[EditInitiativeModal] Data inválida: ${dateString}`);
+                    return undefined;
+                }
+                
+                return parsedDate;
+            }
+            
+            return undefined;
+        } catch (error) {
+            console.error(`[EditInitiativeModal] Erro ao converter data: ${dateString}`, error);
+            return undefined;
+        }
     }
 
     const initialData = {
@@ -87,6 +133,10 @@ export function EditInitiativeModal({ isOpen, onOpenChange, initiative }: EditIn
         phases: initiative.phases?.map(phase => ({
             ...phase,
             deadline: getDeadlineDate(phase.deadline),
+            subItems: phase.subItems?.map(subItem => ({
+                ...subItem,
+                deadline: getDeadlineDate(subItem.deadline),
+            })) || [],
         })) || [],
     };
 

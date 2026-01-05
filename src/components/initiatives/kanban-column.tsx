@@ -18,9 +18,10 @@ interface ColumnProps {
   };
   onDropTask: (taskId: string, newStatus: InitiativeStatus) => void;
   onInitiativeClick: (initiative: Initiative) => void;
+  onInitiativeExpand?: (initiativeId: string) => void; // Função chamada ao clicar no botão de expandir
 }
 
-export function KanbanColumn({ column, onDropTask, onInitiativeClick }: ColumnProps) {
+export function KanbanColumn({ column, onDropTask, onInitiativeClick, onInitiativeExpand }: ColumnProps) {
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: 'task',
     drop: (item: { id: string }) => {
@@ -65,7 +66,12 @@ export function KanbanColumn({ column, onDropTask, onInitiativeClick }: ColumnPr
       </div>
       <div className="space-y-2 overflow-y-auto flex-grow px-1.5 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent min-h-[calc(100vh-250px)]">
         {column.tasks.map((task) => (
-          <KanbanTaskCard key={task.id} task={task} onClick={() => onInitiativeClick(task)} />
+          <KanbanTaskCard 
+            key={task.id} 
+            task={task} 
+            onClick={() => onInitiativeClick(task)}
+            onExpand={onInitiativeExpand ? () => onInitiativeExpand(task.id) : undefined}
+          />
         ))}
       </div>
       <Button variant="ghost" className="mt-2 w-full justify-start text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50" asChild>
