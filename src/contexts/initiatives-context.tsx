@@ -114,6 +114,7 @@ const checkAndUpdateParentStatus = (
       // Verificar se todos os subitens estão concluídos (usando status)
       const allSubItemsCompleted = phase.subItems.every(subItem => subItem.status === 'Concluído');
       
+      // Se todos os subitens estão concluídos e fase não está concluída, concluir fase
       if (allSubItemsCompleted && phase.status !== 'Concluído') {
         // Atualizar fase para "Concluído"
         updatedPhases = updatedPhases.map(p => 
@@ -121,15 +122,36 @@ const checkAndUpdateParentStatus = (
         );
         hasChanges = true;
       }
+      
+      // Se nem todos os subitens estão concluídos mas fase está concluída, reverter fase para "Em execução"
+      if (!allSubItemsCompleted && phase.status === 'Concluído') {
+        updatedPhases = updatedPhases.map(p => 
+          p.id === phase.id ? { ...p, status: 'Em execução' as InitiativeStatus } : p
+        );
+        hasChanges = true;
+      }
     }
   });
   
   // Verificar se todas as fases estão concluídas para atualizar iniciativa
-  const allPhasesCompleted = updatedPhases.every(phase => phase.status === 'Concluído');
+  // IMPORTANTE: Considerar apenas fases com status definido e igual a 'Concluído'
+  // Fases sem status ou com status vazio são consideradas não concluídas
+  const allPhasesCompleted = updatedPhases.length > 0 && 
+    updatedPhases.every(phase => phase.status === 'Concluído');
   let updatedInitiativeStatus: InitiativeStatus | undefined;
   
+  // Se todas as fases estão concluídas e iniciativa não está concluída, concluir iniciativa
   if (allPhasesCompleted && updatedPhases.length > 0 && initiative.status !== 'Concluído') {
     updatedInitiativeStatus = 'Concluído';
+    hasChanges = true;
+  }
+  
+  // Se nem todas as fases estão concluídas mas iniciativa está concluída, reverter status da iniciativa
+  // IMPORTANTE: Esta verificação deve acontecer SEMPRE que há fases e a iniciativa está concluída
+  // IMPORTANTE: Quando revertido, sempre usar "Em execução" como padrão
+  if (updatedPhases.length > 0 && initiative.status === 'Concluído' && !allPhasesCompleted) {
+    // Sempre reverter para "Em execução" quando um filho muda de status
+    updatedInitiativeStatus = 'Em execução';
     hasChanges = true;
   }
   
@@ -509,12 +531,18 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
     }
     
     // Validação: não pode concluir iniciativa se nem todas as fases estão concluídas
-    if (newStatus === 'Concluído' && localInitiative.phases && localInitiative.phases.length > 0) {
-      const allPhasesCompleted = localInitiative.phases.every(phase => phase.status === 'Concluído');
-      if (!allPhasesCompleted) {
-        console.warn(`[InitiativesContext] Não é possível concluir iniciativa ${initiativeId}: nem todas as fases estão concluídas`);
-        // Não atualizar status - manter o atual
-        return;
+    // IMPORTANTE: Esta validação deve ser SEMPRE aplicada, mesmo se a iniciativa estiver em atraso
+    // IMPORTANTE: Fases sem status ou com status vazio são consideradas não concluídas
+    if (newStatus === 'Concluído') {
+      // Se não tem fases, pode concluir
+      if (localInitiative.phases && localInitiative.phases.length > 0) {
+        // Verificar se todas as fases têm status definido e igual a 'Concluído'
+        const allPhasesCompleted = localInitiative.phases.every(phase => phase.status === 'Concluído');
+        if (!allPhasesCompleted) {
+          console.warn(`[InitiativesContext] Não é possível concluir iniciativa ${initiativeId}: nem todas as fases estão concluídas`);
+          // Não atualizar status - manter o atual
+          return;
+        }
       }
     }
     
@@ -524,11 +552,24 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
             status: newStatus,
             lastUpdate: new Date().toISOString(),
         }, { merge: true });
-        await fetchInitiatives(); // Refetch to recalculate parent progress if needed
+        
+        // Atualizar estado local sem recarregar tudo
+        setInitiatives(prevInitiatives => {
+          return prevInitiatives.map(init => {
+            if (init.id === initiativeId) {
+              return {
+                ...init,
+                status: newStatus,
+                lastUpdate: new Date().toISOString(),
+              };
+            }
+            return init;
+          });
+        });
     } catch (error) {
         console.error("Error updating initiative status: ", error);
     }
-  }, [initiatives, fetchInitiatives]);
+  }, [initiatives]);
 
   /**
    * Atualiza o estado de conclusão de um subitem e verifica se deve concluir fase/iniciativa automaticamente.
@@ -543,15 +584,16 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
       if (!localInitiative || !localInitiative.phases) return;
 
       // Atualizar subitem: quando completed muda, também atualizar status
+      // IMPORTANTE: Marcado = "Concluído", Desmarcado = "Em execução"
       const updatedPhases = localInitiative.phases.map(phase => {
           if (phase.id === phaseId && phase.subItems) {
               const updatedSubItems = phase.subItems.map(si => {
                   if (si.id === subItemId) {
-                      // Atualizar completed e status (se completed=true, status='Concluído')
+                      // Sincronizar completed e status: marcado = "Concluído", desmarcado = "Em execução"
                       return { 
                           ...si, 
                           completed,
-                          status: completed ? 'Concluído' as InitiativeStatus : si.status
+                          status: completed ? 'Concluído' as InitiativeStatus : 'Em execução' as InitiativeStatus
                       };
                   }
                   return si;
@@ -700,11 +742,26 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
           }
           
           await setDoc(initiativeDocRef, updateData, { merge: true });
-          fetchInitiatives();
+          
+          // Atualizar estado local sem recarregar tudo
+          setInitiatives(prevInitiatives => {
+            return prevInitiatives.map(init => {
+              if (init.id === initiativeId) {
+                return {
+                  ...init,
+                  phases: finalPhases,
+                  status: finalInitiativeStatus,
+                  progress: calculateProgressFromPhases(finalPhases),
+                  lastUpdate: new Date().toISOString(),
+                };
+              }
+              return init;
+            });
+          });
       } catch (error) {
           console.error("Error updating phase:", error);
       }
-  }, [initiatives, fetchInitiatives]);
+  }, [initiatives]);
 
   const deletePhase = useCallback(async (initiativeId: string, phaseId: string) => {
       const localInitiative = initiatives.find(i => i.id === initiativeId);

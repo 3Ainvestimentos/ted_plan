@@ -21,8 +21,8 @@
 // SEÇÃO 1: IMPORTS
 // ============================================
 
-import React, { useState, useMemo } from 'react';
-import type { Initiative, InitiativeStatus } from '@/types';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import type { Initiative, InitiativeStatus, InitiativePhase, SubItem } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -71,6 +71,8 @@ interface TableGanttViewProps {
   onArchive?: (initiativeId: string) => void;
   onUnarchive?: (initiativeId: string) => void;
   onStatusChange?: (initiativeId: string, newStatus: InitiativeStatus) => void;
+  onPhaseStatusChange?: (initiativeId: string, phaseId: string, newStatus: InitiativeStatus) => void;
+  onSubItemStatusChange?: (initiativeId: string, phaseId: string, subItemId: string, newStatus: InitiativeStatus) => void;
 }
 
 interface GanttTask {
@@ -83,6 +85,10 @@ interface GanttTask {
   progress: number;
   isOverdue: boolean;
   originalInitiative: Initiative;
+  // Campos opcionais para identificar tipo e hierarquia
+  type?: 'initiative' | 'phase' | 'subitem';
+  phaseId?: string; // ID da fase, se for subitem
+  initiativeId?: string; // ID da iniciativa, se for fase ou subitem
 }
 
 // ============================================
@@ -356,7 +362,10 @@ function generateMonthHeaders(dateHeaders: Date[]): { name: string; colSpan: num
 }
 
 /**
- * Transforma Initiative em GanttTask
+ * Transforma uma Initiative em GanttTask para renderização no Gantt.
+ * 
+ * @param initiative - Iniciativa para transformar
+ * @returns GanttTask ou null se não tiver deadline válido
  */
 function transformInitiativeToGanttTask(initiative: Initiative): GanttTask | null {
   const endDate = extractInitiativeDeadline(initiative);
@@ -376,6 +385,90 @@ function transformInitiativeToGanttTask(initiative: Initiative): GanttTask | nul
     progress: initiative.progress || 0,
     isOverdue,
     originalInitiative: initiative,
+    type: 'initiative',
+  };
+}
+
+/**
+ * Transforma uma Phase em GanttTask para renderização no Gantt.
+ * 
+ * Extrai deadline, startDate, status, responsible da fase.
+ * Se a fase não tiver deadline, retorna null.
+ * 
+ * @param phase - Fase para transformar
+ * @param initiative - Iniciativa pai (para referência)
+ * @returns GanttTask ou null se não tiver deadline válido
+ */
+function transformPhaseToGanttTask(phase: InitiativePhase, initiative: Initiative): GanttTask | null {
+  const endDate = parseFlexibleDate(phase.deadline);
+  if (!endDate) return null;
+  
+  // Para fase, startDate pode ser o deadline da iniciativa ou 30 dias antes do deadline da fase
+  const initiativeDeadline = parseFlexibleDate(initiative.deadline);
+  const startDate = initiativeDeadline 
+    ? (isBefore(initiativeDeadline, endDate) ? initiativeDeadline : subDays(endDate, 30))
+    : subDays(endDate, 30);
+  
+  const isOverdue = isBefore(endDate, startOfDay(new Date())) && 
+                    phase.status !== 'Concluído';
+
+  // Progresso da fase baseado nos subitens concluídos
+  const progress = phase.subItems && phase.subItems.length > 0
+    ? Math.round((phase.subItems.filter(si => si.status === 'Concluído').length / phase.subItems.length) * 100)
+    : (phase.status === 'Concluído' ? 100 : 0);
+
+  return {
+    id: phase.id,
+    name: phase.title,
+    responsible: phase.responsible || '-',
+    status: phase.status,
+    startDate,
+    endDate,
+    progress,
+    isOverdue,
+    originalInitiative: initiative,
+    type: 'phase',
+    initiativeId: initiative.id,
+  };
+}
+
+/**
+ * Transforma um SubItem em GanttTask para renderização no Gantt.
+ * 
+ * Extrai deadline, startDate, status, responsible do subitem.
+ * Se o subitem não tiver deadline, retorna null.
+ * 
+ * @param subItem - Subitem para transformar
+ * @param phase - Fase pai (para referência)
+ * @param initiative - Iniciativa pai (para referência)
+ * @returns GanttTask ou null se não tiver deadline válido
+ */
+function transformSubItemToGanttTask(subItem: SubItem, phase: InitiativePhase, initiative: Initiative): GanttTask | null {
+  const endDate = parseFlexibleDate(subItem.deadline);
+  if (!endDate) return null;
+  
+  // Para subitem, startDate pode ser o deadline da fase ou 7 dias antes do deadline do subitem
+  const phaseDeadline = parseFlexibleDate(phase.deadline);
+  const startDate = phaseDeadline 
+    ? (isBefore(phaseDeadline, endDate) ? phaseDeadline : subDays(endDate, 7))
+    : subDays(endDate, 7);
+  
+  const isOverdue = isBefore(endDate, startOfDay(new Date())) && 
+                    subItem.status !== 'Concluído';
+
+  return {
+    id: subItem.id,
+    name: subItem.title,
+    responsible: subItem.responsible || '-',
+    status: subItem.status,
+    startDate,
+    endDate,
+    progress: subItem.completed ? 100 : 0,
+    isOverdue,
+    originalInitiative: initiative,
+    type: 'subitem',
+    phaseId: phase.id,
+    initiativeId: initiative.id,
   };
 }
 
@@ -407,13 +500,17 @@ export function TableGanttView({
   onUpdateSubItem,
   onArchive,
   onUnarchive,
-  onStatusChange
+  onStatusChange,
+  onPhaseStatusChange,
+  onSubItemStatusChange
 }: TableGanttViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [archiveFilter, setArchiveFilter] = useState<string>("active");
   const [expandedInitiatives, setExpandedInitiatives] = useState<Set<string>>(new Set());
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
+  // Estado para mensagens de erro temporárias (desaparecem após 10 segundos)
+  const [tempErrorMessages, setTempErrorMessages] = useState<Set<string>>(new Set());
 
   // Filtra iniciativas
   const filteredInitiatives = useMemo(() => {
@@ -464,6 +561,19 @@ export function TableGanttView({
 
     return { tasks: ganttTasks, dateHeaders, monthHeaders, cellWidth: dynamicCellWidth };
   }, [filteredInitiatives]);
+
+  // Função para adicionar mensagem de erro temporária (desaparece após 10 segundos)
+  const addTempErrorMessage = useCallback((key: string) => {
+    setTempErrorMessages(prev => new Set(prev).add(key));
+    // Remover após 10 segundos
+    setTimeout(() => {
+      setTempErrorMessages(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(key);
+        return newSet;
+      });
+    }, 10000);
+  }, []);
 
   const toggleInitiative = (initiativeId: string) => {
     setExpandedInitiatives(prev => {
@@ -644,19 +754,45 @@ export function TableGanttView({
                           <div className="space-y-1">
                             <Select 
                               value={initiative.status} 
-                              onValueChange={(newStatus: InitiativeStatus) => 
-                                onStatusChange(initiative.id, newStatus)
-                              }
+                              onValueChange={(newStatus: InitiativeStatus) => {
+                                // Verificar se está tentando concluir sem todas as fases concluídas
+                                const allPhasesCompleted = initiative.phases && initiative.phases.length > 0
+                                  ? initiative.phases.every(phase => phase.status === 'Concluído')
+                                  : true;
+                                
+                                if (newStatus === 'Concluído' && !allPhasesCompleted && initiative.phases && initiative.phases.length > 0) {
+                                  // Adicionar mensagem de erro temporária
+                                  addTempErrorMessage(`initiative-${initiative.id}`);
+                                }
+                                
+                                onStatusChange(initiative.id, newStatus);
+                              }}
                             >
                               <SelectTrigger className="h-8 text-xs px-2 w-[120px]">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 {(() => {
+                                  // Verificar se todas as fases estão concluídas
+                                  // IMPORTANTE: Considerar apenas fases com status definido e igual a 'Concluído'
+                                  // Fases sem status ou com status vazio são consideradas não concluídas
+                                  const allPhasesCompleted = initiative.phases && initiative.phases.length > 0
+                                    ? initiative.phases.every(phase => phase.status === 'Concluído')
+                                    : true; // Se não tem fases, pode concluir
+                                  
                                   // Se está atrasado, limitar opções para apenas Atrasado ou Concluído
-                                  const availableStatuses = initiativeIsOverdue 
+                                  let availableStatuses = initiativeIsOverdue 
                                     ? getAvailableStatuses(true)
                                     : initiativeStatuses.filter(s => s !== 'all') as InitiativeStatus[];
+                                  
+                                  // SEMPRE remover "Concluído" se nem todas as fases estão concluídas (mesmo se estiver em atraso)
+                                  if (!allPhasesCompleted && initiative.phases && initiative.phases.length > 0) {
+                                    availableStatuses = availableStatuses.filter(s => s !== 'Concluído') as InitiativeStatus[];
+                                    // Se estava em atraso e removemos "Concluído", só sobra "Atrasado"
+                                    if (availableStatuses.length === 0) {
+                                      availableStatuses = ['Atrasado'] as InitiativeStatus[];
+                                    }
+                                  }
                                   
                                   return availableStatuses.map(s => (
                                     <SelectItem key={s} value={s as string}>{s}</SelectItem>
@@ -664,11 +800,30 @@ export function TableGanttView({
                                 })()}
                               </SelectContent>
                             </Select>
-                            {initiativeIsOverdue && (
-                              <p className="text-xs text-muted-foreground">
-                                Apenas Atrasado ou Concluído
-                              </p>
-                            )}
+                            {(() => {
+                              const allPhasesCompleted = initiative.phases && initiative.phases.length > 0
+                                ? initiative.phases.every(phase => phase.status === 'Concluído')
+                                : false;
+                              
+                              if (initiativeIsOverdue) {
+                                return (
+                                  <p className="text-xs text-muted-foreground">
+                                    Apenas Atrasado ou Concluído
+                                  </p>
+                                );
+                              }
+                              
+                              // Mostrar mensagem de erro apenas se estiver no conjunto de mensagens temporárias
+                              if (!allPhasesCompleted && initiative.phases && initiative.phases.length > 0 && tempErrorMessages.has(`initiative-${initiative.id}`)) {
+                                return (
+                                  <p className="text-xs text-destructive">
+                                    Não é possível concluir: todas as fases devem estar concluídas
+                                  </p>
+                                );
+                              }
+                              
+                              return null;
+                            })()}
                           </div>
                         ) : (
                           <Badge 
@@ -811,12 +966,15 @@ export function TableGanttView({
                     {isInitiativeExpanded && hasPhases && initiative.phases.map(phase => {
                       const isPhaseExpanded = expandedPhases.has(phase.id);
                       const hasSubItems = phase.subItems && phase.subItems.length > 0;
+                      const phaseGanttTask = transformPhaseToGanttTask(phase, initiative);
+                      const phaseIsOverdue = phaseGanttTask ? phaseGanttTask.isOverdue : false;
+                      const PhaseStatusIcon = STATUS_ICONS[phase.status];
                       
                       return (
                         <React.Fragment key={phase.id}>
-                          <TableRow className="bg-secondary/50 hover:bg-secondary/70">
+                          <TableRow className={cn("bg-secondary/50 hover:bg-secondary/70", phaseIsOverdue && "bg-red-50")}>
                             <TableCell className="sticky left-0 bg-secondary/50 z-10"></TableCell>
-                            <TableCell colSpan={4} className="pl-12 sticky left-16 bg-secondary/50 z-10">
+                            <TableCell className="pl-12 sticky left-16 bg-secondary/50 z-10">
                               <div className="flex items-center gap-2">
                                 <CornerDownRight className="h-4 w-4 text-muted-foreground" />
                                 {hasSubItems && (
@@ -832,32 +990,466 @@ export function TableGanttView({
                                 <span className="text-sm font-medium">{phase.title}</span>
                               </div>
                             </TableCell>
-                            <TableCell colSpan={dateHeaders.length}></TableCell>
+                            
+                            {/* Coluna Responsável */}
+                            <TableCell className="text-sm bg-secondary/50">
+                              {phase.responsible || '-'}
+                            </TableCell>
+                            
+                            {/* Coluna Editar - vazia para fases */}
+                            {onEditInitiative && (
+                              <TableCell className="bg-secondary/50"></TableCell>
+                            )}
+                            
+                            {/* Coluna Status */}
+                            <TableCell className="bg-secondary/50">
+                              {onPhaseStatusChange ? (
+                                <div className="space-y-1">
+                                  <Select 
+                                    value={phase.status} 
+                                    onValueChange={(newStatus: InitiativeStatus) => {
+                                      // Verificar se está tentando concluir sem todos os subitens concluídos
+                                      const phaseSubItems = phase.subItems || [];
+                                      const allSubItemsCompleted = phaseSubItems.length > 0 
+                                        ? phaseSubItems.every((si: SubItem) => si.status === 'Concluído')
+                                        : true;
+                                      
+                                      if (newStatus === 'Concluído' && !allSubItemsCompleted && phaseSubItems.length > 0) {
+                                        // Adicionar mensagem de erro temporária
+                                        addTempErrorMessage(`phase-${phase.id}`);
+                                      }
+                                      
+                                      onPhaseStatusChange(initiative.id, phase.id, newStatus);
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-8 text-xs px-2 w-[120px]">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {(() => {
+                                        // Verificar se todos os subitens estão concluídos
+                                        const phaseSubItems = phase.subItems || [];
+                                        const allSubItemsCompleted = phaseSubItems.length > 0 
+                                          ? phaseSubItems.every((si: SubItem) => si.status === 'Concluído')
+                                          : true; // Se não tem subitens, pode concluir
+                                        
+                                        // Se está atrasado, limitar opções para apenas Atrasado ou Concluído
+                                        const phaseDeadline = parseFlexibleDate(phase.deadline);
+                                        const phaseIsOverdue = phaseDeadline ? isOverdue(phaseDeadline, phase.status) : false;
+                                        let availableStatuses = phaseIsOverdue 
+                                          ? getAvailableStatuses(true)
+                                          : initiativeStatuses.filter(s => s !== 'all') as InitiativeStatus[];
+                                        
+                                        // SEMPRE remover "Concluído" se nem todos os subitens estão concluídos (mesmo se estiver em atraso)
+                                        if (!allSubItemsCompleted && phaseSubItems.length > 0) {
+                                          availableStatuses = availableStatuses.filter(s => s !== 'Concluído') as InitiativeStatus[];
+                                          // Se estava em atraso e removemos "Concluído", só sobra "Atrasado"
+                                          if (availableStatuses.length === 0) {
+                                            availableStatuses = ['Atrasado'] as InitiativeStatus[];
+                                          }
+                                        }
+                                        
+                                        return availableStatuses.map(s => (
+                                          <SelectItem key={s} value={s as string}>{s}</SelectItem>
+                                        ));
+                                      })()}
+                                    </SelectContent>
+                                  </Select>
+                                  {(() => {
+                                    const phaseDeadline = parseFlexibleDate(phase.deadline);
+                                    const phaseIsOverdue = phaseDeadline ? isOverdue(phaseDeadline, phase.status) : false;
+                                    const phaseSubItems = phase.subItems || [];
+                                    const allSubItemsCompleted = phaseSubItems.length > 0 
+                                      ? phaseSubItems.every((si: SubItem) => si.status === 'Concluído')
+                                      : true;
+                                    
+                                    if (phaseIsOverdue) {
+                                      return (
+                                        <p className="text-xs text-muted-foreground">
+                                          Apenas Atrasado ou Concluído
+                                        </p>
+                                      );
+                                    }
+                                    
+                                    // Mostrar mensagem de erro apenas se estiver no conjunto de mensagens temporárias
+                                    if (!allSubItemsCompleted && phaseSubItems.length > 0 && tempErrorMessages.has(`phase-${phase.id}`)) {
+                                      return (
+                                        <p className="text-xs text-destructive">
+                                          Não é possível concluir: todos os subitens devem estar concluídos
+                                        </p>
+                                      );
+                                    }
+                                    
+                                    return null;
+                                  })()}
+                                </div>
+                              ) : (
+                                <Badge 
+                                  variant={phase.status === 'Concluído' ? 'default' : phase.status === 'Em Risco' || phase.status === 'Atrasado' ? 'destructive' : 'secondary'} 
+                                  className="capitalize flex items-center w-fit"
+                                >
+                                  {PhaseStatusIcon && <PhaseStatusIcon className="mr-1.5 h-3.5 w-3.5" />}
+                                  {phase.status}
+                                </Badge>
+                              )}
+                            </TableCell>
+                            
+                            {/* Coluna Prioridade */}
+                            <TableCell className="bg-secondary/50">
+                              <Badge 
+                                variant="outline"
+                                className={cn(
+                                  "capitalize",
+                                  phase.priority === 'Alta' && "bg-red-100 text-red-700 border-red-300",
+                                  phase.priority === 'Média' && "bg-yellow-100 text-yellow-700 border-yellow-300",
+                                  phase.priority === 'Baixa' && "bg-blue-100 text-blue-700 border-blue-300"
+                                )}
+                              >
+                                {phase.priority}
+                              </Badge>
+                            </TableCell>
+                            
+                            {/* Coluna Progresso */}
+                            <TableCell className="bg-secondary/50">
+                              <div className="flex items-center gap-2">
+                                <Progress value={phaseGanttTask?.progress || 0} className="h-2 w-12" />
+                                <span className="text-xs text-muted-foreground">
+                                  {phaseGanttTask?.progress || 0}%
+                                </span>
+                              </div>
+                            </TableCell>
+                            
+                            {/* Colunas do Gantt para Fase */}
+                            {(() => {
+                              if (!phaseGanttTask) {
+                                return dateHeaders.map((day, dayIndex) => (
+                                  <TableCell 
+                                    key={dayIndex} 
+                                    className={cn(
+                                      "relative p-0 border-r border-border/50",
+                                      (day.getDay() === 0 || day.getDay() === 6) && "bg-muted/30",
+                                      isToday(day) && "bg-red-100/50 dark:bg-red-900/20"
+                                    )}
+                                    style={{ 
+                                      width: `${cellWidth}px`, 
+                                      minWidth: `${cellWidth}px`, 
+                                      maxWidth: `${cellWidth}px`,
+                                      padding: 0,
+                                    }}
+                                  />
+                                ));
+                              }
+                              
+                              const taskStart = startOfDay(phaseGanttTask.startDate);
+                              const taskEnd = startOfDay(phaseGanttTask.endDate);
+                              
+                              let barStartIndex = dateHeaders.findIndex(day => {
+                                const dayStart = startOfDay(day);
+                                return dayStart.getTime() >= taskStart.getTime();
+                              });
+                              
+                              let barEndIndex = dateHeaders.findIndex(day => {
+                                const dayStart = startOfDay(day);
+                                return dayStart.getTime() > taskEnd.getTime();
+                              });
+                              
+                              if (barEndIndex < 0) {
+                                barEndIndex = dateHeaders.length;
+                              }
+                              barEndIndex = barEndIndex - 1;
+                              
+                              if (barStartIndex < 0) {
+                                barStartIndex = 0;
+                              }
+                              
+                              if (barEndIndex < barStartIndex) {
+                                barEndIndex = barStartIndex;
+                              }
+                              
+                              const barColor = phaseGanttTask.isOverdue 
+                                ? 'bg-red-500' 
+                                : STATUS_COLORS[phaseGanttTask.status] || 'bg-blue-500';
+                              
+                              return dateHeaders.map((day, dayIndex) => {
+                                const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                                const isTodayMarker = isToday(day);
+                                const isInBarRange = barStartIndex >= 0 && dayIndex >= barStartIndex && dayIndex <= barEndIndex;
+                                const isBarStart = dayIndex === barStartIndex;
+                                
+                                return (
+                                  <TableCell 
+                                    key={dayIndex} 
+                                    className={cn(
+                                      "relative p-0 border-r border-border/50 overflow-visible bg-secondary/50",
+                                      isWeekend && "bg-muted/30",
+                                      isTodayMarker && "bg-red-100/50 dark:bg-red-900/20"
+                                    )}
+                                    style={{ 
+                                      width: `${cellWidth}px`, 
+                                      minWidth: `${cellWidth}px`, 
+                                      maxWidth: `${cellWidth}px`,
+                                      padding: 0,
+                                      overflow: 'visible',
+                                    }}
+                                  >
+                                    {isTodayMarker && (
+                                      <div className="absolute inset-y-0 left-0 w-0.5 bg-red-500 z-20" />
+                                    )}
+                                    
+                                    {isBarStart && phaseGanttTask && barStartIndex >= 0 && barEndIndex >= barStartIndex && (() => {
+                                      const span = barEndIndex - barStartIndex + 1;
+                                      const barWidth = Math.max(40, span * cellWidth);
+                                      
+                                      return (
+                                        <div 
+                                          className={cn(
+                                            "absolute top-1/2 -translate-y-1/2 h-5 rounded-md opacity-90 z-10 shadow-sm border border-white/20",
+                                            barColor
+                                          )}
+                                          style={{
+                                            left: '0px',
+                                            width: `${barWidth}px`,
+                                            height: '20px',
+                                            minWidth: '40px',
+                                            pointerEvents: 'none',
+                                          }}
+                                          title={`${phaseGanttTask.name}: ${format(phaseGanttTask.startDate, 'dd/MM/yyyy')} - ${format(phaseGanttTask.endDate, 'dd/MM/yyyy')}`}
+                                        />
+                                      );
+                                    })()}
+                                  </TableCell>
+                                );
+                              });
+                            })()}
                           </TableRow>
                           
                           {/* Subitens expandidos */}
-                          {isPhaseExpanded && hasSubItems && phase.subItems.map(subItem => (
-                            <TableRow key={subItem.id} className="bg-secondary hover:bg-secondary/80">
-                              <TableCell className="sticky left-0 bg-secondary z-10"></TableCell>
-                              <TableCell colSpan={4} className="pl-20 sticky left-16 bg-secondary z-10">
-                                <div className="flex items-center gap-2">
-                                  <CornerDownRight className="h-4 w-4 text-muted-foreground" />
-                                  <Checkbox 
-                                    id={`subitem-${subItem.id}`} 
-                                    checked={subItem.completed}
-                                    onCheckedChange={(checked) => onUpdateSubItem?.(initiative.id, phase.id, subItem.id, !!checked)}
-                                  />
-                                  <label 
-                                    htmlFor={`subitem-${subItem.id}`} 
-                                    className={cn("text-sm", subItem.completed && "line-through text-muted-foreground")}
+                          {isPhaseExpanded && hasSubItems && phase.subItems.map(subItem => {
+                            const subItemGanttTask = transformSubItemToGanttTask(subItem, phase, initiative);
+                            const subItemIsOverdue = subItemGanttTask ? subItemGanttTask.isOverdue : false;
+                            const SubItemStatusIcon = STATUS_ICONS[subItem.status];
+                            
+                            return (
+                              <TableRow key={subItem.id} className={cn("bg-secondary hover:bg-secondary/80", subItemIsOverdue && "bg-red-50")}>
+                                <TableCell className="sticky left-0 bg-secondary z-10"></TableCell>
+                                <TableCell className="pl-20 sticky left-16 bg-secondary z-10">
+                                  <div className="flex items-center gap-2">
+                                    <CornerDownRight className="h-4 w-4 text-muted-foreground" />
+                                    <Checkbox 
+                                      id={`subitem-${subItem.id}`} 
+                                      checked={subItem.status === 'Concluído'}
+                                      onCheckedChange={(checked) => {
+                                        // Sincronizar checkbox com status: marcado = "Concluído", desmarcado = "Em execução"
+                                        const newStatus = checked ? 'Concluído' as InitiativeStatus : 'Em execução' as InitiativeStatus;
+                                        if (onSubItemStatusChange) {
+                                          onSubItemStatusChange(initiative.id, phase.id, subItem.id, newStatus);
+                                        } else if (onUpdateSubItem) {
+                                          // Fallback: usar updateSubItem se onSubItemStatusChange não estiver disponível
+                                          onUpdateSubItem(initiative.id, phase.id, subItem.id, checked);
+                                        }
+                                      }}
+                                    />
+                                    <label 
+                                      htmlFor={`subitem-${subItem.id}`} 
+                                      className={cn("text-sm", subItem.status === 'Concluído' && "line-through text-muted-foreground")}
+                                    >
+                                      {subItem.title}
+                                    </label>
+                                  </div>
+                                </TableCell>
+                                
+                                {/* Coluna Responsável */}
+                                <TableCell className="text-sm bg-secondary">
+                                  {subItem.responsible || '-'}
+                                </TableCell>
+                                
+                                {/* Coluna Editar - vazia para subitens */}
+                                {onEditInitiative && (
+                                  <TableCell className="bg-secondary"></TableCell>
+                                )}
+                                
+                                {/* Coluna Status */}
+                                <TableCell className="bg-secondary">
+                                  {onSubItemStatusChange ? (
+                                    <div className="space-y-1">
+                                      <Select 
+                                        value={subItem.status} 
+                                        onValueChange={(newStatus: InitiativeStatus) => 
+                                          onSubItemStatusChange(initiative.id, phase.id, subItem.id, newStatus)
+                                        }
+                                      >
+                                        <SelectTrigger className="h-8 text-xs px-2 w-[120px]">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {(() => {
+                                            // Se está atrasado, limitar opções para apenas Atrasado ou Concluído
+                                            const subItemDeadline = parseFlexibleDate(subItem.deadline);
+                                            const subItemIsOverdue = subItemDeadline ? isOverdue(subItemDeadline, subItem.status) : false;
+                                            const availableStatuses = subItemIsOverdue 
+                                              ? getAvailableStatuses(true)
+                                              : initiativeStatuses.filter(s => s !== 'all') as InitiativeStatus[];
+                                            
+                                            return availableStatuses.map(s => (
+                                              <SelectItem key={s} value={s as string}>{s}</SelectItem>
+                                            ));
+                                          })()}
+                                        </SelectContent>
+                                      </Select>
+                                      {(() => {
+                                        const subItemDeadline = parseFlexibleDate(subItem.deadline);
+                                        const subItemIsOverdue = subItemDeadline ? isOverdue(subItemDeadline, subItem.status) : false;
+                                        if (subItemIsOverdue) {
+                                          return (
+                                            <p className="text-xs text-muted-foreground">
+                                              Apenas Atrasado ou Concluído
+                                            </p>
+                                          );
+                                        }
+                                        return null;
+                                      })()}
+                                    </div>
+                                  ) : (
+                                    <Badge 
+                                      variant={subItem.status === 'Concluído' ? 'default' : subItem.status === 'Em Risco' || subItem.status === 'Atrasado' ? 'destructive' : 'secondary'} 
+                                      className="capitalize flex items-center w-fit"
+                                    >
+                                      {SubItemStatusIcon && <SubItemStatusIcon className="mr-1.5 h-3.5 w-3.5" />}
+                                      {subItem.status}
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                
+                                {/* Coluna Prioridade */}
+                                <TableCell className="bg-secondary">
+                                  <Badge 
+                                    variant="outline"
+                                    className={cn(
+                                      "capitalize",
+                                      subItem.priority === 'Alta' && "bg-red-100 text-red-700 border-red-300",
+                                      subItem.priority === 'Média' && "bg-yellow-100 text-yellow-700 border-yellow-300",
+                                      subItem.priority === 'Baixa' && "bg-blue-100 text-blue-700 border-blue-300"
+                                    )}
                                   >
-                                    {subItem.title}
-                                  </label>
-                                </div>
-                              </TableCell>
-                              <TableCell colSpan={dateHeaders.length}></TableCell>
-                            </TableRow>
-                          ))}
+                                    {subItem.priority}
+                                  </Badge>
+                                </TableCell>
+                                
+                                {/* Coluna Progresso */}
+                                <TableCell className="bg-secondary">
+                                  <div className="flex items-center gap-2">
+                                    <Progress value={subItemGanttTask?.progress || 0} className="h-2 w-12" />
+                                    <span className="text-xs text-muted-foreground">
+                                      {subItemGanttTask?.progress || 0}%
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                
+                                {/* Colunas do Gantt para Subitem */}
+                                {(() => {
+                                  if (!subItemGanttTask) {
+                                    return dateHeaders.map((day, dayIndex) => (
+                                      <TableCell 
+                                        key={dayIndex} 
+                                        className={cn(
+                                          "relative p-0 border-r border-border/50 bg-secondary",
+                                          (day.getDay() === 0 || day.getDay() === 6) && "bg-muted/30",
+                                          isToday(day) && "bg-red-100/50 dark:bg-red-900/20"
+                                        )}
+                                        style={{ 
+                                          width: `${cellWidth}px`, 
+                                          minWidth: `${cellWidth}px`, 
+                                          maxWidth: `${cellWidth}px`,
+                                          padding: 0,
+                                        }}
+                                      />
+                                    ));
+                                  }
+                                  
+                                  const taskStart = startOfDay(subItemGanttTask.startDate);
+                                  const taskEnd = startOfDay(subItemGanttTask.endDate);
+                                  
+                                  let barStartIndex = dateHeaders.findIndex(day => {
+                                    const dayStart = startOfDay(day);
+                                    return dayStart.getTime() >= taskStart.getTime();
+                                  });
+                                  
+                                  let barEndIndex = dateHeaders.findIndex(day => {
+                                    const dayStart = startOfDay(day);
+                                    return dayStart.getTime() > taskEnd.getTime();
+                                  });
+                                  
+                                  if (barEndIndex < 0) {
+                                    barEndIndex = dateHeaders.length;
+                                  }
+                                  barEndIndex = barEndIndex - 1;
+                                  
+                                  if (barStartIndex < 0) {
+                                    barStartIndex = 0;
+                                  }
+                                  
+                                  if (barEndIndex < barStartIndex) {
+                                    barEndIndex = barStartIndex;
+                                  }
+                                  
+                                  const barColor = subItemGanttTask.isOverdue 
+                                    ? 'bg-red-500' 
+                                    : STATUS_COLORS[subItemGanttTask.status] || 'bg-blue-500';
+                                  
+                                  return dateHeaders.map((day, dayIndex) => {
+                                    const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                                    const isTodayMarker = isToday(day);
+                                    const isInBarRange = barStartIndex >= 0 && dayIndex >= barStartIndex && dayIndex <= barEndIndex;
+                                    const isBarStart = dayIndex === barStartIndex;
+                                    
+                                    return (
+                                      <TableCell 
+                                        key={dayIndex} 
+                                        className={cn(
+                                          "relative p-0 border-r border-border/50 overflow-visible bg-secondary",
+                                          isWeekend && "bg-muted/30",
+                                          isTodayMarker && "bg-red-100/50 dark:bg-red-900/20"
+                                        )}
+                                        style={{ 
+                                          width: `${cellWidth}px`, 
+                                          minWidth: `${cellWidth}px`, 
+                                          maxWidth: `${cellWidth}px`,
+                                          padding: 0,
+                                          overflow: 'visible',
+                                        }}
+                                      >
+                                        {isTodayMarker && (
+                                          <div className="absolute inset-y-0 left-0 w-0.5 bg-red-500 z-20" />
+                                        )}
+                                        
+                                        {isBarStart && subItemGanttTask && barStartIndex >= 0 && barEndIndex >= barStartIndex && (() => {
+                                          const span = barEndIndex - barStartIndex + 1;
+                                          const barWidth = Math.max(40, span * cellWidth);
+                                          
+                                          return (
+                                            <div 
+                                              className={cn(
+                                                "absolute top-1/2 -translate-y-1/2 h-4 rounded-md opacity-90 z-10 shadow-sm border border-white/20",
+                                                barColor
+                                              )}
+                                              style={{
+                                                left: '0px',
+                                                width: `${barWidth}px`,
+                                                height: '16px',
+                                                minWidth: '40px',
+                                                pointerEvents: 'none',
+                                              }}
+                                              title={`${subItemGanttTask.name}: ${format(subItemGanttTask.startDate, 'dd/MM/yyyy')} - ${format(subItemGanttTask.endDate, 'dd/MM/yyyy')}`}
+                                            />
+                                          );
+                                        })()}
+                                      </TableCell>
+                                    );
+                                  });
+                                })()}
+                              </TableRow>
+                            );
+                          })}
                         </React.Fragment>
                       );
                     })}

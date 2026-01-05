@@ -137,7 +137,7 @@ function getEffectiveAreaId(
 }
 
 export default function InitiativesPage() {
-  const { initiatives, isLoading, updateInitiativeStatus, updateSubItem, archiveInitiative, unarchiveInitiative } = useInitiatives();
+  const { initiatives, isLoading, updateInitiativeStatus, updateSubItem, updatePhase, archiveInitiative, unarchiveInitiative } = useInitiatives();
   const { user, getUserArea } = useAuth();
   const { businessAreas } = useStrategicPanel();
   const { toast } = useToast();
@@ -229,7 +229,112 @@ export default function InitiativesPage() {
       return;
     }
 
+    // Validação: não pode concluir iniciativa se nem todas as fases estão concluídas
+    // IMPORTANTE: Esta validação deve ser SEMPRE aplicada, mesmo se a iniciativa estiver em atraso
+    // IMPORTANTE: Fases sem status ou com status vazio são consideradas não concluídas
+    if (newStatus === 'Concluído') {
+      // Se não tem fases, pode concluir
+      if (initiative.phases && initiative.phases.length > 0) {
+        // Verificar se todas as fases têm status definido e igual a 'Concluído'
+        const allPhasesCompleted = initiative.phases.every(phase => phase.status === 'Concluído');
+        if (!allPhasesCompleted) {
+          toast({
+            variant: 'destructive',
+            title: "Não é possível concluir",
+            description: "Todas as fases devem estar concluídas antes de concluir a iniciativa.",
+          });
+          return;
+        }
+      }
+    }
+
     updateInitiativeStatus(initiativeId, newStatus);
+  }
+
+  /**
+   * Handler para atualizar status de fase diretamente do Gantt
+   * 
+   * Quando o usuário muda o status de uma fase no dropdown, essa função é chamada
+   */
+  const handlePhaseStatusChange = (initiativeId: string, phaseId: string, newStatus: InitiativeStatus) => {
+    const initiative = initiatives.find(i => i.id === initiativeId);
+    if (!initiative) return;
+
+    // Verificar permissão para editar status (mesma regra da iniciativa)
+    const canEdit = canEditInitiativeStatus(userType, userArea, initiative.areaId);
+
+    if (!canEdit) {
+      toast({
+        variant: 'destructive',
+        title: "Acesso Negado",
+        description: "Você não tem permissão para alterar o status desta fase.",
+      });
+      return;
+    }
+
+    // Buscar a fase
+    const phase = initiative.phases?.find(p => p.id === phaseId);
+    if (!phase) return;
+
+    // Validação: não pode concluir fase se nem todos os subitens estão concluídos
+    // IMPORTANTE: Esta validação deve ser SEMPRE aplicada, mesmo se a fase estiver em atraso
+    if (newStatus === 'Concluído') {
+      // Se não tem subitens, pode concluir
+      if (phase.subItems && phase.subItems.length > 0) {
+        const allSubItemsCompleted = phase.subItems.every(subItem => subItem.status === 'Concluído');
+        if (!allSubItemsCompleted) {
+          toast({
+            variant: 'destructive',
+            title: "Não é possível concluir",
+            description: "Todos os subitens devem estar concluídos antes de concluir a fase.",
+          });
+          return;
+        }
+      }
+    }
+
+    // Atualizar fase com novo status
+    updatePhase(initiativeId, phaseId, { status: newStatus });
+  }
+
+  /**
+   * Handler para atualizar status de subitem diretamente do Gantt
+   * 
+   * Quando o usuário muda o status de um subitem no dropdown, essa função é chamada
+   */
+  const handleSubItemStatusChange = (initiativeId: string, phaseId: string, subItemId: string, newStatus: InitiativeStatus) => {
+    const initiative = initiatives.find(i => i.id === initiativeId);
+    if (!initiative) return;
+
+    // Verificar permissão para editar status (mesma regra da iniciativa)
+    const canEdit = canEditInitiativeStatus(userType, userArea, initiative.areaId);
+
+    if (!canEdit) {
+      toast({
+        variant: 'destructive',
+        title: "Acesso Negado",
+        description: "Você não tem permissão para alterar o status deste subitem.",
+      });
+      return;
+    }
+
+    // Buscar a fase e o subitem
+    const phase = initiative.phases?.find(p => p.id === phaseId);
+    if (!phase || !phase.subItems) return;
+
+    const subItem = phase.subItems.find(si => si.id === subItemId);
+    if (!subItem) return;
+
+    // Atualizar subitem: sincronizar completed com status
+    // IMPORTANTE: "Concluído" = completed true, outros status = completed false
+    const updatedSubItems = phase.subItems.map(si => 
+      si.id === subItemId 
+        ? { ...si, status: newStatus, completed: newStatus === 'Concluído' }
+        : si
+    );
+
+    // Atualizar fase com subitens atualizados
+    updatePhase(initiativeId, phaseId, { subItems: updatedSubItems });
   }
   
   // Filtrar iniciativas por área efetiva (aplicar filtro automático quando não há selectedAreaId)
@@ -379,6 +484,8 @@ export default function InitiativesPage() {
             onArchive={archiveInitiative}
             onUnarchive={unarchiveInitiative}
             onStatusChange={handleStatusChange}
+            onPhaseStatusChange={handlePhaseStatusChange}
+            onSubItemStatusChange={handleSubItemStatusChange}
           />
         ) : (
           <InitiativesKanban initiatives={activeInitiatives} onInitiativeClick={openDossier} />

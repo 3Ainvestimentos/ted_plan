@@ -156,7 +156,34 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
     const currentSubItems = currentPhase.subItems || [];
     
     const updatedSubItems = currentSubItems.filter((_: any, idx: number) => idx !== subItemIndex);
-    setValue(`phases.${phaseIndex}.subItems`, updatedSubItems, { shouldValidate: true });
+    // Não validar ao remover, apenas atualizar o valor
+    setValue(`phases.${phaseIndex}.subItems`, updatedSubItems, { shouldValidate: false });
+  };
+
+  /**
+   * Verifica recursivamente se há mensagens de erro reais no objeto de erros
+   * 
+   * @param errorObj - Objeto de erro a verificar
+   * @returns true se houver pelo menos uma mensagem de erro real
+   */
+  const hasRealErrorMessage = (errorObj: any): boolean => {
+    if (!errorObj || typeof errorObj !== 'object') {
+      return false;
+    }
+    
+    // Verificar se tem mensagem direta
+    if (errorObj.message && typeof errorObj.message === 'string' && errorObj.message.trim().length > 0) {
+      return true;
+    }
+    
+    // Verificar recursivamente em todas as propriedades
+    for (const key in errorObj) {
+      if (hasRealErrorMessage(errorObj[key])) {
+        return true;
+      }
+    }
+    
+    return false;
   };
 
   /**
@@ -165,38 +192,40 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
    * @param errors - Objeto de erros do react-hook-form
    */
   const onError = (errors: any) => {
-    // Só logar se houver erros reais (não objeto vazio)
-    if (errors && Object.keys(errors).length > 0) {
-      console.error("Erros de validação:", errors);
-      
-      // Função recursiva para encontrar o primeiro campo com erro
-      const findFirstErrorField = (errorObj: any, path: string = ''): string | null => {
-        for (const key in errorObj) {
-          const currentPath = path ? `${path}.${key}` : key;
-          
-          if (errorObj[key]?.message) {
-            return currentPath;
-          }
-          
-          if (typeof errorObj[key] === 'object' && errorObj[key] !== null) {
-            const nestedError = findFirstErrorField(errorObj[key], currentPath);
-            if (nestedError) return nestedError;
-          }
-        }
-        return null;
-      };
-      
-      const firstErrorField = findFirstErrorField(errors);
-      if (firstErrorField) {
-        // Tentar encontrar o elemento pelo name ou id
-        const fieldName = firstErrorField.split('.').pop();
-        const element = document.querySelector(`[name="${firstErrorField}"]`) || 
-                       document.querySelector(`[name="${fieldName}"]`) ||
-                       document.querySelector(`#${fieldName}`);
+    // Ignorar completamente se não houver erros reais
+    if (!hasRealErrorMessage(errors)) {
+      return; // Objeto vazio ou sem mensagens de erro reais
+    }
+    
+    console.error("Erros de validação:", errors);
+    
+    // Função recursiva para encontrar o primeiro campo com erro
+    const findFirstErrorField = (errorObj: any, path: string = ''): string | null => {
+      for (const key in errorObj) {
+        const currentPath = path ? `${path}.${key}` : key;
         
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (errorObj[key]?.message) {
+          return currentPath;
         }
+        
+        if (typeof errorObj[key] === 'object' && errorObj[key] !== null) {
+          const nestedError = findFirstErrorField(errorObj[key], currentPath);
+          if (nestedError) return nestedError;
+        }
+      }
+      return null;
+    };
+    
+    const firstErrorField = findFirstErrorField(errors);
+    if (firstErrorField) {
+      // Tentar encontrar o elemento pelo name ou id
+      const fieldName = firstErrorField.split('.').pop();
+      const element = document.querySelector(`[name="${firstErrorField}"]`) || 
+                     document.querySelector(`[name="${fieldName}"]`) ||
+                     document.querySelector(`#${fieldName}`);
+      
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
   };
