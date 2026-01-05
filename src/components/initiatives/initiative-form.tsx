@@ -57,20 +57,20 @@ const subItemSchema = z.object({
   title: z.string().min(3, "O título do subitem deve ter pelo menos 3 caracteres."),
   completed: z.boolean().optional().default(false),
   deadline: dateSchema,
-  status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso', 'A Fazer', 'Em Dia', 'Em Risco', 'Atrasado']).optional().default('Pendente'),
+  status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso']).optional().default('Pendente'),
   responsible: z.string().min(1, "O responsável é obrigatório."),
   priority: z.enum(['Baixa', 'Média', 'Alta']).optional().default('Baixa'),
-  description: z.string().min(1, "A observação é obrigatória."),
+  description: z.string().optional(),
 });
 
 const phaseSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(3, "O título da fase deve ter pelo menos 3 caracteres."),
   deadline: dateSchema,
-  status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso', 'A Fazer', 'Em Dia', 'Em Risco', 'Atrasado']),
+  status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso']),
   areaId: z.string().min(1, "A área é obrigatória."), // Será sempre igual à área do projeto
   priority: z.enum(['Baixa', 'Média', 'Alta']),
-  description: z.string().min(1, "A observação é obrigatória."),
+  description: z.string().optional(),
   responsible: z.string().min(1, "O responsável é obrigatório."),
   subItems: z.array(subItemSchema).optional(),
 });
@@ -78,7 +78,7 @@ const phaseSchema = z.object({
 const initiativeSchema = z.object({
   title: z.string().min(5, "O título deve ter pelo menos 5 caracteres."),
   owner: z.string().min(1, "O responsável é obrigatório."),
-  description: z.string().min(10, "A descrição deve ter pelo menos 10 caracteres."),
+  description: z.string().optional(),
   status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso']),
   deadline: dateSchema,
   priority: z.enum(['Baixa', 'Média', 'Alta']),
@@ -529,7 +529,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                         // Status disponíveis baseado em atraso
                         let availableStatuses = phaseIsOverdue 
                           ? getAvailableStatuses(true)
-                          : ['Pendente', 'Em execução', 'Concluído', 'Suspenso', 'A Fazer', 'Em Dia', 'Em Risco', 'Atrasado'] as const;
+                          : ['Pendente', 'Em execução', 'Concluído', 'Suspenso'] as const;
                         
                         // Se não está atrasado mas tenta concluir sem todos subitens concluídos, remover "Concluído"
                         if (!phaseIsOverdue && !allSubItemsCompleted && phaseSubItems.length > 0) {
@@ -771,7 +771,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                   const subItemIsOverdue = subItemDeadline ? isOverdue(subItemDeadline, subItemStatus) : false;
                                   const availableStatuses = subItemIsOverdue 
                                     ? getAvailableStatuses(true)
-                                    : ['Pendente', 'Em execução', 'Concluído', 'Suspenso', 'A Fazer', 'Em Dia', 'Em Risco', 'Atrasado'] as const;
+                                    : ['Pendente', 'Em execução', 'Concluído', 'Suspenso'] as const;
                                   
                                   return (
                                     <Select onValueChange={field.onChange} value={field.value} disabled={!canEditStatus}>
