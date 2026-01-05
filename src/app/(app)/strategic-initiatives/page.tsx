@@ -21,25 +21,148 @@ import { ImportInitiativesModal } from "@/components/initiatives/import-initiati
 import { EditInitiativeModal } from "@/components/initiatives/edit-initiative-modal";
 import { useAuth } from "@/contexts/auth-context";
 import { useStrategicPanel } from "@/contexts/strategic-panel-context";
-import { canCreateInitiative, canViewInitiativeViewMode, canEditInitiativeStatus } from "@/lib/permissions-config";
+import { canCreateInitiative, canViewMode, canEditInitiativeStatus } from "@/lib/permissions-config";
 import { Badge } from "@/components/ui/badge";
 
 
 type ViewMode = "dashboard" | "table-gantt" | "kanban";
 
+/**
+ * ============================================
+ * FUNÇÕES HELPER DE ÁREA
+ * ============================================
+ */
+
+/**
+ * Obtém a área padrão baseada no tipo de usuário quando não há filtro selecionado.
+ * 
+ * REGRAS:
+ * - Head: Retorna a área do próprio usuário (userArea) para visualização completa
+ * - PMO: Busca e retorna a área "Estratégia e IA" por nome
+ * - Admin: Retorna null (pode ver todas as áreas)
+ * 
+ * @param userType - Tipo de usuário (admin, pmo, head)
+ * @param userArea - ID da área do usuário (apenas para Head)
+ * @param businessAreas - Array de todas as áreas de negócio disponíveis
+ * @returns ID da área padrão ou null se não houver padrão definido
+ * 
+ * @example
+ * // Head sem filtro
+ * const defaultArea = getDefaultAreaId('head', 'area-123', businessAreas);
+ * // Retorna: 'area-123'
+ * 
+ * @example
+ * // PMO sem filtro
+ * const defaultArea = getDefaultAreaId('pmo', undefined, businessAreas);
+ * // Retorna: ID da área "Estratégia e IA"
+ */
+function getDefaultAreaId(
+  userType: 'admin' | 'pmo' | 'head',
+  userArea: string | undefined,
+  businessAreas: Array<{ id: string; name: string }>
+): string | null {
+  // Head: usa sua própria área como padrão
+  if (userType === 'head' && userArea) {
+    return userArea;
+  }
+  
+  // PMO: busca área "Estratégia e IA" primeiro por ID, depois por nome
+  if (userType === 'pmo' || userType === 'admin') {
+    // Primeiro: buscar pelo ID específico
+    const estrategiaAreaById = businessAreas.find(
+      area => area.id === 'Sg1SSSWI0WMy4U3Dgc3e'
+    );
+    if (estrategiaAreaById) {
+      return estrategiaAreaById.id;
+    }
+    
+    // Fallback: buscar por nome "Estratégia e IA"
+    const estrategiaArea = businessAreas.find(
+      area => area.name.toLowerCase().includes('estratégia') && 
+              (area.name.toLowerCase().includes('ia') || area.name.toLowerCase().includes('ai'))
+    );
+    
+    // Fallback adicional: busca apenas por "Estratégia" se não encontrar com IA
+    if (!estrategiaArea) {
+      const estrategiaFallback = businessAreas.find(
+        area => area.name.toLowerCase().includes('estratégia')
+      );
+      return estrategiaFallback?.id || null;
+    }
+    
+    return estrategiaArea.id || null;
+  }
+  
+  // Admin sem área específica: retorna null (pode ver todas)
+  return null;
+}
+
+/**
+ * Obtém a área efetiva considerando a área selecionada e os padrões.
+ * 
+ * LÓGICA:
+ * - Se há selectedAreaId na URL, retorna essa área
+ * - Se não há selectedAreaId, retorna a área padrão baseada no userType
+ * - Retorna null se não houver área selecionada nem padrão
+ * 
+ * @param selectedAreaId - ID da área selecionada na URL (pode ser null)
+ * @param userType - Tipo de usuário (admin, pmo, head)
+ * @param userArea - ID da área do usuário (apenas para Head)
+ * @param businessAreas - Array de todas as áreas de negócio disponíveis
+ * @returns ID da área efetiva ou null se não houver área definida
+ * 
+ * @example
+ * // Head com filtro selecionado
+ * const effectiveArea = getEffectiveAreaId('area-456', 'head', 'area-123', businessAreas);
+ * // Retorna: 'area-456'
+ * 
+ * @example
+ * // Head sem filtro (usa padrão)
+ * const effectiveArea = getEffectiveAreaId(null, 'head', 'area-123', businessAreas);
+ * // Retorna: 'area-123' (sua própria área)
+ */
+function getEffectiveAreaId(
+  selectedAreaId: string | null,
+  userType: 'admin' | 'pmo' | 'head',
+  userArea: string | undefined,
+  businessAreas: Array<{ id: string; name: string }>
+): string | null {
+  // Se há área selecionada na URL, usar ela
+  if (selectedAreaId) {
+    return selectedAreaId;
+  }
+  
+  // Caso contrário, usar área padrão
+  return getDefaultAreaId(userType, userArea, businessAreas);
+}
+
 export default function InitiativesPage() {
   const { initiatives, isLoading, updateInitiativeStatus, updateSubItem, archiveInitiative, unarchiveInitiative } = useInitiatives();
   const { user, getUserArea } = useAuth();
   const { businessAreas } = useStrategicPanel();
+  const { toast } = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
   
+  // Verificar permissões
+  const userType = user?.userType || 'head';
+  const userArea = getUserArea();
+  const canCreate = canCreateInitiative(userType);
+  
   // Obter área selecionada da URL
   const selectedAreaId = searchParams.get('area') || null;
+  
+  // Calcular área efetiva (selecionada ou padrão)
+  const effectiveAreaId = useMemo(() => {
+    return getEffectiveAreaId(selectedAreaId, userType, userArea, businessAreas);
+  }, [selectedAreaId, userType, userArea, businessAreas]);
+  
+  // Área selecionada para exibição (pode ser diferente da efetiva se não há filtro)
   const selectedArea = useMemo(() => {
-    if (!selectedAreaId) return null;
-    return businessAreas.find(a => a.id === selectedAreaId) || null;
-  }, [selectedAreaId, businessAreas]);
+    const areaIdToShow = selectedAreaId || effectiveAreaId;
+    if (!areaIdToShow) return null;
+    return businessAreas.find(a => a.id === areaIdToShow) || null;
+  }, [selectedAreaId, effectiveAreaId, businessAreas]);
 
   /**
    * Dashboard é a visualização inicial/padrão da página
@@ -50,25 +173,20 @@ export default function InitiativesPage() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedInitiativeId, setSelectedInitiativeId] = useState<string | null>(null);
   const [editingInitiative, setEditingInitiative] = useState<Initiative | null>(null);
-
-  // Verificar permissões
-  const userType = user?.userType || 'head';
-  const userArea = getUserArea();
-  const canCreate = canCreateInitiative(userType);
   
-  // Verificar se pode ver o modo de visualização atual
+  // Verificar se pode ver o modo de visualização atual usando área efetiva
   const canViewCurrentMode = useMemo(() => {
-    if (!selectedAreaId) return true; // Sem filtro, pode ver tudo
-    return canViewInitiativeViewMode(userType, userArea, selectedAreaId, viewMode);
-  }, [userType, userArea, selectedAreaId, viewMode]);
+    if (!effectiveAreaId) return true; // Sem área efetiva, pode ver tudo (admin)
+    return canViewMode(userType, userArea, effectiveAreaId, viewMode);
+  }, [userType, userArea, effectiveAreaId, viewMode]);
 
   // Ajustar viewMode se não tiver permissão
   useEffect(() => {
-    if (!canViewCurrentMode && selectedAreaId && viewMode !== 'dashboard') {
+    if (!canViewCurrentMode && effectiveAreaId && viewMode !== 'dashboard') {
       // Se não pode ver o modo atual, forçar dashboard
       setViewMode('dashboard');
     }
-  }, [canViewCurrentMode, selectedAreaId, viewMode]);
+  }, [canViewCurrentMode, effectiveAreaId, viewMode]);
 
   /**
    * Busca a iniciativa atualizada do array initiatives
@@ -114,14 +232,15 @@ export default function InitiativesPage() {
     updateInitiativeStatus(initiativeId, newStatus);
   }
   
-  // Filtrar iniciativas por área se selecionada
+  // Filtrar iniciativas por área efetiva (aplicar filtro automático quando não há selectedAreaId)
   const filteredInitiatives = useMemo(() => {
     let filtered = initiatives.filter(i => !i.archived);
-    if (selectedAreaId) {
-      filtered = filtered.filter(i => i.areaId === selectedAreaId);
+    // Usar área efetiva para filtrar (considera área padrão quando não há filtro)
+    if (effectiveAreaId) {
+      filtered = filtered.filter(i => i.areaId === effectiveAreaId);
     }
     return filtered;
-  }, [initiatives, selectedAreaId]);
+  }, [initiatives, effectiveAreaId]);
 
   const activeInitiatives = filteredInitiatives;
 
@@ -166,15 +285,18 @@ export default function InitiativesPage() {
                 <Badge variant="secondary" className="text-sm">
                   Área: {selectedArea.name}
                 </Badge>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearAreaFilter}
-                  className="h-6 px-2"
-                >
-                  <X className="h-3 w-3 mr-1" />
-                  Remover filtro
-                </Button>
+                {/* Mostrar botão "Remover filtro" apenas se há filtro explícito na URL */}
+                {selectedAreaId && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAreaFilter}
+                    className="h-6 px-2"
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Remover filtro
+                  </Button>
+                )}
               </div>
             )}
           </div>
@@ -186,7 +308,7 @@ export default function InitiativesPage() {
                 size="sm" 
                 onClick={() => setViewMode('dashboard')}
                 className="h-8 px-3"
-                disabled={selectedAreaId && !canViewInitiativeViewMode(userType, userArea, selectedAreaId, 'dashboard')}
+                disabled={effectiveAreaId ? !canViewMode(userType, userArea, effectiveAreaId, 'dashboard') : false}
               >
                 <LayoutDashboard className="h-4 w-4" />
                 <span className="ml-2 hidden sm:inline">Dashboard</span>
@@ -196,7 +318,7 @@ export default function InitiativesPage() {
                 size="sm" 
                 onClick={() => setViewMode('table-gantt')}
                 className="h-8 px-3"
-                disabled={selectedAreaId && !canViewInitiativeViewMode(userType, userArea, selectedAreaId, 'table-gantt')}
+                disabled={effectiveAreaId ? !canViewMode(userType, userArea, effectiveAreaId, 'table-gantt') : false}
               >
                 <List className="h-4 w-4" />
                 <span className="ml-2 hidden sm:inline">Tabela/Gantt</span>
@@ -206,7 +328,7 @@ export default function InitiativesPage() {
                 size="sm" 
                 onClick={() => setViewMode('kanban')}
                 className="h-8 px-3"
-                disabled={selectedAreaId && !canViewInitiativeViewMode(userType, userArea, selectedAreaId, 'kanban')}
+                disabled={effectiveAreaId ? !canViewMode(userType, userArea, effectiveAreaId, 'kanban') : false}
               >
                 <LayoutGrid className="h-4 w-4" />
                 <span className="ml-2 hidden sm:inline">Kanban</span>

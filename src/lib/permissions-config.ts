@@ -248,7 +248,74 @@ export function canDeleteInitiative(userType: UserType): boolean {
 }
 
 /**
- * Verifica se o usuário pode visualizar um modo específico de visualização
+ * Verifica se o usuário pode visualizar um modo específico de visualização.
+ * 
+ * Esta função verifica permissões baseadas na área efetiva (effectiveAreaId),
+ * que pode ser a área selecionada na URL ou a área padrão do usuário.
+ * 
+ * REGRAS:
+ * - Admin e PMO: Sempre podem ver todas as visualizações
+ * - Head com effectiveAreaId === userArea: Pode ver todas as visualizações (Dashboard, Tabela/Gantt, Kanban)
+ * - Head com effectiveAreaId !== userArea: Apenas Dashboard (limitado)
+ * 
+ * @param userType - Tipo de usuário (admin, pmo, head)
+ * @param userArea - Área do usuário (ID da BusinessArea)
+ * @param effectiveAreaId - ID da área efetiva (selecionada ou padrão)
+ * @param viewMode - Modo de visualização (dashboard, table-gantt, kanban)
+ * @returns true se o usuário pode visualizar no modo especificado
+ * 
+ * @example
+ * // Head vendo sua própria área (sem filtro ou com filtro de sua área)
+ * canViewMode('head', 'area-123', 'area-123', 'table-gantt');
+ * // Retorna: true
+ * 
+ * @example
+ * // Head vendo área alheia
+ * canViewMode('head', 'area-123', 'area-456', 'table-gantt');
+ * // Retorna: false (apenas dashboard permitido)
+ * 
+ * @example
+ * // PMO sempre pode ver tudo
+ * canViewMode('pmo', undefined, 'area-456', 'kanban');
+ * // Retorna: true
+ */
+export function canViewMode(
+  userType: UserType,
+  userArea: string | undefined,
+  effectiveAreaId: string | null,
+  viewMode: 'dashboard' | 'table-gantt' | 'kanban'
+): boolean {
+  // Admin e PMO sempre podem ver todas as visualizações
+  if (userType === 'admin' || userType === 'pmo') {
+    return true;
+  }
+  
+  // Head precisa verificar se a área efetiva é sua própria área
+  if (userType === 'head') {
+    // Se não há área efetiva, não pode ver (não deveria acontecer)
+    if (!effectiveAreaId) {
+      return false;
+    }
+    
+    const isOwnArea = userArea === effectiveAreaId;
+    
+    if (isOwnArea) {
+      // Head da própria área: pode ver todas as visualizações
+      return true;
+    } else {
+      // Head de área alheia: apenas Dashboard (limitado)
+      return viewMode === 'dashboard';
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Verifica se o usuário pode visualizar um modo específico de visualização.
+ * 
+ * @deprecated Use canViewMode() em vez desta função. Esta função mantém compatibilidade
+ * mas usa initiativeAreaId em vez de effectiveAreaId, o que não considera área padrão.
  * 
  * @param userType - Tipo de usuário (admin, pmo, head)
  * @param userArea - Área do usuário (ID da BusinessArea)
