@@ -157,14 +157,44 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
     setValue(`phases.${phaseIndex}.subItems`, updatedSubItems, { shouldValidate: true });
   };
 
+  /**
+   * Handler de erros de validação do formulário
+   * 
+   * @param errors - Objeto de erros do react-hook-form
+   */
   const onError = (errors: any) => {
-    console.error("Erros de validação:", errors);
-    // Scroll para o primeiro erro
-    const firstErrorField = Object.keys(errors)[0];
-    if (firstErrorField) {
-      const element = document.querySelector(`[name="${firstErrorField}"]`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Só logar se houver erros reais (não objeto vazio)
+    if (errors && Object.keys(errors).length > 0) {
+      console.error("Erros de validação:", errors);
+      
+      // Função recursiva para encontrar o primeiro campo com erro
+      const findFirstErrorField = (errorObj: any, path: string = ''): string | null => {
+        for (const key in errorObj) {
+          const currentPath = path ? `${path}.${key}` : key;
+          
+          if (errorObj[key]?.message) {
+            return currentPath;
+          }
+          
+          if (typeof errorObj[key] === 'object' && errorObj[key] !== null) {
+            const nestedError = findFirstErrorField(errorObj[key], currentPath);
+            if (nestedError) return nestedError;
+          }
+        }
+        return null;
+      };
+      
+      const firstErrorField = findFirstErrorField(errors);
+      if (firstErrorField) {
+        // Tentar encontrar o elemento pelo name ou id
+        const fieldName = firstErrorField.split('.').pop();
+        const element = document.querySelector(`[name="${firstErrorField}"]`) || 
+                       document.querySelector(`[name="${fieldName}"]`) ||
+                       document.querySelector(`#${fieldName}`);
+        
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
       }
     }
   };

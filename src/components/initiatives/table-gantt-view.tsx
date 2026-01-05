@@ -455,7 +455,7 @@ export function TableGanttView({
 
     // Calcula largura das células para evitar scroll horizontal
     const totalDays = dateHeaders.length;
-    const fixedColumnsWidth = 64 + 32 + (onEditInitiative ? 48 : 0) + 36 + 20 + 24; // Tabela: #, Título, Responsável, Editar (opcional), Status, Progresso
+    const fixedColumnsWidth = 64 + 32 + (onEditInitiative ? 48 : 0) + 36 + 24 + 20 + 24; // Tabela: #, Título, Responsável, Editar (opcional), Status, Prioridade, Progresso
     const estimatedAvailableWidth = typeof window !== 'undefined' ? window.innerWidth - 250 - 48 - fixedColumnsWidth : 800;
     const calculatedWidth = estimatedAvailableWidth / totalDays;
     // Largura mínima de 2px e máxima de 4px para melhor visualização
@@ -544,6 +544,7 @@ export function TableGanttView({
                 <TableHead className="w-32">Responsável</TableHead>
                 {onEditInitiative && <TableHead className="w-12"></TableHead>}
                 <TableHead className="w-36">Status</TableHead>
+                <TableHead className="w-24">Prioridade</TableHead>
                 <TableHead className="w-20">Progresso</TableHead>
                 
                 {/* Cabeçalhos dos meses do Gantt */}
@@ -657,6 +658,21 @@ export function TableGanttView({
                             {initiative.status}
                           </Badge>
                         )}
+                      </TableCell>
+                      
+                      {/* Coluna Prioridade */}
+                      <TableCell>
+                        <Badge 
+                          variant="outline"
+                          className={cn(
+                            "capitalize",
+                            initiative.priority === 'Alta' && "bg-red-100 text-red-700 border-red-300",
+                            initiative.priority === 'Média' && "bg-yellow-100 text-yellow-700 border-yellow-300",
+                            initiative.priority === 'Baixa' && "bg-blue-100 text-blue-700 border-blue-300"
+                          )}
+                        >
+                          {initiative.priority}
+                        </Badge>
                       </TableCell>
                       
                       {/* Coluna Progresso */}

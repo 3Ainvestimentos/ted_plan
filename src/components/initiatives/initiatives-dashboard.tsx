@@ -277,38 +277,6 @@ function calculatePriorityDistribution(initiatives: Initiative[]): PriorityDistr
     }));
 }
 
-/**
- * Calcula quantidade de iniciativas com subitens (checklist)
- * 
- * @param initiatives - Array de iniciativas
- * @returns Número de iniciativas com subitens
- */
-function calculateInitiativesWithSubItems(initiatives: Initiative[]): number {
-  const active = initiatives.filter(i => !i.archived);
-  return active.filter(i => i.subItems && i.subItems.length > 0).length;
-}
-
-/**
- * Calcula percentual médio de conclusão dos checklists
- * 
- * @param initiatives - Array de iniciativas
- * @returns Percentual médio de subitens concluídos
- */
-function calculateAverageChecklistCompletion(initiatives: Initiative[]): number {
-  const active = initiatives.filter(i => !i.archived && i.subItems && i.subItems.length > 0);
-  
-  if (active.length === 0) return 0;
-  
-  const totalCompletion = active.reduce((sum, i) => {
-    const subItems = i.subItems || [];
-    if (subItems.length === 0) return sum;
-    
-    const completed = subItems.filter(si => si.completed).length;
-    return sum + (completed / subItems.length) * 100;
-  }, 0);
-  
-  return Math.round(totalCompletion / active.length);
-}
 
 // ============================================
 // SEÇÃO 4: COMPONENTE PRINCIPAL
@@ -331,8 +299,6 @@ export function InitiativesDashboard({ initiatives }: InitiativesDashboardProps)
     const statusDist = calculateStatusDistribution(initiatives);
     const ownerDist = calculateOwnerDistribution(initiatives);
     const priorityDist = calculatePriorityDistribution(initiatives);
-    const withSubItems = calculateInitiativesWithSubItems(initiatives);
-    const avgChecklistCompletion = calculateAverageChecklistCompletion(initiatives);
     
     return {
       total,
@@ -342,9 +308,7 @@ export function InitiativesDashboard({ initiatives }: InitiativesDashboardProps)
       avgProgress,
       statusDist,
       ownerDist,
-      priorityDist,
-      withSubItems,
-      avgChecklistCompletion
+      priorityDist
     };
   }, [initiatives]);
 
@@ -417,7 +381,7 @@ export function InitiativesDashboard({ initiatives }: InitiativesDashboardProps)
       </div>
 
       {/* ========== CARDS DE MÉTRICAS SECUNDÁRIAS ========== */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         {/* Card: Progresso Médio */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -430,32 +394,6 @@ export function InitiativesDashboard({ initiatives }: InitiativesDashboardProps)
             <p className="text-xs text-muted-foreground mt-1">
               Média geral de todas as iniciativas
             </p>
-          </CardContent>
-        </Card>
-
-        {/* Card: Iniciativas com Checklist */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Com Checklist</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.withSubItems}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {metrics.total > 0 
-                ? `${Math.round((metrics.withSubItems / metrics.total) * 100)}% das iniciativas`
-                : 'Nenhuma iniciativa'
-              }
-            </p>
-            {metrics.withSubItems > 0 && (
-              <div className="mt-2">
-                <div className="flex justify-between text-xs mb-1">
-                  <span>Conclusão média dos checklists</span>
-                  <span>{metrics.avgChecklistCompletion}%</span>
-                </div>
-                <Progress value={metrics.avgChecklistCompletion} className="h-2" />
-              </div>
-            )}
           </CardContent>
         </Card>
 

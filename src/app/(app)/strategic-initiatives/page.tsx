@@ -372,7 +372,7 @@ export default function InitiativesPage() {
            * - Layout responsivo sem scroll horizontal
            */
           <TableGanttView 
-            initiatives={initiatives} 
+            initiatives={activeInitiatives} 
             onInitiativeClick={openDossier}
             onEditInitiative={(initiative) => setEditingInitiative(initiative)}
             onUpdateSubItem={updateSubItem}
