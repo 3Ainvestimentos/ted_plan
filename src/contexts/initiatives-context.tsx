@@ -430,35 +430,125 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [initiatives, fetchInitiatives, initiativesCollectionRef]);
 
-  const bulkAddInitiatives = useCallback(async (newInitiativesData: any[]) => {
+  /**
+   * Adiciona múltiplas iniciativas em lote com estrutura hierárquica (itens e subitens).
+   * 
+   * @param newInitiativesData - Array de iniciativas com itens e subitens
+   * Cada iniciativa deve ter:
+   * - Campos obrigatórios: title, owner, status, priority, deadline, areaId
+   * - items: Array de itens (mínimo 1)
+   *   - Cada item deve ter: title, deadline, status, areaId, priority, responsible
+   *   - Cada item pode ter subItems: Array de subitens (opcional)
+   *     - Cada subitem deve ter: title, deadline, status, responsible, priority
+   */
+  const bulkAddInitiatives = useCallback(async (newInitiativesData: Array<{
+    title: string;
+    owner: string;
+    description?: string;
+    status: InitiativeStatus;
+    priority: InitiativePriority;
+    deadline: string;
+    areaId: string;
+    items: Array<{
+      title: string;
+      deadline: string;
+      status: InitiativeStatus;
+      areaId: string;
+      priority: InitiativePriority;
+      description?: string;
+      responsible: string;
+      subItems?: Array<{
+        title: string;
+        deadline: string;
+        status: InitiativeStatus;
+        responsible: string;
+        priority: InitiativePriority;
+        description?: string;
+      }>;
+    }>;
+  }>) => {
     let nextTopicNumber = getNextMainTopicNumber(initiatives);
     const batch = writeBatch(db);
+    
     newInitiativesData.forEach(initiativeData => {
+        // Validar que a iniciativa tem pelo menos 1 item
+        if (!initiativeData.items || initiativeData.items.length === 0) {
+            console.error(`Iniciativa "${initiativeData.title}" não possui itens. Será ignorada.`);
+            return;
+        }
+
+        // Validar e formatar deadline da iniciativa
         const deadline = initiativeData.deadline && !isNaN(new Date(initiativeData.deadline).getTime())
           ? new Date(initiativeData.deadline).toISOString().split('T')[0]
           : null;
 
+        // Mapear itens com subitens
+        const items = initiativeData.items.map(item => {
+            // Validar e formatar deadline do item
+            const itemDeadline = item.deadline && !isNaN(new Date(item.deadline).getTime())
+              ? new Date(item.deadline).toISOString().split('T')[0]
+              : null;
+
+            // Mapear subitens se presentes
+            const subItems = item.subItems?.map(subItem => {
+                // Validar e formatar deadline do subitem
+                const subItemDeadline = subItem.deadline && !isNaN(new Date(subItem.deadline).getTime())
+                  ? new Date(subItem.deadline).toISOString().split('T')[0]
+                  : null;
+
+                return {
+                    id: doc(collection(db, 'dummy')).id,
+                    title: subItem.title,
+                    completed: subItem.status === 'Concluído',
+                    deadline: subItemDeadline,
+                    status: subItem.status,
+                    responsible: subItem.responsible,
+                    priority: subItem.priority,
+                    description: subItem.description || '',
+                };
+            }) || [];
+
+            return {
+                id: doc(collection(db, 'dummy')).id,
+                title: item.title,
+                deadline: itemDeadline,
+                status: item.status,
+                areaId: item.areaId,
+                priority: item.priority,
+                description: item.description || '',
+                responsible: item.responsible || null,
+                subItems: subItems,
+            };
+        });
+
         const newInitiative = {
-          ...initiativeData,
+          title: initiativeData.title,
+          owner: initiativeData.owner,
+          description: initiativeData.description || '',
+          status: initiativeData.status,
+          priority: initiativeData.priority,
           deadline: deadline,
+          areaId: initiativeData.areaId,
           lastUpdate: new Date().toISOString(),
           topicNumber: (nextTopicNumber++).toString(),
           progress: 0,
           keyMetrics: [],
           parentId: null,
-          items: [],
-          areaId: '',
+          items: items,
           archived: false,
         };
+        
+        // Remover campos undefined antes de salvar
+        const cleanedInitiative = removeUndefinedFields(newInitiative);
         const docRef = doc(initiativesCollectionRef);
-        batch.set(docRef, newInitiative);
+        batch.set(docRef, cleanedInitiative);
     });
 
     try {
       await batch.commit();
       fetchInitiatives();
     } catch (error) {
-        console.error("Error bulk adding initiatives: ", error);
+      console.error("Error bulk adding initiatives: ", error);
     }
   }, [initiatives, fetchInitiatives, initiativesCollectionRef]);
   
