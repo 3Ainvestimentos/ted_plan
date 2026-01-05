@@ -4,6 +4,7 @@
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { canEditInitiativeStatus } from "@/lib/permissions-config";
+import { isOverdue, getAvailableStatuses } from "@/lib/initiatives-helpers";
 
 /**
  * ============================================
@@ -59,6 +60,12 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
      * @param taskId - ID da iniciativa que foi movida
      * @param newStatus - Novo status (coluna de destino)
      */
+    /**
+     * Handler para quando uma tarefa é arrastada e solta em outra coluna
+     * 
+     * @param taskId - ID da iniciativa que foi movida
+     * @param newStatus - Novo status (coluna de destino)
+     */
     const handleDropTask = (taskId: string, newStatus: InitiativeStatus) => {
         const initiative = initiatives.find(i => i.id === taskId);
         if (!initiative) return;
@@ -75,6 +82,20 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
                 description: "Você não tem permissão para alterar o status desta iniciativa.",
             });
             return;
+        }
+
+        // Verificar se está em atraso e validar status permitido
+        const initiativeIsOverdue = isOverdue(initiative.deadline, initiative.status);
+        if (initiativeIsOverdue) {
+            const availableStatuses = getAvailableStatuses(true);
+            if (!availableStatuses.includes(newStatus)) {
+                toast({
+                    variant: 'destructive',
+                    title: "Status não permitido",
+                    description: "Iniciativas em atraso só podem ser movidas para 'Atrasado' ou 'Concluído'.",
+                });
+                return;
+            }
         }
 
         updateInitiativeStatus(taskId, newStatus);

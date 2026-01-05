@@ -18,6 +18,7 @@ import type { InitiativeStatus, InitiativePriority, InitiativePhase } from "@/ty
 import { Checkbox } from "../ui/checkbox";
 import { cn } from "@/lib/utils";
 import { useStrategicPanel } from "@/contexts/strategic-panel-context";
+import { isOverdue, getAvailableStatuses } from "@/lib/initiatives-helpers";
 
 const subItemSchema = z.object({
   id: z.string().optional(),
@@ -419,20 +420,39 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                     <Controller
                       name={`phases.${index}.status`}
                       control={control}
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value} disabled={!canEditStatus}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Pendente">Pendente</SelectItem>
-                            <SelectItem value="Em execução">Em execução</SelectItem>
-                            <SelectItem value="Concluído">Concluído</SelectItem>
-                            <SelectItem value="Suspenso">Suspenso</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
+                      render={({ field }) => {
+                        // Verificar se a fase está em atraso
+                        const phaseDeadline = watchPhases?.[index]?.deadline;
+                        const phaseStatus = field.value;
+                        const phaseIsOverdue = phaseDeadline ? isOverdue(phaseDeadline, phaseStatus) : false;
+                        const availableStatuses = phaseIsOverdue 
+                          ? getAvailableStatuses(true)
+                          : ['Pendente', 'Em execução', 'Concluído', 'Suspenso', 'A Fazer', 'Em Dia', 'Em Risco', 'Atrasado'] as const;
+                        
+                        return (
+                          <Select onValueChange={field.onChange} value={field.value} disabled={!canEditStatus}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableStatuses.map(status => (
+                                <SelectItem key={status} value={status}>{status}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        );
+                      }}
                     />
+                    {(() => {
+                      const phaseDeadline = watchPhases?.[index]?.deadline;
+                      const phaseStatus = watchPhases?.[index]?.status;
+                      const phaseIsOverdue = phaseDeadline ? isOverdue(phaseDeadline, phaseStatus) : false;
+                      return phaseIsOverdue ? (
+                        <p className="text-xs text-muted-foreground">
+                          Fase em atraso: apenas Atrasado ou Concluído disponíveis
+                        </p>
+                      ) : null;
+                    })()}
                   </div>
                   
                   <div className="space-y-2">
@@ -614,20 +634,39 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                               <Controller
                                 name={`phases.${index}.subItems.${subItemIndex}.status`}
                                 control={control}
-                                render={({ field }) => (
-                                  <Select onValueChange={field.onChange} value={field.value} disabled={!canEditStatus}>
-                                    <SelectTrigger className="h-8 text-sm">
-                                      <SelectValue placeholder="Status" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="Pendente">Pendente</SelectItem>
-                                      <SelectItem value="Em execução">Em execução</SelectItem>
-                                      <SelectItem value="Concluído">Concluído</SelectItem>
-                                      <SelectItem value="Suspenso">Suspenso</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                )}
+                                render={({ field }) => {
+                                  // Verificar se o subitem está em atraso
+                                  const subItemDeadline = watchPhases?.[index]?.subItems?.[subItemIndex]?.deadline;
+                                  const subItemStatus = field.value;
+                                  const subItemIsOverdue = subItemDeadline ? isOverdue(subItemDeadline, subItemStatus) : false;
+                                  const availableStatuses = subItemIsOverdue 
+                                    ? getAvailableStatuses(true)
+                                    : ['Pendente', 'Em execução', 'Concluído', 'Suspenso', 'A Fazer', 'Em Dia', 'Em Risco', 'Atrasado'] as const;
+                                  
+                                  return (
+                                    <Select onValueChange={field.onChange} value={field.value} disabled={!canEditStatus}>
+                                      <SelectTrigger className="h-8 text-sm">
+                                        <SelectValue placeholder="Status" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {availableStatuses.map(status => (
+                                          <SelectItem key={status} value={status}>{status}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  );
+                                }}
                               />
+                              {(() => {
+                                const subItemDeadline = watchPhases?.[index]?.subItems?.[subItemIndex]?.deadline;
+                                const subItemStatus = watchPhases?.[index]?.subItems?.[subItemIndex]?.status;
+                                const subItemIsOverdue = subItemDeadline ? isOverdue(subItemDeadline, subItemStatus) : false;
+                                return subItemIsOverdue ? (
+                                  <p className="text-xs text-muted-foreground">
+                                    Subitem em atraso: apenas Atrasado ou Concluído disponíveis
+                                  </p>
+                                ) : null;
+                              })()}
                             </div>
                             
                             <div className="space-y-1">

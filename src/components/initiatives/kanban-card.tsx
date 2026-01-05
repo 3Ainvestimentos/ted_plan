@@ -9,6 +9,7 @@ import { FileText, AlertTriangle, Clock, Lightbulb, Bug, CheckSquare } from "luc
 import { cn } from "@/lib/utils";
 import { useDrag } from 'react-dnd';
 import { Progress } from "../ui/progress";
+import { isOverdue } from "@/lib/initiatives-helpers";
 
 interface KanbanTaskCardProps {
   task: Initiative;
@@ -37,6 +38,9 @@ export function KanbanTaskCard({ task, onClick }: KanbanTaskCardProps) {
   const hasSubItems = task.subItems && task.subItems.length > 0;
   const TaskIcon = hasSubItems ? CheckSquare : (task.icon || FileText);
   
+  // Verificar se está em atraso
+  const taskIsOverdue = isOverdue(task.deadline, task.status);
+  
   const priorityColorMapping: Record<typeof task.priority, string> = {
     'Alta': 'bg-red-100 text-red-700',
     'Média': 'bg-yellow-100 text-yellow-700',
@@ -47,16 +51,18 @@ export function KanbanTaskCard({ task, onClick }: KanbanTaskCardProps) {
   let statusIndicator = null;
   if (task.status === 'Em Risco') {
     statusIndicator = <AlertTriangle className="h-4 w-4 text-orange-500 ml-auto" title="Em Risco" />;
-  } else if (task.status === 'Atrasado') {
+  } else if (task.status === 'Atrasado' || taskIsOverdue) {
     statusIndicator = <Clock className="h-4 w-4 text-red-500 ml-auto" title="Atrasado" />;
   }
 
   return (
     <div ref={drag} style={{ opacity: isDragging ? 0.5 : 1 }} className="cursor-grab active:cursor-grabbing" onClick={onClick}>
         <Card className={cn(
-            "shadow-sm hover:shadow-md transition-shadow duration-200 bg-card border-border",
+            "shadow-sm hover:shadow-md transition-shadow duration-200 border-border",
+            // Cor de fundo vermelha clara quando atrasado
+            taskIsOverdue ? 'bg-red-50 border-red-200' : 'bg-card',
             task.status === 'Em Risco' ? 'border-l-4 border-l-orange-500' : '',
-            task.status === 'Atrasado' ? 'border-l-4 border-l-red-500' : ''
+            (task.status === 'Atrasado' || taskIsOverdue) ? 'border-l-4 border-l-red-500' : ''
         )}>
         <CardContent className="p-3 space-y-3">
             <div className="flex items-start space-x-2 min-w-0">

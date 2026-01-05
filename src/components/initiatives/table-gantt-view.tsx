@@ -33,6 +33,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { STATUS_ICONS } from '@/lib/constants';
+import { isOverdue, getAvailableStatuses } from '@/lib/initiatives-helpers';
 import { 
   ChevronRight, 
   ChevronDown, 
@@ -581,9 +582,15 @@ export function TableGanttView({
                   });
                 }
 
+                // Verificar se está em atraso
+                const initiativeIsOverdue = isOverdue(initiative.deadline, initiative.status);
+                
                 return (
                   <React.Fragment key={initiative.id}>
-                    <TableRow className={cn(initiative.archived && 'bg-muted/30 text-muted-foreground hover:bg-muted/50')}>
+                    <TableRow className={cn(
+                      initiative.archived && 'bg-muted/30 text-muted-foreground hover:bg-muted/50',
+                      !initiative.archived && initiativeIsOverdue && 'bg-red-50 hover:bg-red-100'
+                    )}>
                       {/* Coluna # */}
                       <TableCell className="font-medium sticky left-0 bg-background z-10">
                         {initiative.topicNumber}
@@ -634,21 +641,35 @@ export function TableGanttView({
                       {/* Coluna Status */}
                       <TableCell>
                         {onStatusChange ? (
-                          <Select 
-                            value={initiative.status} 
-                            onValueChange={(newStatus: InitiativeStatus) => 
-                              onStatusChange(initiative.id, newStatus)
-                            }
-                          >
-                            <SelectTrigger className="h-8 text-xs px-2 w-[120px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {initiativeStatuses.filter(s => s !== 'all').map(s => (
-                                <SelectItem key={s} value={s as string}>{s}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="space-y-1">
+                            <Select 
+                              value={initiative.status} 
+                              onValueChange={(newStatus: InitiativeStatus) => 
+                                onStatusChange(initiative.id, newStatus)
+                              }
+                            >
+                              <SelectTrigger className="h-8 text-xs px-2 w-[120px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(() => {
+                                  // Se está atrasado, limitar opções para apenas Atrasado ou Concluído
+                                  const availableStatuses = initiativeIsOverdue 
+                                    ? getAvailableStatuses(true)
+                                    : initiativeStatuses.filter(s => s !== 'all') as InitiativeStatus[];
+                                  
+                                  return availableStatuses.map(s => (
+                                    <SelectItem key={s} value={s as string}>{s}</SelectItem>
+                                  ));
+                                })()}
+                              </SelectContent>
+                            </Select>
+                            {initiativeIsOverdue && (
+                              <p className="text-xs text-muted-foreground">
+                                Apenas Atrasado ou Concluído
+                              </p>
+                            )}
+                          </div>
                         ) : (
                           <Badge 
                             variant={initiative.archived ? 'outline' : initiative.status === 'Concluído' ? 'default' : initiative.status === 'Em Risco' || initiative.status === 'Atrasado' ? 'destructive' : 'secondary'} 
