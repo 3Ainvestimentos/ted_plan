@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, LayoutGrid, List, Upload, LayoutDashboard, X } from "lucide-react";
+import { PlusCircle, LayoutGrid, List, LayoutDashboard, X } from "lucide-react";
 import { useInitiatives } from "@/contexts/initiatives-context";
 import { TableGanttView } from "@/components/initiatives/table-gantt-view";
 import { InitiativesKanban } from "@/components/initiatives/initiatives-kanban";
@@ -17,7 +17,6 @@ import type { Initiative, InitiativeStatus } from "@/types";
 import { CreateInitiativeModal } from "@/components/initiatives/create-initiative-modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InitiativeDossierModal } from "@/components/initiatives/initiative-dossier-modal";
-import { ImportInitiativesModal } from "@/components/initiatives/import-initiatives-modal";
 import { EditInitiativeModal } from "@/components/initiatives/edit-initiative-modal";
 import { useAuth } from "@/contexts/auth-context";
 import { useStrategicPanel } from "@/contexts/strategic-panel-context";
@@ -170,7 +169,6 @@ export default function InitiativesPage() {
    */
   const [viewMode, setViewMode] = useState<ViewMode>("dashboard");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedInitiativeId, setSelectedInitiativeId] = useState<string | null>(null);
   const [editingInitiative, setEditingInitiative] = useState<Initiative | null>(null);
   
@@ -354,7 +352,6 @@ export default function InitiativesPage() {
   return (
     <DndProvider backend={HTML5Backend}>
       <CreateInitiativeModal isOpen={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
-      <ImportInitiativesModal isOpen={isImportModalOpen} onOpenChange={setIsImportModalOpen} />
       
       {selectedInitiative && (
         <InitiativeDossierModal
@@ -437,11 +434,6 @@ export default function InitiativesPage() {
             {canCreate && (
               <Button onClick={() => setIsCreateModalOpen(true)} className="flex-shrink-0">
                 <PlusCircle className="mr-2 h-4 w-4" /> Criar
-              </Button>
-            )}
-            {canCreate && (
-              <Button variant="outline" onClick={() => setIsImportModalOpen(true)} className="flex-shrink-0">
-                <Upload className="mr-2 h-4 w-4" /> Importar CSV
               </Button>
             )}
           </div>

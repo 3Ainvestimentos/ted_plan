@@ -248,6 +248,31 @@ export function canDeleteInitiative(userType: UserType): boolean {
 }
 
 /**
+ * Verifica se o usuário pode importar iniciativas via CSV
+ * 
+ * REGRAS:
+ * - Admin e PMO: Podem importar iniciativas
+ * - Head: Não pode importar iniciativas
+ * 
+ * @param userType - Tipo de usuário (admin, pmo, head)
+ * @returns true se o usuário pode importar iniciativas
+ * 
+ * @example
+ * // PMO pode importar
+ * canImportInitiatives('pmo');
+ * // Retorna: true
+ * 
+ * @example
+ * // Head não pode importar
+ * canImportInitiatives('head');
+ * // Retorna: false
+ */
+export function canImportInitiatives(userType: UserType): boolean {
+  // Apenas admin e PMO podem importar iniciativas
+  return userType === 'admin' || userType === 'pmo';
+}
+
+/**
  * Verifica se o usuário pode editar o prazo (deadline) de iniciativas, itens ou subitens.
  * 
  * REGRAS:
