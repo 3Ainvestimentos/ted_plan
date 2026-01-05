@@ -185,7 +185,7 @@ export function canCreateInitiative(userType: UserType): boolean {
 }
 
 /**
- * Verifica se o usuário pode editar o campo responsible das fases
+ * Verifica se o usuário pode editar o campo responsible dos itens
  * 
  * @param userType - Tipo de usuário (admin, pmo, head)
  * @param userArea - Área do usuário (ID da BusinessArea)
@@ -211,7 +211,7 @@ export function canEditInitiativeResponsible(
 }
 
 /**
- * Verifica se o usuário pode editar o status de execução (projeto, fase ou subitem)
+ * Verifica se o usuário pode editar o status de execução (projeto, item ou subitem)
  * 
  * @param userType - Tipo de usuário (admin, pmo, head)
  * @param userArea - Área do usuário (ID da BusinessArea)
@@ -248,7 +248,7 @@ export function canDeleteInitiative(userType: UserType): boolean {
 }
 
 /**
- * Verifica se o usuário pode editar o prazo (deadline) de iniciativas, fases ou subitens.
+ * Verifica se o usuário pode editar o prazo (deadline) de iniciativas, itens ou subitens.
  * 
  * REGRAS:
  * - Admin e PMO: Sempre podem editar prazo

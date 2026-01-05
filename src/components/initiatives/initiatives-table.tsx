@@ -21,7 +21,7 @@ interface InitiativesTableProps {
     onInitiativeClick: (initiative: Initiative) => void;
     onEditInitiative?: (initiative: Initiative) => void;
     // Props opcionais para permitir uso com M&As
-    onUpdateSubItem?: (initiativeId: string, phaseId: string, subItemId: string, completed: boolean) => void;
+    onUpdateSubItem?: (initiativeId: string, itemId: string, subItemId: string, completed: boolean) => void;
     onArchive?: (initiativeId: string) => void;
     onUnarchive?: (initiativeId: string) => void;
 }
@@ -59,31 +59,31 @@ export function InitiativesTable({
   const [archiveFilter, setArchiveFilter] = useState<string>("active");
   
   const parentInitiativeIds = useMemo(() => 
-    new Set(initiatives.filter(i => i.phases && i.phases.length > 0).map(i => i.id))
+    new Set(initiatives.filter(i => i.items && i.items.length > 0).map(i => i.id))
   , [initiatives]);
 
   const [expandedInitiatives, setExpandedInitiatives] = useState<Set<string>>(new Set());
-  const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [areAllExpanded, setAreAllExpanded] = useState(false);
 
   const toggleAllTopics = () => {
     if (areAllExpanded) {
         setExpandedInitiatives(new Set());
-        setExpandedPhases(new Set());
+        setExpandedItems(new Set());
     } else {
         setExpandedInitiatives(new Set(parentInitiativeIds));
-        // Expandir todas as fases também
-        const allPhaseIds = new Set<string>();
+        // Expandir todos os itens também
+        const allItemIds = new Set<string>();
         initiatives.forEach(init => {
-          if (init.phases) {
-            init.phases.forEach(phase => {
-              if (phase.subItems && phase.subItems.length > 0) {
-                allPhaseIds.add(phase.id);
+          if (init.items) {
+            init.items.forEach(item => {
+              if (item.subItems && item.subItems.length > 0) {
+                allItemIds.add(item.id);
               }
             });
           }
         });
-        setExpandedPhases(allPhaseIds);
+        setExpandedItems(allItemIds);
     }
     setAreAllExpanded(prev => !prev);
   };
@@ -100,13 +100,13 @@ export function InitiativesTable({
     });
   };
 
-  const togglePhase = (phaseId: string) => {
-    setExpandedPhases(prev => {
+  const toggleItem = (itemId: string) => {
+    setExpandedItems(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(phaseId)) {
-        newSet.delete(phaseId);
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId);
       } else {
-        newSet.add(phaseId);
+        newSet.add(itemId);
       }
       return newSet;
     });
@@ -117,7 +117,7 @@ export function InitiativesTable({
       const matchesSearch = initiative.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             (initiative.owner && initiative.owner.toLowerCase().includes(searchTerm.toLowerCase())) ||
                             initiative.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            (initiative.phases && initiative.phases.some(p => 
+                            (initiative.items && initiative.items.some(p => 
                               p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                               (p.responsible && p.responsible.toLowerCase().includes(searchTerm.toLowerCase()))
                             ));
@@ -197,7 +197,7 @@ export function InitiativesTable({
           {filteredInitiatives.length > 0 ? (
             filteredInitiatives.map((initiative: Initiative) => {
               const StatusIcon = STATUS_ICONS[initiative.status];
-              const hasPhases = initiative.phases && initiative.phases.length > 0;
+              const hasItems = initiative.items && initiative.items.length > 0;
               const isInitiativeExpanded = expandedInitiatives.has(initiative.id);
               const isArchivable = initiative.status === 'Concluído' || initiative.status === 'Suspenso';
 
@@ -211,12 +211,12 @@ export function InitiativesTable({
                   </TableCell>
                   <TableCell className="font-medium font-body">
                      <div className="flex items-center gap-1">
-                        {hasPhases && (
+                        {hasItems && (
                           <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2" onClick={() => toggleInitiative(initiative.id)}>
                               {isInitiativeExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                           </Button>
                         )}
-                        <span className={cn(hasPhases && "cursor-pointer", "text-current")} onClick={() => hasPhases && toggleInitiative(initiative.id)}>
+                        <span className={cn(hasItems && "cursor-pointer", "text-current")} onClick={() => hasItems && toggleInitiative(initiative.id)}>
                           {initiative.title}
                        </span>
                      </div>
@@ -275,13 +275,13 @@ export function InitiativesTable({
                      )}
                   </TableCell>
                 </TableRow>
-                 {/* Fases expandidas */}
-                 {isInitiativeExpanded && hasPhases && initiative.phases.map(phase => {
-                   const isPhaseExpanded = expandedPhases.has(phase.id);
-                   const hasSubItems = phase.subItems && phase.subItems.length > 0;
+                 {/* Itens expandidos */}
+                 {isInitiativeExpanded && hasItems && initiative.items.map(item => {
+                   const isItemExpanded = expandedItems.has(item.id);
+                   const hasSubItems = item.subItems && item.subItems.length > 0;
                    
                    return (
-                     <React.Fragment key={phase.id}>
+                     <React.Fragment key={item.id}>
                        <TableRow className="bg-secondary/50 hover:bg-secondary/70">
                          <TableCell></TableCell>
                          <TableCell colSpan={hasAuc ? 5 : 4} className="pl-12">
@@ -292,19 +292,19 @@ export function InitiativesTable({
                                  variant="ghost" 
                                  size="icon" 
                                  className="h-5 w-5 -ml-1" 
-                                 onClick={() => togglePhase(phase.id)}
+                                 onClick={() => toggleItem(item.id)}
                                >
-                                 {isPhaseExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                                 {isItemExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                                </Button>
                              )}
-                             <span className="text-sm font-medium">{phase.title}</span>
+                             <span className="text-sm font-medium">{item.title}</span>
                            </div>
                          </TableCell>
                          <TableCell></TableCell>
                        </TableRow>
                        
                        {/* Subitens expandidos */}
-                       {isPhaseExpanded && hasSubItems && phase.subItems.map(subItem => (
+                       {isItemExpanded && hasSubItems && item.subItems.map(subItem => (
                          <TableRow key={subItem.id} className="bg-secondary hover:bg-secondary/80">
                            <TableCell></TableCell>
                            <TableCell colSpan={hasAuc ? 5 : 4} className="pl-20">
@@ -313,7 +313,7 @@ export function InitiativesTable({
                                <Checkbox 
                                  id={`subitem-${subItem.id}`} 
                                  checked={subItem.completed}
-                                 onCheckedChange={(checked) => updateSubItem(initiative.id, phase.id, subItem.id, !!checked)}
+                                 onCheckedChange={(checked) => updateSubItem(initiative.id, item.id, subItem.id, !!checked)}
                                />
                                <label htmlFor={`subitem-${subItem.id}`} className={cn("text-sm", subItem.completed && "line-through text-muted-foreground")}>
                                  {subItem.title}

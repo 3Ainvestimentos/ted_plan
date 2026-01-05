@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { Initiative, InitiativeStatus, SubItem, InitiativePhase } from '@/types';
+import type { Initiative, InitiativeStatus, SubItem, InitiativeItem } from '@/types';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, query, orderBy, deleteDoc, writeBatch, setDoc, deleteField } from 'firebase/firestore';
@@ -18,13 +18,13 @@ interface InitiativesContextType {
   archiveInitiative: (initiativeId: string) => Promise<void>;
   unarchiveInitiative: (initiativeId: string) => Promise<void>;
   updateInitiativeStatus: (initiativeId: string, newStatus: InitiativeStatus) => void;
-  updateSubItem: (initiativeId: string, phaseId: string, subItemId: string, completed: boolean, newStatus?: InitiativeStatus) => Promise<void>;
-  addPhase: (initiativeId: string, phase: Omit<InitiativePhase, 'id'>) => Promise<void>;
-  updatePhase: (initiativeId: string, phaseId: string, phase: Partial<InitiativePhase>) => Promise<void>;
-  deletePhase: (initiativeId: string, phaseId: string) => Promise<void>;
-  addSubItem: (initiativeId: string, phaseId: string, subItem: Omit<SubItem, 'id'>) => Promise<void>;
-  deleteSubItem: (initiativeId: string, phaseId: string, subItemId: string) => Promise<void>;
-  bulkAddInitiatives: (newInitiatives: Omit<Initiative, 'id' | 'lastUpdate' | 'topicNumber' | 'progress' | 'keyMetrics' | 'phases' | 'deadline'>[]) => void;
+  updateSubItem: (initiativeId: string, itemId: string, subItemId: string, completed: boolean, newStatus?: InitiativeStatus) => Promise<void>;
+  addItem: (initiativeId: string, item: Omit<InitiativeItem, 'id'>) => Promise<void>;
+  updateItem: (initiativeId: string, itemId: string, item: Partial<InitiativeItem>) => Promise<void>;
+  deleteItem: (initiativeId: string, itemId: string) => Promise<void>;
+  addSubItem: (initiativeId: string, itemId: string, subItem: Omit<SubItem, 'id'>) => Promise<void>;
+  deleteSubItem: (initiativeId: string, itemId: string, subItemId: string) => Promise<void>;
+  bulkAddInitiatives: (newInitiatives: Omit<Initiative, 'id' | 'lastUpdate' | 'topicNumber' | 'progress' | 'keyMetrics' | 'items' | 'deadline'>[]) => void;
   isLoading: boolean;
 }
 
@@ -42,18 +42,18 @@ const calculateProgressFromSubItems = (subItems: SubItem[]): number => {
     return Math.round((completedCount / subItems.length) * 100);
 };
 
-const calculateProgressFromPhases = (phases: InitiativePhase[]): number => {
-    if (!phases || phases.length === 0) return 0;
+const calculateProgressFromItems = (items: InitiativeItem[]): number => {
+    if (!items || items.length === 0) return 0;
     
-    const phaseProgresses = phases.map(phase => {
-        if (phase.subItems && phase.subItems.length > 0) {
-            return calculateProgressFromSubItems(phase.subItems);
+    const itemProgresses = items.map(item => {
+        if (item.subItems && item.subItems.length > 0) {
+            return calculateProgressFromSubItems(item.subItems);
         }
-        return phase.status === 'Concluído' ? 100 : 0;
+        return item.status === 'Concluído' ? 100 : 0;
     });
     
-    const totalProgress = phaseProgresses.reduce((sum, progress) => sum + progress, 0);
-    return Math.round(totalProgress / phaseProgresses.length);
+    const totalProgress = itemProgresses.reduce((sum, progress) => sum + progress, 0);
+    return Math.round(totalProgress / itemProgresses.length);
 };
 
 const calculateParentProgress = (parentId: string, allInitiatives: Initiative[]): number => {
@@ -65,27 +65,27 @@ const calculateParentProgress = (parentId: string, allInitiatives: Initiative[])
 };
 
 /**
- * Verifica e atualiza o status do pai (fase ou iniciativa) baseado na conclusão dos filhos.
+ * Verifica e atualiza o status do pai (item ou iniciativa) baseado na conclusão dos filhos.
  * 
  * REGRAS:
- * - Fase só pode ser "Concluído" quando TODOS os subitens estiverem "Concluído"
- * - Iniciativa só pode ser "Concluído" quando TODAS as fases estiverem "Concluído"
+ * - Item só pode ser "Concluído" quando TODOS os subitens estiverem "Concluído"
+ * - Iniciativa só pode ser "Concluído" quando TODOS os itens estiverem "Concluído"
  * - Atualiza progresso automaticamente quando status muda
  * 
  * @param initiativeId - ID da iniciativa a verificar
- * @param phaseId - ID da fase a verificar (opcional, se não fornecido verifica todas as fases)
+ * @param itemId - ID do item a verificar (opcional, se não fornecido verifica todos os itens)
  * @param allInitiatives - Array completo de iniciativas para buscar dados atualizados
- * @returns Objeto com fases atualizadas e status da iniciativa atualizado, ou null se não houver mudanças
+ * @returns Objeto com itens atualizados e status da iniciativa atualizado, ou null se não houver mudanças
  * 
  * @example
- * // Verificar e atualizar fase após concluir subitem
- * const result = checkAndUpdateParentStatus('init-123', 'phase-456', initiatives);
+ * // Verificar e atualizar item após concluir subitem
+ * const result = checkAndUpdateParentStatus('init-123', 'item-456', initiatives);
  * if (result) {
  *   // Atualizar no Firestore
  * }
  * 
  * @example
- * // Verificar e atualizar iniciativa após concluir fase
+ * // Verificar e atualizar iniciativa após concluir item
  * const result = checkAndUpdateParentStatus('init-123', undefined, initiatives);
  * if (result) {
  *   // Atualizar no Firestore
@@ -93,63 +93,63 @@ const calculateParentProgress = (parentId: string, allInitiatives: Initiative[])
  */
 const checkAndUpdateParentStatus = (
   initiativeId: string,
-  phaseId: string | undefined,
+  itemId: string | undefined,
   allInitiatives: Initiative[]
-): { updatedPhases: InitiativePhase[]; updatedInitiativeStatus?: InitiativeStatus } | null => {
+): { updatedItems: InitiativeItem[]; updatedInitiativeStatus?: InitiativeStatus } | null => {
   const initiative = allInitiatives.find(i => i.id === initiativeId);
-  if (!initiative || !initiative.phases) return null;
+  if (!initiative || !initiative.items) return null;
   
-  let updatedPhases = [...initiative.phases];
+  let updatedItems = [...initiative.items];
   let hasChanges = false;
   
-  // Se phaseId foi fornecido, verificar e atualizar essa fase específica
-  // Se não foi fornecido, verificar todas as fases
-  const phasesToCheck = phaseId 
-    ? updatedPhases.filter(p => p.id === phaseId)
-    : updatedPhases;
+  // Se itemId foi fornecido, verificar e atualizar esse item específico
+  // Se não foi fornecido, verificar todos os itens
+  const itemsToCheck = itemId 
+    ? updatedItems.filter(p => p.id === itemId)
+    : updatedItems;
   
-  // Verificar cada fase que tem subitens
-  phasesToCheck.forEach(phase => {
-    if (phase.subItems && phase.subItems.length > 0) {
+  // Verificar cada item que tem subitens
+  itemsToCheck.forEach(item => {
+    if (item.subItems && item.subItems.length > 0) {
       // Verificar se todos os subitens estão concluídos (usando status)
-      const allSubItemsCompleted = phase.subItems.every(subItem => subItem.status === 'Concluído');
+      const allSubItemsCompleted = item.subItems.every(subItem => subItem.status === 'Concluído');
       
-      // Se todos os subitens estão concluídos e fase não está concluída, concluir fase
-      if (allSubItemsCompleted && phase.status !== 'Concluído') {
-        // Atualizar fase para "Concluído"
-        updatedPhases = updatedPhases.map(p => 
-          p.id === phase.id ? { ...p, status: 'Concluído' as InitiativeStatus } : p
+      // Se todos os subitens estão concluídos e item não está concluído, concluir item
+      if (allSubItemsCompleted && item.status !== 'Concluído') {
+        // Atualizar item para "Concluído"
+        updatedItems = updatedItems.map(p => 
+          p.id === item.id ? { ...p, status: 'Concluído' as InitiativeStatus } : p
         );
         hasChanges = true;
       }
       
-      // Se nem todos os subitens estão concluídos mas fase está concluída, reverter fase para "Em execução"
-      if (!allSubItemsCompleted && phase.status === 'Concluído') {
-        updatedPhases = updatedPhases.map(p => 
-          p.id === phase.id ? { ...p, status: 'Em execução' as InitiativeStatus } : p
+      // Se nem todos os subitens estão concluídos mas item está concluído, reverter item para "Em execução"
+      if (!allSubItemsCompleted && item.status === 'Concluído') {
+        updatedItems = updatedItems.map(p => 
+          p.id === item.id ? { ...p, status: 'Em execução' as InitiativeStatus } : p
         );
         hasChanges = true;
       }
     }
   });
   
-  // Verificar se todas as fases estão concluídas para atualizar iniciativa
-  // IMPORTANTE: Considerar apenas fases com status definido e igual a 'Concluído'
-  // Fases sem status ou com status vazio são consideradas não concluídas
-  const allPhasesCompleted = updatedPhases.length > 0 && 
-    updatedPhases.every(phase => phase.status === 'Concluído');
+  // Verificar se todos os itens estão concluídos para atualizar iniciativa
+  // IMPORTANTE: Considerar apenas itens com status definido e igual a 'Concluído'
+  // Itens sem status ou com status vazio são considerados não concluídos
+  const allItemsCompleted = updatedItems.length > 0 && 
+    updatedItems.every(item => item.status === 'Concluído');
   let updatedInitiativeStatus: InitiativeStatus | undefined;
   
-  // Se todas as fases estão concluídas e iniciativa não está concluída, concluir iniciativa
-  if (allPhasesCompleted && updatedPhases.length > 0 && initiative.status !== 'Concluído') {
+  // Se todos os itens estão concluídos e iniciativa não está concluída, concluir iniciativa
+  if (allItemsCompleted && updatedItems.length > 0 && initiative.status !== 'Concluído') {
     updatedInitiativeStatus = 'Concluído';
     hasChanges = true;
   }
   
-  // Se nem todas as fases estão concluídas mas iniciativa está concluída, reverter status da iniciativa
-  // IMPORTANTE: Esta verificação deve acontecer SEMPRE que há fases e a iniciativa está concluída
+  // Se nem todos os itens estão concluídos mas iniciativa está concluída, reverter status da iniciativa
+  // IMPORTANTE: Esta verificação deve acontecer SEMPRE que há itens e a iniciativa está concluída
   // IMPORTANTE: Quando revertido, sempre usar "Em execução" como padrão
-  if (updatedPhases.length > 0 && initiative.status === 'Concluído' && !allPhasesCompleted) {
+  if (updatedItems.length > 0 && initiative.status === 'Concluído' && !allItemsCompleted) {
     // Sempre reverter para "Em execução" quando um filho muda de status
     updatedInitiativeStatus = 'Em execução';
     hasChanges = true;
@@ -158,7 +158,7 @@ const checkAndUpdateParentStatus = (
   // Retornar mudanças se houver
   if (hasChanges) {
     return {
-      updatedPhases,
+      updatedItems,
       ...(updatedInitiativeStatus && { updatedInitiativeStatus })
     };
   }
@@ -202,12 +202,32 @@ const removeUndefinedFields = (obj: any): any => {
 };
 
 /**
- * Migra iniciativa da estrutura antiga (subItems diretos) para nova estrutura (phases)
+ * Migra iniciativa da estrutura antiga (subItems diretos ou phases) para nova estrutura (items)
  */
 const migrateInitiativeToThreeLayer = (initiative: Initiative): Initiative => {
-    // Se já tem phases, não precisa migrar
-    if (initiative.phases && initiative.phases.length > 0) {
+    // Se já tem items, não precisa migrar
+    if (initiative.items && initiative.items.length > 0) {
         return initiative;
+    }
+
+    // Migrar de phases para items (se existir phases no Firestore)
+    if ((initiative as any).phases && Array.isArray((initiative as any).phases) && (initiative as any).phases.length > 0) {
+        const { phases, ...initiativeWithoutPhases } = initiative as any;
+        return {
+            ...initiativeWithoutPhases,
+            items: phases.map((phase: any) => ({
+                id: phase.id,
+                title: phase.title,
+                deadline: phase.deadline,
+                status: phase.status,
+                areaId: phase.areaId,
+                priority: phase.priority,
+                description: phase.description,
+                responsible: phase.responsible,
+                subItems: phase.subItems || [],
+            })),
+            areaId: initiative.areaId || '',
+        };
     }
 
     // Se não tem subItems antigos, criar estrutura vazia
@@ -215,13 +235,13 @@ const migrateInitiativeToThreeLayer = (initiative: Initiative): Initiative => {
         const { subItems, ...initiativeWithoutSubItems } = initiative;
         return {
             ...initiativeWithoutSubItems,
-            phases: [],
+            items: [],
             areaId: initiative.areaId || '', // Se não tiver areaId, usar string vazia (será obrigatório no form)
         };
     }
 
-    // Converter cada subItem antigo em uma Fase com um único subItem dentro
-    const migratedPhases: InitiativePhase[] = initiative.subItems.map((oldSubItem, index) => {
+    // Converter cada subItem antigo em um Item com um único subItem dentro
+    const migratedItems: InitiativeItem[] = initiative.subItems.map((oldSubItem, index) => {
         // Criar novo subItem com campos atualizados
         const newSubItem: SubItem = {
             id: oldSubItem.id,
@@ -234,10 +254,10 @@ const migrateInitiativeToThreeLayer = (initiative: Initiative): Initiative => {
             description: '', // Default
         };
 
-        // Criar fase com o subItem
+        // Criar item com o subItem
         return {
             id: doc(collection(db, 'dummy')).id, // Gerar ID temporário
-            title: `Fase ${index + 1}`, // Título padrão
+            title: `Item ${index + 1}`, // Título padrão
             deadline: oldSubItem.deadline,
             status: oldSubItem.completed ? 'Concluído' : 'Pendente',
             areaId: initiative.areaId || '', // Usar área do projeto
@@ -252,7 +272,7 @@ const migrateInitiativeToThreeLayer = (initiative: Initiative): Initiative => {
     const { subItems, ...initiativeWithoutSubItems } = initiative;
     return {
         ...initiativeWithoutSubItems,
-        phases: migratedPhases,
+        items: migratedItems,
         areaId: initiative.areaId || '', // Garantir que areaId existe
     };
 };
@@ -278,24 +298,32 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
         const migratedInitiatives = rawInitiatives.map(init => migrateInitiativeToThreeLayer(init));
 
         // Salvar iniciativas migradas de volta ao Firestore (se necessário)
-        const needsMigration = rawInitiatives.some(init => 
-            (!init.phases || init.phases.length === 0) && init.subItems && init.subItems.length > 0
-        );
+        const needsMigration = rawInitiatives.some(init => {
+            const hasPhases = (init as any).phases && Array.isArray((init as any).phases) && (init as any).phases.length > 0;
+            const hasOldSubItems = init.subItems && init.subItems.length > 0;
+            const hasNoItems = !init.items || init.items.length === 0;
+            return hasNoItems && (hasPhases || hasOldSubItems);
+        });
         
         if (needsMigration) {
             // Usar updateDoc individualmente para ter mais controle
             const migrationPromises: Promise<void>[] = [];
             migratedInitiatives.forEach((migrated, index) => {
                 const original = rawInitiatives[index];
-                // Só salvar se realmente foi migrado
-                if ((!original.phases || original.phases.length === 0) && original.subItems && original.subItems.length > 0) {
+                const hasPhases = (original as any).phases && Array.isArray((original as any).phases) && (original as any).phases.length > 0;
+                const hasOldSubItems = original.subItems && original.subItems.length > 0;
+                const hasNoItems = !original.items || original.items.length === 0;
+                
+                // Só salvar se realmente foi migrado (de phases ou subItems antigos)
+                if (hasNoItems && (hasPhases || hasOldSubItems)) {
                     const docRef = doc(db, 'initiatives', migrated.id);
-                    // Criar objeto sem subItems para evitar undefined
-                    const { subItems, ...migratedWithoutSubItems } = migrated;
+                    // Criar objeto sem subItems e phases para evitar undefined
+                    const { subItems, phases, ...migratedWithoutOldFields } = migrated as any;
                     const dataToSave = {
-                        ...migratedWithoutSubItems,
-                        phases: migrated.phases || [],
+                        ...migratedWithoutOldFields,
+                        items: migrated.items || [],
                         subItems: deleteField(), // Remover campo subItems do Firestore
+                        phases: deleteField(), // Remover campo phases do Firestore
                     };
                     // Remover campos undefined antes de salvar (exceto deleteField)
                     const cleanedData = removeUndefinedFields(dataToSave);
@@ -313,11 +341,11 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
             }
         }
 
-        // First pass: calculate progress for phases
+        // First pass: calculate progress for items
         const initiativesWithProgress = migratedInitiatives.map(init => {
             let progress = init.progress || 0;
-            if (init.phases && init.phases.length > 0) {
-                progress = calculateProgressFromPhases(init.phases);
+            if (init.items && init.items.length > 0) {
+                progress = calculateProgressFromItems(init.items);
             } else if (init.status === 'Concluído') {
                 progress = 100;
             }
@@ -370,7 +398,7 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
         keyMetrics: [],
         parentId: null,
         archived: false,
-        phases: initiativeData.phases?.map(p => ({
+        items: initiativeData.items?.map(p => ({
             id: p.id || doc(collection(db, 'dummy')).id,
             title: p.title,
             deadline: p.deadline ? p.deadline.toISOString().split('T')[0] : null,
@@ -418,7 +446,7 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
           progress: 0,
           keyMetrics: [],
           parentId: null,
-          phases: [],
+          items: [],
           areaId: '',
           archived: false,
         };
@@ -446,7 +474,7 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
           deadline: data.deadline ? data.deadline.toISOString().split('T')[0] : null,
           areaId: data.areaId,
           lastUpdate: new Date().toISOString(),
-          phases: data.phases?.map(p => ({
+          items: data.items?.map(p => ({
               id: p.id || doc(collection(db, 'dummy')).id,
               title: p.title,
               deadline: p.deadline ? p.deadline.toISOString().split('T')[0] : null,
@@ -516,8 +544,8 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
    * Atualiza o status de uma iniciativa com validação de conclusão.
    * 
    * REGRAS:
-   * - Iniciativa não pode ser "Concluído" se nem todas as fases estão concluídas
-   * - Se todas as fases estão concluídas, permite concluir automaticamente
+   * - Iniciativa não pode ser "Concluído" se nem todos os itens estão concluídos
+   * - Se todos os itens estão concluídos, permite concluir automaticamente
    * 
    * @param initiativeId - ID da iniciativa
    * @param newStatus - Novo status desejado
@@ -530,16 +558,16 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     
-    // Validação: não pode concluir iniciativa se nem todas as fases estão concluídas
+    // Validação: não pode concluir iniciativa se nem todos os itens estão concluídos
     // IMPORTANTE: Esta validação deve ser SEMPRE aplicada, mesmo se a iniciativa estiver em atraso
-    // IMPORTANTE: Fases sem status ou com status vazio são consideradas não concluídas
+    // IMPORTANTE: Itens sem status ou com status vazio são considerados não concluídos
     if (newStatus === 'Concluído') {
-      // Se não tem fases, pode concluir
-      if (localInitiative.phases && localInitiative.phases.length > 0) {
-        // Verificar se todas as fases têm status definido e igual a 'Concluído'
-        const allPhasesCompleted = localInitiative.phases.every(phase => phase.status === 'Concluído');
-        if (!allPhasesCompleted) {
-          console.warn(`[InitiativesContext] Não é possível concluir iniciativa ${initiativeId}: nem todas as fases estão concluídas`);
+      // Se não tem itens, pode concluir
+      if (localInitiative.items && localInitiative.items.length > 0) {
+        // Verificar se todos os itens têm status definido e igual a 'Concluído'
+        const allItemsCompleted = localInitiative.items.every(item => item.status === 'Concluído');
+        if (!allItemsCompleted) {
+          console.warn(`[InitiativesContext] Não é possível concluir iniciativa ${initiativeId}: nem todos os itens estão concluídos`);
           // Não atualizar status - manter o atual
           return;
         }
@@ -572,10 +600,10 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
   }, [initiatives]);
 
   /**
-   * Atualiza o estado de conclusão de um subitem e verifica se deve concluir fase/iniciativa automaticamente.
+   * Atualiza o estado de conclusão de um subitem e verifica se deve concluir item/iniciativa automaticamente.
    * 
    * @param initiativeId - ID da iniciativa
-   * @param phaseId - ID da fase
+   * @param itemId - ID do item
    * @param subItemId - ID do subitem
    * @param completed - Novo estado de conclusão
    */
@@ -583,7 +611,7 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
    * Atualiza um subitem, podendo alterar o campo completed e/ou o status diretamente.
    * 
    * @param initiativeId - ID da iniciativa
-   * @param phaseId - ID da fase
+   * @param itemId - ID do item
    * @param subItemId - ID do subitem
    * @param completed - Novo valor de completed (true/false)
    * @param newStatus - Novo status (opcional). Se fornecido, será usado em vez de calcular baseado em completed
@@ -593,14 +621,14 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
    * - Se newStatus não for fornecido, o status será calculado: completed=true → "Concluído", completed=false → "Em execução"
    * - O campo completed sempre será atualizado conforme o parâmetro
    */
-  const updateSubItem = useCallback(async (initiativeId: string, phaseId: string, subItemId: string, completed: boolean, newStatus?: InitiativeStatus) => {
+  const updateSubItem = useCallback(async (initiativeId: string, itemId: string, subItemId: string, completed: boolean, newStatus?: InitiativeStatus) => {
       const localInitiative = initiatives.find(i => i.id === initiativeId);
-      if (!localInitiative || !localInitiative.phases) return;
+      if (!localInitiative || !localInitiative.items) return;
 
       // Atualizar subitem
-      const updatedPhases = localInitiative.phases.map(phase => {
-          if (phase.id === phaseId && phase.subItems) {
-              const updatedSubItems = phase.subItems.map(si => {
+      const updatedItems = localInitiative.items.map(item => {
+          if (item.id === itemId && item.subItems) {
+              const updatedSubItems = item.subItems.map(si => {
                   if (si.id === subItemId) {
                       // Se newStatus foi fornecido, usar diretamente; senão, calcular baseado em completed
                       const finalStatus = newStatus || (completed ? 'Concluído' as InitiativeStatus : 'Em execução' as InitiativeStatus);
@@ -614,26 +642,26 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
                   return si;
               });
               return {
-                  ...phase,
+                  ...item,
                   subItems: updatedSubItems,
               };
           }
-          return phase;
+          return item;
       });
       
-      // Verificar e atualizar status do pai (fase e iniciativa) se necessário
+      // Verificar e atualizar status do pai (item e iniciativa) se necessário
       // Criar array temporário com iniciativa atualizada para verificação
       const tempInitiatives = initiatives.map(init => 
-        init.id === initiativeId ? { ...init, phases: updatedPhases } : init
+        init.id === initiativeId ? { ...init, items: updatedItems } : init
       );
-      const parentUpdate = checkAndUpdateParentStatus(initiativeId, phaseId, tempInitiatives);
+      const parentUpdate = checkAndUpdateParentStatus(initiativeId, itemId, tempInitiatives);
       
       // Aplicar atualizações do pai se houver
-      let finalPhases = updatedPhases;
+      let finalItems = updatedItems;
       let finalInitiativeStatus = localInitiative.status;
       
       if (parentUpdate) {
-          finalPhases = parentUpdate.updatedPhases;
+          finalItems = parentUpdate.updatedItems;
           if (parentUpdate.updatedInitiativeStatus) {
               finalInitiativeStatus = parentUpdate.updatedInitiativeStatus;
           }
@@ -642,7 +670,7 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
       const initiativeDocRef = doc(db, 'initiatives', initiativeId);
       try {
           const updateData: any = { 
-              phases: finalPhases, 
+              items: finalItems, 
               lastUpdate: new Date().toISOString() 
           };
           
@@ -659,9 +687,9 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
                   if (init.id === initiativeId) {
                       return {
                           ...init,
-                          phases: finalPhases,
+                          items: finalItems,
                           status: finalInitiativeStatus,
-                          progress: calculateProgressFromPhases(finalPhases),
+                          progress: calculateProgressFromItems(finalItems),
                           lastUpdate: new Date().toISOString(),
                       };
                   }
@@ -690,55 +718,55 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
       }
   }, [initiatives]);
 
-  const addPhase = useCallback(async (initiativeId: string, phase: Omit<InitiativePhase, 'id'>) => {
+  const addItem = useCallback(async (initiativeId: string, item: Omit<InitiativeItem, 'id'>) => {
       const localInitiative = initiatives.find(i => i.id === initiativeId);
       if (!localInitiative) return;
 
-      const newPhase: InitiativePhase = {
-          ...phase,
+      const newItem: InitiativeItem = {
+          ...item,
           id: doc(collection(db, 'dummy')).id,
-          subItems: phase.subItems || [],
+          subItems: item.subItems || [],
       };
 
-      const updatedPhases = [...(localInitiative.phases || []), newPhase];
+      const updatedItems = [...(localInitiative.items || []), newItem];
       const initiativeDocRef = doc(db, 'initiatives', initiativeId);
       
       try {
-          await setDoc(initiativeDocRef, { phases: updatedPhases, lastUpdate: new Date().toISOString() }, { merge: true });
+          await setDoc(initiativeDocRef, { items: updatedItems, lastUpdate: new Date().toISOString() }, { merge: true });
           fetchInitiatives();
       } catch (error) {
-          console.error("Error adding phase:", error);
+          console.error("Error adding item:", error);
       }
   }, [initiatives, fetchInitiatives]);
 
   /**
-   * Atualiza uma fase e verifica se deve concluir iniciativa automaticamente.
+   * Atualiza um item e verifica se deve concluir iniciativa automaticamente.
    * 
    * @param initiativeId - ID da iniciativa
-   * @param phaseId - ID da fase
-   * @param phase - Dados parciais da fase para atualizar
+   * @param itemId - ID do item
+   * @param item - Dados parciais do item para atualizar
    */
-  const updatePhase = useCallback(async (initiativeId: string, phaseId: string, phase: Partial<InitiativePhase>) => {
+  const updateItem = useCallback(async (initiativeId: string, itemId: string, item: Partial<InitiativeItem>) => {
       const localInitiative = initiatives.find(i => i.id === initiativeId);
-      if (!localInitiative || !localInitiative.phases) return;
+      if (!localInitiative || !localInitiative.items) return;
 
-      const updatedPhases = localInitiative.phases.map(p => 
-          p.id === phaseId ? { ...p, ...phase } : p
+      const updatedItems = localInitiative.items.map(p => 
+          p.id === itemId ? { ...p, ...item } : p
       );
       
-      // Verificar e atualizar status da iniciativa se todas as fases estão concluídas
+      // Verificar e atualizar status da iniciativa se todos os itens estão concluídos
       // Criar array temporário com iniciativa atualizada para verificação
       const tempInitiatives = initiatives.map(init => 
-        init.id === initiativeId ? { ...init, phases: updatedPhases } : init
+        init.id === initiativeId ? { ...init, items: updatedItems } : init
       );
       const parentUpdate = checkAndUpdateParentStatus(initiativeId, undefined, tempInitiatives);
       
       // Aplicar atualizações se houver
-      let finalPhases = updatedPhases;
+      let finalItems = updatedItems;
       let finalInitiativeStatus = localInitiative.status;
       
       if (parentUpdate) {
-          finalPhases = parentUpdate.updatedPhases;
+          finalItems = parentUpdate.updatedItems;
           if (parentUpdate.updatedInitiativeStatus) {
               finalInitiativeStatus = parentUpdate.updatedInitiativeStatus;
           }
@@ -747,7 +775,7 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
       const initiativeDocRef = doc(db, 'initiatives', initiativeId);
       try {
           const updateData: any = { 
-              phases: finalPhases, 
+              items: finalItems, 
               lastUpdate: new Date().toISOString() 
           };
           
@@ -764,9 +792,9 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
               if (init.id === initiativeId) {
                 return {
                   ...init,
-                  phases: finalPhases,
+                  items: finalItems,
                   status: finalInitiativeStatus,
-                  progress: calculateProgressFromPhases(finalPhases),
+                  progress: calculateProgressFromItems(finalItems),
                   lastUpdate: new Date().toISOString(),
                 };
               }
@@ -774,70 +802,70 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
             });
           });
       } catch (error) {
-          console.error("Error updating phase:", error);
+          console.error("Error updating item:", error);
       }
   }, [initiatives]);
 
-  const deletePhase = useCallback(async (initiativeId: string, phaseId: string) => {
+  const deleteItem = useCallback(async (initiativeId: string, itemId: string) => {
       const localInitiative = initiatives.find(i => i.id === initiativeId);
-      if (!localInitiative || !localInitiative.phases) return;
+      if (!localInitiative || !localInitiative.items) return;
 
-      const updatedPhases = localInitiative.phases.filter(p => p.id !== phaseId);
+      const updatedItems = localInitiative.items.filter(p => p.id !== itemId);
       const initiativeDocRef = doc(db, 'initiatives', initiativeId);
       
       try {
-          await setDoc(initiativeDocRef, { phases: updatedPhases, lastUpdate: new Date().toISOString() }, { merge: true });
+          await setDoc(initiativeDocRef, { items: updatedItems, lastUpdate: new Date().toISOString() }, { merge: true });
           fetchInitiatives();
       } catch (error) {
-          console.error("Error deleting phase:", error);
+          console.error("Error deleting item:", error);
       }
   }, [initiatives, fetchInitiatives]);
 
-  const addSubItem = useCallback(async (initiativeId: string, phaseId: string, subItem: Omit<SubItem, 'id'>) => {
+  const addSubItem = useCallback(async (initiativeId: string, itemId: string, subItem: Omit<SubItem, 'id'>) => {
       const localInitiative = initiatives.find(i => i.id === initiativeId);
-      if (!localInitiative || !localInitiative.phases) return;
+      if (!localInitiative || !localInitiative.items) return;
 
       const newSubItem: SubItem = {
           ...subItem,
           id: doc(collection(db, 'dummy')).id,
       };
 
-      const updatedPhases = localInitiative.phases.map(phase => {
-          if (phase.id === phaseId) {
+      const updatedItems = localInitiative.items.map(item => {
+          if (item.id === itemId) {
               return {
-                  ...phase,
-                  subItems: [...(phase.subItems || []), newSubItem],
+                  ...item,
+                  subItems: [...(item.subItems || []), newSubItem],
               };
           }
-          return phase;
+          return item;
       });
 
       const initiativeDocRef = doc(db, 'initiatives', initiativeId);
       try {
-          await setDoc(initiativeDocRef, { phases: updatedPhases, lastUpdate: new Date().toISOString() }, { merge: true });
+          await setDoc(initiativeDocRef, { items: updatedItems, lastUpdate: new Date().toISOString() }, { merge: true });
           fetchInitiatives();
       } catch (error) {
           console.error("Error adding subitem:", error);
       }
   }, [initiatives, fetchInitiatives]);
 
-  const deleteSubItem = useCallback(async (initiativeId: string, phaseId: string, subItemId: string) => {
+  const deleteSubItem = useCallback(async (initiativeId: string, itemId: string, subItemId: string) => {
       const localInitiative = initiatives.find(i => i.id === initiativeId);
-      if (!localInitiative || !localInitiative.phases) return;
+      if (!localInitiative || !localInitiative.items) return;
 
-      const updatedPhases = localInitiative.phases.map(phase => {
-          if (phase.id === phaseId && phase.subItems) {
+      const updatedItems = localInitiative.items.map(item => {
+          if (item.id === itemId && item.subItems) {
               return {
-                  ...phase,
-                  subItems: phase.subItems.filter(si => si.id !== subItemId),
+                  ...item,
+                  subItems: item.subItems.filter(si => si.id !== subItemId),
               };
           }
-          return phase;
+          return item;
       });
 
       const initiativeDocRef = doc(db, 'initiatives', initiativeId);
       try {
-          await setDoc(initiativeDocRef, { phases: updatedPhases, lastUpdate: new Date().toISOString() }, { merge: true });
+          await setDoc(initiativeDocRef, { items: updatedItems, lastUpdate: new Date().toISOString() }, { merge: true });
           fetchInitiatives();
       } catch (error) {
           console.error("Error deleting subitem:", error);
@@ -855,9 +883,9 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
       unarchiveInitiative, 
       updateInitiativeStatus, 
       updateSubItem,
-      addPhase,
-      updatePhase,
-      deletePhase,
+      addItem,
+      updateItem,
+      deleteItem,
       addSubItem,
       deleteSubItem,
       isLoading 

@@ -32,22 +32,22 @@ interface KanbanSubItemColumnProps {
     subItems: SubItem[];
   };
   initiativeId: string; // ID da iniciativa pai (necessário para os cards)
-  phaseId: string; // ID da fase pai (necessário para os cards)
-  onDropSubItem: (subItemId: string, initiativeId: string, phaseId: string, newStatus: InitiativeStatus) => void;
+  itemId: string; // ID do item pai (necessário para os cards)
+  onDropSubItem: (subItemId: string, initiativeId: string, itemId: string, newStatus: InitiativeStatus) => void;
   onSubItemClick: (subItem: SubItem) => void;
 }
 
 export function KanbanSubItemColumn({ 
   column, 
   initiativeId,
-  phaseId,
+  itemId,
   onDropSubItem, 
   onSubItemClick 
 }: KanbanSubItemColumnProps) {
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: 'subitem',
-    drop: (item: { id: string; initiativeId: string; phaseId: string }) => {
-      onDropSubItem(item.id, item.initiativeId, item.phaseId, column.id);
+    drop: (item: { id: string; initiativeId: string; itemId: string }) => {
+      onDropSubItem(item.id, item.initiativeId, item.itemId, column.id);
     },
     collect: (monitor) => ({
       isOver: !!monitor.isOver(),
@@ -76,7 +76,7 @@ export function KanbanSubItemColumn({
             key={subItem.id}
             subItem={subItem}
             initiativeId={initiativeId}
-            phaseId={phaseId}
+            itemId={itemId}
             onClick={() => onSubItemClick(subItem)}
           />
         ))}

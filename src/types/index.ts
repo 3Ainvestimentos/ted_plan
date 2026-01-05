@@ -19,7 +19,7 @@ export interface SubItem {
   description: string; // Observações
 }
 
-export interface InitiativePhase {
+export interface InitiativeItem {
   id: string;
   title: string;
   deadline?: string | null; // ISO date string 'YYYY-MM-DD'
@@ -47,7 +47,7 @@ export interface Initiative {
   keyMetrics: { name: string; value: string; trend: 'up' | 'down' | 'neutral' }[];
   icon?: React.ElementType; // Optional: for specific task icons
   areaId: string; // Área obrigatória (seletor com áreas de negócio)
-  phases: InitiativePhase[]; // Fases obrigatórias (mínimo 1)
+  items: InitiativeItem[]; // Itens obrigatórios (mínimo 1)
   archived?: boolean;
   cidade?: string;
   auc?: number;

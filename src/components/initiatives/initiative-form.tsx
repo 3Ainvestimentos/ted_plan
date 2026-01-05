@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ArrowLeft, CalendarIcon, PlusCircle, Trash2 } from "lucide-react";
-import type { InitiativeStatus, InitiativePriority, InitiativePhase } from "@/types";
+import type { InitiativeStatus, InitiativePriority, InitiativeItem } from "@/types";
 import { Checkbox } from "../ui/checkbox";
 import { cn } from "@/lib/utils";
 import { useStrategicPanel } from "@/contexts/strategic-panel-context";
@@ -63,9 +63,9 @@ const subItemSchema = z.object({
   description: z.string().optional(),
 });
 
-const phaseSchema = z.object({
+const itemSchema = z.object({
   id: z.string().optional(),
-  title: z.string().min(3, "O título da fase deve ter pelo menos 3 caracteres."),
+  title: z.string().min(3, "O título do item deve ter pelo menos 3 caracteres."),
   deadline: dateSchema,
   status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso']),
   areaId: z.string().min(1, "A área é obrigatória."), // Será sempre igual à área do projeto
@@ -83,7 +83,7 @@ const initiativeSchema = z.object({
   deadline: dateSchema,
   priority: z.enum(['Baixa', 'Média', 'Alta']),
   areaId: z.string().min(1, "A área é obrigatória."),
-  phases: z.array(phaseSchema).min(1, "É necessário pelo menos uma fase."),
+  items: z.array(itemSchema).min(1, "É necessário pelo menos um item."),
 });
 
 export type InitiativeFormData = z.infer<typeof initiativeSchema>;
@@ -116,49 +116,49 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
       priority: 'Baixa',
       areaId: '',
       owner: '',
-      phases: [],
+      items: [],
     },
     mode: 'onChange' // Para validação em tempo real
   });
 
-  const { fields: phaseFields, append: appendPhase, remove: removePhase } = useFieldArray({
+  const { fields: itemFields, append: appendItem, remove: removeItem } = useFieldArray({
     control,
-    name: "phases",
+    name: "items",
   });
 
-  const watchPhases = watch("phases");
+  const watchItems = watch("items");
   const watchAreaId = watch("areaId");
-  const hasPhases = watchPhases && watchPhases.length > 0;
+  const hasItems = watchItems && watchItems.length > 0;
 
-  // Quando a área do projeto mudar, atualizar todas as fases
+  // Quando a área do projeto mudar, atualizar todas as items
   useEffect(() => {
-    if (watchAreaId && watchPhases && watchPhases.length > 0) {
-      watchPhases.forEach((_, index) => {
-        const currentPhaseAreaId = getValues(`phases.${index}.areaId`);
+    if (watchAreaId && watchItems && watchItems.length > 0) {
+      watchItems.forEach((_, index) => {
+        const currentItemAreaId = getValues(`items.${index}.areaId`);
         // Só atualizar se for diferente para evitar loops
-        if (currentPhaseAreaId !== watchAreaId) {
-          setValue(`phases.${index}.areaId`, watchAreaId, { shouldValidate: false });
+        if (currentItemAreaId !== watchAreaId) {
+          setValue(`items.${index}.areaId`, watchAreaId, { shouldValidate: false });
         }
       });
     }
-  }, [watchAreaId, watchPhases, setValue, getValues]);
+  }, [watchAreaId, watchItems, setValue, getValues]);
 
-  // Quando fases forem adicionadas, aplicar a área do projeto
+  // Quando items forem adicionadas, aplicar a área do projeto
   useEffect(() => {
-    if (watchAreaId && watchPhases) {
-      watchPhases.forEach((phase, index) => {
-        if (!phase.areaId || phase.areaId !== watchAreaId) {
-          setValue(`phases.${index}.areaId`, watchAreaId, { shouldValidate: false });
+    if (watchAreaId && watchItems) {
+      watchItems.forEach((item, index) => {
+        if (!item.areaId || item.areaId !== watchAreaId) {
+          setValue(`items.${index}.areaId`, watchAreaId, { shouldValidate: false });
         }
       });
     }
-  }, [watchPhases?.length, watchAreaId, setValue, getValues]);
+  }, [watchItems?.length, watchAreaId, setValue, getValues]);
 
-  // Função para adicionar subitem a uma fase específica
-  const appendSubItem = (phaseIndex: number) => {
-    const currentPhases = getValues('phases') || [];
-    const currentPhase = currentPhases[phaseIndex] || { subItems: [] };
-    const currentSubItems = currentPhase.subItems || [];
+  // Função para adicionar subitem a uma item específica
+  const appendSubItem = (itemIndex: number) => {
+    const currentItems = getValues('items') || [];
+    const currentItem = currentItems[itemIndex] || { subItems: [] };
+    const currentSubItems = currentItem.subItems || [];
     
     const newSubItem = {
       title: "",
@@ -172,18 +172,18 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
     
     // Atualizar usando setValue do react-hook-form
     const updatedSubItems = [...currentSubItems, newSubItem];
-    setValue(`phases.${phaseIndex}.subItems`, updatedSubItems, { shouldValidate: false });
+    setValue(`items.${itemIndex}.subItems`, updatedSubItems, { shouldValidate: false });
   };
 
-  // Função para remover subitem de uma fase específica
-  const removeSubItem = (phaseIndex: number, subItemIndex: number) => {
-    const currentPhases = getValues('phases') || [];
-    const currentPhase = currentPhases[phaseIndex] || { subItems: [] };
-    const currentSubItems = currentPhase.subItems || [];
+  // Função para remover subitem de um item específico
+  const removeSubItem = (itemIndex: number, subItemIndex: number) => {
+    const currentItems = getValues('items') || [];
+    const currentItem = currentItems[itemIndex] || { subItems: [] };
+    const currentSubItems = currentItem.subItems || [];
     
     const updatedSubItems = currentSubItems.filter((_: any, idx: number) => idx !== subItemIndex);
     // Não validar ao remover, apenas atualizar o valor
-    setValue(`phases.${phaseIndex}.subItems`, updatedSubItems, { shouldValidate: false });
+    setValue(`items.${itemIndex}.subItems`, updatedSubItems, { shouldValidate: false });
   };
 
   /**
@@ -344,14 +344,14 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                   name="status"
                   control={control}
                   render={({ field }) => {
-                    // Verificar se todas as fases estão concluídas
-                    const allPhasesCompleted = watchPhases && watchPhases.length > 0
-                      ? watchPhases.every((phase: any) => phase.status === 'Concluído')
+                    // Verificar se todas as items estão concluídas
+                    const allItemsCompleted = watchItems && watchItems.length > 0
+                      ? watchItems.every((item: any) => item.status === 'Concluído')
                       : false;
                     
-                    // Status disponíveis - remover "Concluído" se nem todas fases estão concluídas
+                    // Status disponíveis - remover "Concluído" se nem todas items estão concluídas
                     let availableStatuses = ['Pendente', 'Em execução', 'Concluído', 'Suspenso'] as const;
-                    if (!allPhasesCompleted && watchPhases && watchPhases.length > 0) {
+                    if (!allItemsCompleted && watchItems && watchItems.length > 0) {
                       availableStatuses = availableStatuses.filter(s => s !== 'Concluído') as any;
                     }
                     
@@ -370,14 +370,14 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                   }}
               />
               {(() => {
-                const allPhasesCompleted = watchPhases && watchPhases.length > 0
-                  ? watchPhases.every((phase: any) => phase.status === 'Concluído')
+                const allItemsCompleted = watchItems && watchItems.length > 0
+                  ? watchItems.every((item: any) => item.status === 'Concluído')
                   : false;
                 
-                if (!allPhasesCompleted && watchPhases && watchPhases.length > 0) {
+                if (!allItemsCompleted && watchItems && watchItems.length > 0) {
                   return (
                     <p className="text-sm text-destructive">
-                      Não é possível concluir: todas as fases devem estar concluídas
+                      Não é possível concluir: todas as items devem estar concluídas
                     </p>
                   );
                 }
@@ -415,14 +415,14 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
       
        <div className="space-y-4 rounded-lg border p-4">
         <div className="flex justify-between items-center">
-            <Label>Fases (Obrigatório - mínimo 1)</Label>
+            <Label>Items (Obrigatório - mínimo 1)</Label>
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => {
                 const currentAreaId = getValues('areaId') || '';
-                appendPhase({ 
+                appendItem({ 
                   title: "", 
                   deadline: undefined as any, // Obrigatório, usuário deve preencher antes de salvar
                   status: 'Pendente',
@@ -435,21 +435,21 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
               }}
               disabled={isLimitedMode}
             >
-              <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Fase
+              <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Item
             </Button>
         </div>
-         {hasPhases ? (
+         {hasItems ? (
           <div className="space-y-4">
-            {phaseFields.map((field, index) => (
+            {itemFields.map((field, index) => (
               <div key={field.id} className="space-y-3 p-3 border rounded-lg">
                 <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold">Fase {index + 1}</Label>
+                  <Label className="text-base font-semibold">Item {index + 1}</Label>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     className="text-destructive hover:text-destructive"
-                    onClick={() => removePhase(index)}
+                    onClick={() => removeItem(index)}
                     disabled={isLimitedMode}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -458,29 +458,29 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label>Título da Fase</Label>
+                    <Label>Título da Item</Label>
                     <Input
-                      {...register(`phases.${index}.title`)}
+                      {...register(`items.${index}.title`)}
                       placeholder="Ex: Planejamento"
-                      className={cn(errors.phases?.[index]?.title && "border-destructive")}
+                      className={cn(errors.items?.[index]?.title && "border-destructive")}
                       disabled={isLimitedMode}
                     />
-                    {errors.phases?.[index]?.title && (
-                      <p className="text-sm text-destructive">{errors.phases[index]?.title?.message}</p>
+                    {errors.items?.[index]?.title && (
+                      <p className="text-sm text-destructive">{errors.items[index]?.title?.message}</p>
                     )}
                   </div>
                   
                   <div className="space-y-2">
                     <Label>Prazo <span className="text-destructive">*</span></Label>
                     <Controller
-                      name={`phases.${index}.deadline`}
+                      name={`items.${index}.deadline`}
                       control={control}
                       render={({ field }) => (
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button 
                               variant="outline" 
-                              className={cn("w-full justify-start text-left font-normal", errors.phases?.[index]?.deadline && "border-destructive")} 
+                              className={cn("w-full justify-start text-left font-normal", errors.items?.[index]?.deadline && "border-destructive")} 
                               disabled={!canEditDeadline}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -504,35 +504,35 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                         Você não tem permissão para editar o prazo. Apenas PMO pode alterar prazos.
                       </p>
                     )}
-                    {errors.phases?.[index]?.deadline && (
-                      <p className="text-sm text-destructive">{errors.phases[index]?.deadline?.message}</p>
+                    {errors.items?.[index]?.deadline && (
+                      <p className="text-sm text-destructive">{errors.items[index]?.deadline?.message}</p>
                     )}
                   </div>
                   
                   <div className="space-y-2">
                     <Label>Status</Label>
                     <Controller
-                      name={`phases.${index}.status`}
+                      name={`items.${index}.status`}
                       control={control}
                       render={({ field }) => {
-                        // Verificar se a fase está em atraso
-                        const phaseDeadline = watchPhases?.[index]?.deadline;
-                        const phaseStatus = field.value;
-                        const phaseIsOverdue = phaseDeadline ? isOverdue(phaseDeadline, phaseStatus) : false;
+                        // Verificar se a item está em atraso
+                        const itemDeadline = watchItems?.[index]?.deadline;
+                        const itemStatus = field.value;
+                        const itemIsOverdue = itemDeadline ? isOverdue(itemDeadline, itemStatus) : false;
                         
                         // Verificar se todos os subitens estão concluídos
-                        const phaseSubItems = watchPhases?.[index]?.subItems || [];
-                        const allSubItemsCompleted = phaseSubItems.length > 0 
-                          ? phaseSubItems.every((si: any) => si.status === 'Concluído')
+                        const itemSubItems = watchItems?.[index]?.subItems || [];
+                        const allSubItemsCompleted = itemSubItems.length > 0 
+                          ? itemSubItems.every((si: any) => si.status === 'Concluído')
                           : true; // Se não tem subitens, pode concluir
                         
                         // Status disponíveis baseado em atraso
-                        let availableStatuses = phaseIsOverdue 
+                        let availableStatuses = itemIsOverdue 
                           ? getAvailableStatuses(true)
                           : ['Pendente', 'Em execução', 'Concluído', 'Suspenso'] as const;
                         
                         // Se não está atrasado mas tenta concluir sem todos subitens concluídos, remover "Concluído"
-                        if (!phaseIsOverdue && !allSubItemsCompleted && phaseSubItems.length > 0) {
+                        if (!itemIsOverdue && !allSubItemsCompleted && itemSubItems.length > 0) {
                           availableStatuses = availableStatuses.filter(s => s !== 'Concluído') as any;
                         }
                         
@@ -551,23 +551,23 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       }}
                     />
                     {(() => {
-                      const phaseDeadline = watchPhases?.[index]?.deadline;
-                      const phaseStatus = watchPhases?.[index]?.status;
-                      const phaseIsOverdue = phaseDeadline ? isOverdue(phaseDeadline, phaseStatus) : false;
-                      const phaseSubItems = watchPhases?.[index]?.subItems || [];
-                      const allSubItemsCompleted = phaseSubItems.length > 0 
-                        ? phaseSubItems.every((si: any) => si.status === 'Concluído')
+                      const itemDeadline = watchItems?.[index]?.deadline;
+                      const itemStatus = watchItems?.[index]?.status;
+                      const itemIsOverdue = itemDeadline ? isOverdue(itemDeadline, itemStatus) : false;
+                      const itemSubItems = watchItems?.[index]?.subItems || [];
+                      const allSubItemsCompleted = itemSubItems.length > 0 
+                        ? itemSubItems.every((si: any) => si.status === 'Concluído')
                         : true;
                       
-                      if (phaseIsOverdue) {
+                      if (itemIsOverdue) {
                         return (
                           <p className="text-xs text-muted-foreground">
-                            Fase em atraso: apenas Atrasado ou Concluído disponíveis
+                            Item em atraso: apenas Atrasado ou Concluído disponíveis
                           </p>
                         );
                       }
                       
-                      if (!allSubItemsCompleted && phaseSubItems.length > 0) {
+                      if (!allSubItemsCompleted && itemSubItems.length > 0) {
                         return (
                           <p className="text-xs text-destructive">
                             Não é possível concluir: todos os subitens devem estar concluídos
@@ -582,7 +582,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                   <div className="space-y-2">
                     <Label>Área</Label>
                     <Controller
-                      name={`phases.${index}.areaId`}
+                      name={`items.${index}.areaId`}
                       control={control}
                       render={({ field }) => (
                         <Select 
@@ -606,15 +606,15 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                         </Select>
                       )}
                     />
-                    {errors.phases?.[index]?.areaId && (
-                      <p className="text-sm text-destructive">{errors.phases[index]?.areaId?.message}</p>
+                    {errors.items?.[index]?.areaId && (
+                      <p className="text-sm text-destructive">{errors.items[index]?.areaId?.message}</p>
                     )}
                   </div>
                   
                   <div className="space-y-2">
                     <Label>Prioridade</Label>
                     <Controller
-                      name={`phases.${index}.priority`}
+                      name={`items.${index}.priority`}
                       control={control}
                       render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value} disabled={isLimitedMode}>
@@ -636,13 +636,13 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       Responsável <span className="text-destructive">*</span>
                     </Label>
                     <Input
-                      {...register(`phases.${index}.responsible`)}
+                      {...register(`items.${index}.responsible`)}
                       placeholder="Ex: Maria Silva"
-                      className={cn(errors.phases?.[index]?.responsible && "border-destructive")}
+                      className={cn(errors.items?.[index]?.responsible && "border-destructive")}
                       disabled={isLimitedMode}
                     />
-                    {errors.phases?.[index]?.responsible && (
-                      <p className="text-sm text-destructive">{errors.phases[index]?.responsible?.message}</p>
+                    {errors.items?.[index]?.responsible && (
+                      <p className="text-sm text-destructive">{errors.items[index]?.responsible?.message}</p>
                     )}
                   </div>
                 </div>
@@ -650,14 +650,14 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                 <div className="space-y-2">
                   <Label>Observações</Label>
                   <Textarea
-                    {...register(`phases.${index}.description`)}
-                    placeholder="Descreva a fase..."
+                    {...register(`items.${index}.description`)}
+                    placeholder="Descreva a item..."
                     rows={2}
-                    className={cn(errors.phases?.[index]?.description && "border-destructive")}
+                    className={cn(errors.items?.[index]?.description && "border-destructive")}
                     disabled={isLimitedMode}
                   />
-                  {errors.phases?.[index]?.description && (
-                    <p className="text-sm text-destructive">{errors.phases[index]?.description?.message}</p>
+                  {errors.items?.[index]?.description && (
+                    <p className="text-sm text-destructive">{errors.items[index]?.description?.message}</p>
                   )}
                 </div>
 
@@ -676,9 +676,9 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                     </Button>
                   </div>
                   
-                  {watchPhases?.[index]?.subItems && watchPhases[index].subItems.length > 0 ? (
+                  {watchItems?.[index]?.subItems && watchItems[index].subItems.length > 0 ? (
                     <div className="space-y-3">
-                      {watchPhases[index].subItems.map((subItem: any, subItemIndex: number) => (
+                      {watchItems[index].subItems.map((subItem: any, subItemIndex: number) => (
                         <div key={subItemIndex} className="space-y-2 p-2 border rounded bg-background">
                           <div className="flex items-center justify-between">
                             <Label className="text-xs font-medium">Subitem {subItemIndex + 1}</Label>
@@ -698,39 +698,39 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                             <div className="space-y-1">
                               <Label className="text-xs">Título</Label>
                               <Input
-                                {...register(`phases.${index}.subItems.${subItemIndex}.title`)}
+                                {...register(`items.${index}.subItems.${subItemIndex}.title`)}
                                 placeholder="Título do subitem"
                                 className="h-8 text-sm"
                                 disabled={isLimitedMode}
                               />
-                              {errors.phases?.[index]?.subItems?.[subItemIndex]?.title && (
-                                <p className="text-xs text-destructive">{errors.phases[index]?.subItems?.[subItemIndex]?.title?.message}</p>
+                              {errors.items?.[index]?.subItems?.[subItemIndex]?.title && (
+                                <p className="text-xs text-destructive">{errors.items[index]?.subItems?.[subItemIndex]?.title?.message}</p>
                               )}
                             </div>
                             
                             <div className="space-y-1">
                               <Label className="text-xs">Responsável *</Label>
                               <Input
-                                {...register(`phases.${index}.subItems.${subItemIndex}.responsible`)}
+                                {...register(`items.${index}.subItems.${subItemIndex}.responsible`)}
                                 placeholder="Responsável"
                                 className="h-8 text-sm"
                               />
-                              {errors.phases?.[index]?.subItems?.[subItemIndex]?.responsible && (
-                                <p className="text-xs text-destructive">{errors.phases[index]?.subItems?.[subItemIndex]?.responsible?.message}</p>
+                              {errors.items?.[index]?.subItems?.[subItemIndex]?.responsible && (
+                                <p className="text-xs text-destructive">{errors.items[index]?.subItems?.[subItemIndex]?.responsible?.message}</p>
                               )}
                             </div>
                             
                             <div className="space-y-1">
                               <Label className="text-xs">Prazo <span className="text-destructive">*</span></Label>
                               <Controller
-                                name={`phases.${index}.subItems.${subItemIndex}.deadline`}
+                                name={`items.${index}.subItems.${subItemIndex}.deadline`}
                                 control={control}
                                 render={({ field }) => (
                                   <Popover>
                                     <PopoverTrigger asChild>
                                       <Button 
                                         variant="outline" 
-                                        className={cn("w-full justify-start text-left font-normal h-8 text-sm", errors.phases?.[index]?.subItems?.[subItemIndex]?.deadline && "border-destructive")} 
+                                        className={cn("w-full justify-start text-left font-normal h-8 text-sm", errors.items?.[index]?.subItems?.[subItemIndex]?.deadline && "border-destructive")} 
                                         disabled={!canEditDeadline}
                                       >
                                         <CalendarIcon className="mr-2 h-3 w-3" />
@@ -754,19 +754,19 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                   Você não tem permissão para editar o prazo. Apenas PMO pode alterar prazos.
                                 </p>
                               )}
-                              {errors.phases?.[index]?.subItems?.[subItemIndex]?.deadline && (
-                                <p className="text-xs text-destructive">{errors.phases[index]?.subItems?.[subItemIndex]?.deadline?.message}</p>
+                              {errors.items?.[index]?.subItems?.[subItemIndex]?.deadline && (
+                                <p className="text-xs text-destructive">{errors.items[index]?.subItems?.[subItemIndex]?.deadline?.message}</p>
                               )}
                             </div>
                             
                             <div className="space-y-1">
                               <Label className="text-xs">Status</Label>
                               <Controller
-                                name={`phases.${index}.subItems.${subItemIndex}.status`}
+                                name={`items.${index}.subItems.${subItemIndex}.status`}
                                 control={control}
                                 render={({ field }) => {
                                   // Verificar se o subitem está em atraso
-                                  const subItemDeadline = watchPhases?.[index]?.subItems?.[subItemIndex]?.deadline;
+                                  const subItemDeadline = watchItems?.[index]?.subItems?.[subItemIndex]?.deadline;
                                   const subItemStatus = field.value;
                                   const subItemIsOverdue = subItemDeadline ? isOverdue(subItemDeadline, subItemStatus) : false;
                                   const availableStatuses = subItemIsOverdue 
@@ -788,8 +788,8 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                 }}
                               />
                               {(() => {
-                                const subItemDeadline = watchPhases?.[index]?.subItems?.[subItemIndex]?.deadline;
-                                const subItemStatus = watchPhases?.[index]?.subItems?.[subItemIndex]?.status;
+                                const subItemDeadline = watchItems?.[index]?.subItems?.[subItemIndex]?.deadline;
+                                const subItemStatus = watchItems?.[index]?.subItems?.[subItemIndex]?.status;
                                 const subItemIsOverdue = subItemDeadline ? isOverdue(subItemDeadline, subItemStatus) : false;
                                 return subItemIsOverdue ? (
                                   <p className="text-xs text-muted-foreground">
@@ -802,7 +802,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                             <div className="space-y-1">
                               <Label className="text-xs">Prioridade</Label>
                               <Controller
-                                name={`phases.${index}.subItems.${subItemIndex}.priority`}
+                                name={`items.${index}.subItems.${subItemIndex}.priority`}
                                 control={control}
                                 render={({ field }) => (
                                   <Select onValueChange={field.onChange} value={field.value} disabled={isLimitedMode}>
@@ -823,14 +823,14 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                           <div className="space-y-1">
                             <Label className="text-xs">Observações</Label>
                             <Textarea
-                              {...register(`phases.${index}.subItems.${subItemIndex}.description`)}
+                              {...register(`items.${index}.subItems.${subItemIndex}.description`)}
                               placeholder="Observações do subitem"
                               rows={2}
                               className="text-sm"
                               disabled={isLimitedMode}
                             />
-                            {errors.phases?.[index]?.subItems?.[subItemIndex]?.description && (
-                              <p className="text-xs text-destructive">{errors.phases[index]?.subItems?.[subItemIndex]?.description?.message}</p>
+                            {errors.items?.[index]?.subItems?.[subItemIndex]?.description && (
+                              <p className="text-xs text-destructive">{errors.items[index]?.subItems?.[subItemIndex]?.description?.message}</p>
                             )}
                           </div>
                         </div>
@@ -844,20 +844,20 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                 </div>
               </div>
             ))}
-            {errors.phases && (
+            {errors.items && (
               <div className="text-sm text-destructive space-y-1 p-3 border border-destructive rounded-md bg-destructive/10">
-                <p className="font-semibold">Erros encontrados nas fases:</p>
-                {Array.isArray(errors.phases) && errors.phases.map((phaseError: any, idx: number) => {
-                  if (!phaseError) return null;
+                <p className="font-semibold">Erros encontrados nas items:</p>
+                {Array.isArray(errors.items) && errors.items.map((itemError: any, idx: number) => {
+                  if (!itemError) return null;
                   return (
                     <div key={idx} className="ml-4 mt-2">
-                      <p className="font-medium">Fase {idx + 1}:</p>
+                      <p className="font-medium">Item {idx + 1}:</p>
                       <ul className="list-disc list-inside ml-4 space-y-1">
-                        {phaseError.title && <li>{phaseError.title.message}</li>}
-                        {phaseError.description && <li>{phaseError.description.message}</li>}
-                        {phaseError.responsible && <li>{phaseError.responsible.message}</li>}
-                        {phaseError.areaId && <li>{phaseError.areaId.message}</li>}
-                        {phaseError.subItems && Array.isArray(phaseError.subItems) && phaseError.subItems.map((subItemError: any, subIdx: number) => {
+                        {itemError.title && <li>{itemError.title.message}</li>}
+                        {itemError.description && <li>{itemError.description.message}</li>}
+                        {itemError.responsible && <li>{itemError.responsible.message}</li>}
+                        {itemError.areaId && <li>{itemError.areaId.message}</li>}
+                        {itemError.subItems && Array.isArray(itemError.subItems) && itemError.subItems.map((subItemError: any, subIdx: number) => {
                           if (!subItemError) return null;
                           return (
                             <li key={subIdx}>
@@ -874,15 +874,15 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                     </div>
                   );
                 })}
-                {typeof errors.phases === 'object' && !Array.isArray(errors.phases) && 'message' in errors.phases && (
-                  <p className="mt-2">{String(errors.phases.message)}</p>
+                {typeof errors.items === 'object' && !Array.isArray(errors.items) && 'message' in errors.items && (
+                  <p className="mt-2">{String(errors.items.message)}</p>
                 )}
               </div>
             )}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground text-center py-2">
-            Nenhuma fase adicionada. Adicione pelo menos uma fase.
+            Nenhuma item adicionada. Adicione pelo menos uma item.
           </p>
         )}
       </div>

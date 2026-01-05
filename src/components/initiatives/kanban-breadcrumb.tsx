@@ -11,26 +11,26 @@ import { cn } from "@/lib/utils";
  * ============================================
  * 
  * Componente de navegação breadcrumb para o Kanban hierárquico.
- * Permite navegar entre os níveis: Iniciativas → Fases → Subitens
+ * Permite navegar entre os níveis: Iniciativas → Itens → Subitens
  * 
- * @param currentLevel - Nível atual de visualização ('initiatives' | 'phases' | 'subitems')
- * @param initiativeTitle - Título da iniciativa atual (quando em nível de fases ou subitens)
- * @param phaseTitle - Título da fase atual (quando em nível de subitens)
+ * @param currentLevel - Nível atual de visualização ('initiatives' | 'items' | 'subitems')
+ * @param initiativeTitle - Título da iniciativa atual (quando em nível de itens ou subitens)
+ * @param itemTitle - Título do item atual (quando em nível de subitens)
  * @param onGoBack - Função chamada ao clicar no botão "Voltar"
  * @param onGoHome - Função chamada ao clicar no botão "Iniciativas" (voltar ao nível raiz)
  * 
  * @example
  * <KanbanBreadcrumb
- *   currentLevel="phases"
+ *   currentLevel="items"
  *   initiativeTitle="Otimizar Funil de Vendas"
  *   onGoBack={() => setCurrentLevel('initiatives')}
  *   onGoHome={() => setCurrentLevel('initiatives')}
  * />
  */
 interface KanbanBreadcrumbProps {
-  currentLevel: 'initiatives' | 'phases' | 'subitems';
+  currentLevel: 'initiatives' | 'items' | 'subitems';
   initiativeTitle?: string;
-  phaseTitle?: string;
+  itemTitle?: string;
   onGoBack: () => void;
   onGoHome: () => void;
 }
@@ -38,7 +38,7 @@ interface KanbanBreadcrumbProps {
 export function KanbanBreadcrumb({
   currentLevel,
   initiativeTitle,
-  phaseTitle,
+  itemTitle,
   onGoBack,
   onGoHome
 }: KanbanBreadcrumbProps) {
@@ -59,7 +59,7 @@ export function KanbanBreadcrumb({
         Iniciativas
       </Button>
       
-      {currentLevel === 'phases' && initiativeTitle && (
+      {currentLevel === 'items' && initiativeTitle && (
         <>
           <span className="text-muted-foreground">/</span>
           <span className="text-sm font-medium text-foreground truncate max-w-[200px]" title={initiativeTitle}>
@@ -68,15 +68,15 @@ export function KanbanBreadcrumb({
         </>
       )}
       
-      {currentLevel === 'subitems' && initiativeTitle && phaseTitle && (
+      {currentLevel === 'subitems' && initiativeTitle && itemTitle && (
         <>
           <span className="text-muted-foreground">/</span>
           <span className="text-sm font-medium text-foreground truncate max-w-[150px]" title={initiativeTitle}>
             {initiativeTitle}
           </span>
           <span className="text-muted-foreground">/</span>
-          <span className="text-sm font-medium text-foreground truncate max-w-[150px]" title={phaseTitle}>
-            {phaseTitle}
+          <span className="text-sm font-medium text-foreground truncate max-w-[150px]" title={itemTitle}>
+            {itemTitle}
           </span>
         </>
       )}

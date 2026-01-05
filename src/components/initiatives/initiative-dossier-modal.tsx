@@ -32,13 +32,13 @@ export function InitiativeDossierModal({ isOpen, onOpenChange, initiative, isMna
     if (!initiative) return null;
 
     const StatusIcon = STATUS_ICONS[initiative.status];
-    const hasPhases = !isMna && 'phases' in initiative && initiative.phases && initiative.phases.length > 0;
+    const hasItems = !isMna && 'items' in initiative && initiative.items && initiative.items.length > 0;
     const hasSubItems = isMna && initiative.subItems && initiative.subItems.length > 0;
 
-    const handleSubItemToggle = (phaseId: string, subItemId: string, completed: boolean) => {
+    const handleSubItemToggle = (itemId: string, subItemId: string, completed: boolean) => {
         console.log('[DossierModal] Toggle subItem:', {
             initiativeId: initiative.id,
-            phaseId,
+            itemId,
             subItemId,
             newCompleted: completed,
             isMna
@@ -48,7 +48,7 @@ export function InitiativeDossierModal({ isOpen, onOpenChange, initiative, isMna
             // Para M&As, manter compatibilidade com estrutura antiga
             updateMnaSubItem(initiative.id, subItemId, completed);
         } else {
-            updateInitiativeSubItem(initiative.id, phaseId, subItemId, completed);
+            updateInitiativeSubItem(initiative.id, itemId, subItemId, completed);
         }
     };
 
@@ -103,7 +103,7 @@ export function InitiativeDossierModal({ isOpen, onOpenChange, initiative, isMna
                       <p className="text-foreground/80 whitespace-pre-line">{initiative.description}</p>
                     </section>
 
-                    {(hasPhases || hasSubItems) && (
+                    {(hasItems || hasSubItems) && (
                         <>
                         <section>
                             <h3 className="text-xl font-headline mb-2 text-foreground/90">Progresso</h3>
@@ -113,30 +113,30 @@ export function InitiativeDossierModal({ isOpen, onOpenChange, initiative, isMna
                             </div>
                             <Progress value={initiative.progress} aria-label={`${initiative.title} progresso ${initiative.progress}%`} className="h-3" />
                         </section>
-                        {hasPhases && !isMna && 'phases' in initiative && (
+                        {hasItems && !isMna && 'items' in initiative && (
                             <section>
-                                <h3 className="text-xl font-headline mb-2 text-foreground/90 flex items-center gap-2"><ListChecks className="w-5 h-5"/> Fases e Subitens</h3>
+                                <h3 className="text-xl font-headline mb-2 text-foreground/90 flex items-center gap-2"><ListChecks className="w-5 h-5"/> Itens e Subitens</h3>
                                 <div className="space-y-4 rounded-md border p-4">
-                                    {initiative.phases.map((phase, phaseIndex) => (
-                                        <div key={phase.id || `phase-${phaseIndex}`} className="space-y-2 border-l-2 border-primary/20 pl-4">
+                                    {initiative.items.map((item, itemIndex) => (
+                                        <div key={item.id || `item-${itemIndex}`} className="space-y-2 border-l-2 border-primary/20 pl-4">
                                             <div className="flex items-center gap-2">
-                                                <h4 className="font-semibold text-sm">{phase.title}</h4>
-                                                {phase.responsible && (
+                                                <h4 className="font-semibold text-sm">{item.title}</h4>
+                                                {item.responsible && (
                                                     <Badge variant="outline" className="text-xs">
-                                                        {phase.responsible}
+                                                        {item.responsible}
                                                     </Badge>
                                                 )}
                                             </div>
-                                            {phase.subItems && phase.subItems.length > 0 && (
+                                            {item.subItems && item.subItems.length > 0 && (
                                                 <div className="space-y-2 ml-4">
-                                                    {phase.subItems.map((subItem, subItemIndex) => (
+                                                    {item.subItems.map((subItem, subItemIndex) => (
                                                         <div key={subItem.id || `subitem-${subItemIndex}`} className="flex items-center gap-3">
                                                             <Checkbox 
                                                                 id={`dossier-subitem-${subItem.id || subItemIndex}`}
                                                                 checked={subItem.completed} 
                                                                 onCheckedChange={(checked) => {
-                                                                    if (subItem.id && phase.id) {
-                                                                        handleSubItemToggle(phase.id, subItem.id, !!checked);
+                                                                    if (subItem.id && item.id) {
+                                                                        handleSubItemToggle(item.id, subItem.id, !!checked);
                                                                     }
                                                                 }}
                                                             />

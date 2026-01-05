@@ -14,7 +14,7 @@ import { isOverdue } from "@/lib/initiatives-helpers";
 interface KanbanTaskCardProps {
   task: Initiative;
   onClick: () => void;
-  onExpand?: () => void; // Função chamada ao clicar no botão de expandir (se tiver fases)
+  onExpand?: () => void; // Função chamada ao clicar no botão de expandir (se tiver itens)
 }
 
 function getInitials(name: string | null | undefined): string {
@@ -36,7 +36,7 @@ export function KanbanTaskCard({ task, onClick, onExpand }: KanbanTaskCardProps)
     }),
   }));
   
-  const hasPhases = task.phases && task.phases.length > 0;
+  const hasItems = task.items && task.items.length > 0;
   const hasSubItems = task.subItems && task.subItems.length > 0;
   const TaskIcon = hasSubItems ? CheckSquare : (task.icon || FileText);
   
@@ -83,9 +83,9 @@ export function KanbanTaskCard({ task, onClick, onExpand }: KanbanTaskCardProps)
                 {statusIndicator && <div className="flex-shrink-0">{statusIndicator}</div>}
             </div>
 
-            {hasPhases && (
+            {hasItems && (
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{task.phases?.length || 0} fases</span>
+                    <span>{task.items?.length || 0} itens</span>
                     {onExpand && (
                         <button
                             onClick={(e) => {

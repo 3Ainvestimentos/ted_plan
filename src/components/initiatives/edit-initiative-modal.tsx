@@ -130,10 +130,10 @@ export function EditInitiativeModal({ isOpen, onOpenChange, initiative }: EditIn
     const initialData = {
         ...initiative,
         deadline: getDeadlineDate(initiative.deadline),
-        phases: initiative.phases?.map(phase => ({
-            ...phase,
-            deadline: getDeadlineDate(phase.deadline),
-            subItems: phase.subItems?.map(subItem => ({
+        items: initiative.items?.map(item => ({
+            ...item,
+            deadline: getDeadlineDate(item.deadline),
+            subItems: item.subItems?.map(subItem => ({
                 ...subItem,
                 deadline: getDeadlineDate(subItem.deadline),
             })) || [],

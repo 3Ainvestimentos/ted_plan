@@ -30,7 +30,7 @@ import { isOverdue } from "@/lib/initiatives-helpers";
 interface KanbanSubItemCardProps {
   subItem: SubItem;
   initiativeId: string; // ID da iniciativa pai (necessário para drag and drop)
-  phaseId: string; // ID da fase pai (necessário para drag and drop)
+  itemId: string; // ID do item pai (necessário para drag and drop)
   onClick: () => void;
 }
 
@@ -44,10 +44,10 @@ function getInitials(name: string | null | undefined): string {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
-export function KanbanSubItemCard({ subItem, initiativeId, phaseId, onClick }: KanbanSubItemCardProps) {
+export function KanbanSubItemCard({ subItem, initiativeId, itemId, onClick }: KanbanSubItemCardProps) {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'subitem',
-    item: { id: subItem.id, initiativeId, phaseId }, // Passa o ID do subitem, iniciativa e fase
+    item: { id: subItem.id, initiativeId, itemId }, // Passa o ID do subitem, iniciativa e item
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),

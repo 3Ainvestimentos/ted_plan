@@ -4,11 +4,11 @@
  * ============================================
  * 
  * Este arquivo contém funções helper reutilizáveis para trabalhar com iniciativas,
- * fases e subitens, incluindo detecção de atraso e validações de status.
+ * itens e subitens, incluindo detecção de atraso e validações de status.
  */
 
 import { startOfDay, isBefore } from 'date-fns';
-import type { InitiativeStatus, InitiativePhase, SubItem } from '@/types';
+import type { InitiativeStatus, InitiativeItem, SubItem } from '@/types';
 
 /**
  * Verifica se um item está em atraso baseado em seu deadline e status.
@@ -113,13 +113,13 @@ export function getAvailableStatuses(isOverdue: boolean): InitiativeStatus[] {
 }
 
 /**
- * Verifica se uma fase está em atraso.
+ * Verifica se um item está em atraso.
  * 
- * @param phase - Fase a verificar
- * @returns true se a fase está em atraso
+ * @param item - Item a verificar
+ * @returns true se o item está em atraso
  */
-export function isPhaseOverdue(phase: InitiativePhase): boolean {
-  return isOverdue(phase.deadline, phase.status);
+export function isItemOverdue(item: InitiativeItem): boolean {
+  return isOverdue(item.deadline, item.status);
 }
 
 /**

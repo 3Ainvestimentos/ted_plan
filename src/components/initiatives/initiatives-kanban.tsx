@@ -15,8 +15,8 @@ import { isOverdue, getAvailableStatuses } from "@/lib/initiatives-helpers";
  * 
  * NAVEGAÇÃO HIERÁRQUICA:
  * - Nível 1: Iniciativas (raiz)
- * - Nível 2: Fases (ao expandir uma iniciativa)
- * - Nível 3: Subitens (ao expandir uma fase)
+ * - Nível 2: Itens (ao expandir uma iniciativa)
+ * - Nível 3: Subitens (ao expandir um item)
  * 
  * ARQUITETURA MODULAR:
  * - Separação clara entre lógica de agrupamento e renderização
@@ -31,12 +31,12 @@ import { isOverdue, getAvailableStatuses } from "@/lib/initiatives-helpers";
  */
 
 import React, { useMemo, useState } from 'react';
-import type { Initiative, InitiativeStatus, InitiativePhase, SubItem } from '@/types';
+import type { Initiative, InitiativeStatus, InitiativeItem, SubItem } from '@/types';
 import { KanbanColumn } from './kanban-column';
 import { useInitiatives } from '@/contexts/initiatives-context';
 import { KANBAN_COLUMNS_ORDER } from '@/lib/constants';
 import { KanbanBreadcrumb } from './kanban-breadcrumb';
-import { KanbanPhaseColumn } from './kanban-phase-column';
+import { KanbanItemColumn } from './kanban-item-column';
 import { KanbanSubItemColumn } from './kanban-subitem-column';
 
 // ============================================
@@ -54,10 +54,10 @@ interface Column {
   tasks: Initiative[];
 }
 
-interface PhaseColumn {
+interface ItemColumn {
   id: InitiativeStatus;
   title: string;
-  phases: InitiativePhase[];
+  items: InitiativeItem[];
 }
 
 interface SubItemColumn {
@@ -66,41 +66,41 @@ interface SubItemColumn {
   subItems: SubItem[];
 }
 
-type KanbanLevel = 'initiatives' | 'phases' | 'subitems';
+type KanbanLevel = 'initiatives' | 'items' | 'subitems';
 
 // ============================================
 // COMPONENTE PRINCIPAL
 // ============================================
 
 export function InitiativesKanban({ initiatives, onInitiativeClick }: InitiativesKanbanProps) {
-    const { updateInitiativeStatus, updatePhase, updateSubItem } = useInitiatives();
+    const { updateInitiativeStatus, updateItem, updateSubItem } = useInitiatives();
     const { user, getUserArea } = useAuth();
     const { toast } = useToast();
 
     // Estados de navegação hierárquica
     const [currentLevel, setCurrentLevel] = useState<KanbanLevel>('initiatives');
     const [expandedInitiativeId, setExpandedInitiativeId] = useState<string | null>(null);
-    const [expandedPhaseId, setExpandedPhaseId] = useState<string | null>(null);
+    const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
 
     /**
      * Funções de navegação hierárquica
      */
     const expandInitiative = (initiativeId: string) => {
         setExpandedInitiativeId(initiativeId);
-        setCurrentLevel('phases');
-        setExpandedPhaseId(null);
+        setCurrentLevel('items');
+        setExpandedItemId(null);
     };
 
-    const expandPhase = (phaseId: string) => {
-        setExpandedPhaseId(phaseId);
+    const expandItem = (itemId: string) => {
+        setExpandedItemId(itemId);
         setCurrentLevel('subitems');
     };
 
     const goBack = () => {
         if (currentLevel === 'subitems') {
-            setCurrentLevel('phases');
-            setExpandedPhaseId(null);
-        } else if (currentLevel === 'phases') {
+            setCurrentLevel('items');
+            setExpandedItemId(null);
+        } else if (currentLevel === 'items') {
             setCurrentLevel('initiatives');
             setExpandedInitiativeId(null);
         }
@@ -109,7 +109,7 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
     const goHome = () => {
         setCurrentLevel('initiatives');
         setExpandedInitiativeId(null);
-        setExpandedPhaseId(null);
+        setExpandedItemId(null);
     };
 
     /**
@@ -161,22 +161,22 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
     };
 
     /**
-     * Handler para quando uma fase é arrastada e solta em outra coluna
+     * Handler para quando um item é arrastado e solto em outra coluna
      * 
-     * @param phaseId - ID da fase que foi movida
+     * @param itemId - ID do item que foi movido
      * @param initiativeId - ID da iniciativa pai (vem do item arrastado)
      * @param newStatus - Novo status (coluna de destino)
      */
-    const handleDropPhase = (phaseId: string, initiativeId: string, newStatus: InitiativeStatus) => {
+    const handleDropItem = (itemId: string, initiativeId: string, newStatus: InitiativeStatus) => {
         const initiative = initiatives.find(i => i.id === initiativeId);
         if (!initiative) return;
 
-        // Buscar a fase
-        const phase = initiative.phases?.find(p => p.id === phaseId);
-        if (!phase) return;
+        // Buscar o item
+        const item = initiative.items?.find(p => p.id === itemId);
+        if (!item) return;
 
         // Se o status não mudou, não fazer nada
-        if (phase.status === newStatus) {
+        if (item.status === newStatus) {
             return;
         }
 
@@ -189,43 +189,43 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
             toast({
                 variant: 'destructive',
                 title: "Acesso Negado",
-                description: "Você não tem permissão para alterar o status desta fase.",
+                description: "Você não tem permissão para alterar o status deste item.",
             });
             return;
         }
 
         // Verificar se está em atraso e validar status permitido
         // IMPORTANTE: Só limita status se realmente estiver em atraso
-        const phaseIsOverdue = isOverdue(phase.deadline, phase.status);
-        if (phaseIsOverdue) {
+        const itemIsOverdue = isOverdue(item.deadline, item.status);
+        if (itemIsOverdue) {
             const availableStatuses = getAvailableStatuses(true);
             if (!availableStatuses.includes(newStatus)) {
                 toast({
                     variant: 'destructive',
                     title: "Status não permitido",
-                    description: "Fases em atraso só podem ser movidas para 'Atrasado' ou 'Concluído'.",
+                    description: "Itens em atraso só podem ser movidos para 'Atrasado' ou 'Concluído'.",
                 });
                 return;
             }
         }
         // Se não está em atraso, permite qualquer mudança de status (exceto validações específicas de conclusão)
 
-        // Validação: não pode concluir fase se nem todos os subitens estão concluídos
+        // Validação: não pode concluir item se nem todos os subitens estão concluídos
         if (newStatus === 'Concluído') {
-            if (phase.subItems && phase.subItems.length > 0) {
-                const allSubItemsCompleted = phase.subItems.every(subItem => subItem.status === 'Concluído');
+            if (item.subItems && item.subItems.length > 0) {
+                const allSubItemsCompleted = item.subItems.every(subItem => subItem.status === 'Concluído');
                 if (!allSubItemsCompleted) {
                     toast({
                         variant: 'destructive',
                         title: "Não é possível concluir",
-                        description: "Todos os subitens devem estar concluídos antes de concluir a fase.",
+                        description: "Todos os subitens devem estar concluídos antes de concluir o item.",
                     });
                     return;
                 }
             }
         }
 
-        updatePhase(initiativeId, phaseId, { status: newStatus });
+        updateItem(initiativeId, itemId, { status: newStatus });
     };
 
     /**
@@ -233,18 +233,18 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
      * 
      * @param subItemId - ID do subitem que foi movido
      * @param initiativeId - ID da iniciativa pai (vem do item arrastado)
-     * @param phaseId - ID da fase pai (vem do item arrastado)
+     * @param itemId - ID do item pai (vem do item arrastado)
      * @param newStatus - Novo status (coluna de destino)
      */
-    const handleDropSubItem = (subItemId: string, initiativeId: string, phaseId: string, newStatus: InitiativeStatus) => {
+    const handleDropSubItem = (subItemId: string, initiativeId: string, itemId: string, newStatus: InitiativeStatus) => {
         const initiative = initiatives.find(i => i.id === initiativeId);
         if (!initiative) return;
 
         // Buscar o subitem
-        const phase = initiative.phases?.find(p => p.id === phaseId);
-        if (!phase || !phase.subItems) return;
+        const item = initiative.items?.find(p => p.id === itemId);
+        if (!item || !item.subItems) return;
 
-        const subItem = phase.subItems.find(si => si.id === subItemId);
+        const subItem = item.subItems.find(si => si.id === subItemId);
         if (!subItem) return;
 
         // Se o status não mudou, não fazer nada
@@ -285,7 +285,7 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
         // Atualizar subitem: passar o novo status diretamente
         // completed será true apenas se status for "Concluído", senão false
         const completed = newStatus === 'Concluído';
-        updateSubItem(initiativeId, phaseId, subItemId, completed, newStatus);
+        updateSubItem(initiativeId, itemId, subItemId, completed, newStatus);
     };
 
     /**
@@ -322,26 +322,26 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
     }, [initiatives]);
 
     /**
-     * Agrupa fases por status e cria colunas do Kanban
+     * Agrupa itens por status e cria colunas do Kanban
      * 
-     * @returns Array de colunas com fases agrupadas por status
+     * @returns Array de colunas com itens agrupados por status
      */
-    const phaseColumns: PhaseColumn[] = useMemo(() => {
+    const itemColumns: ItemColumn[] = useMemo(() => {
         if (!expandedInitiativeId) return [];
 
         const initiative = initiatives.find(i => i.id === expandedInitiativeId);
-        if (!initiative || !initiative.phases) return [];
+        if (!initiative || !initiative.items) return [];
 
         // Inicializa objeto com arrays vazios para cada status
-        const groupedPhases = KANBAN_COLUMNS_ORDER.reduce((acc, status) => {
+        const groupedItems = KANBAN_COLUMNS_ORDER.reduce((acc, status) => {
             acc[status] = [];
             return acc;
-        }, {} as Record<InitiativeStatus, InitiativePhase[]>);
+        }, {} as Record<InitiativeStatus, InitiativeItem[]>);
         
-        // Agrupa fases por status
-        initiative.phases.forEach(phase => {
-            if (groupedPhases[phase.status]) {
-                groupedPhases[phase.status].push(phase);
+        // Agrupa itens por status
+        initiative.items.forEach(item => {
+            if (groupedItems[item.status]) {
+                groupedItems[item.status].push(item);
             }
         });
 
@@ -349,7 +349,7 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
         return KANBAN_COLUMNS_ORDER.map(status => ({
             id: status,
             title: status,
-            phases: groupedPhases[status] || [],
+            items: groupedItems[status] || [],
         }));
 
     }, [initiatives, expandedInitiativeId]);
@@ -360,13 +360,13 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
      * @returns Array de colunas com subitens agrupados por status
      */
     const subItemColumns: SubItemColumn[] = useMemo(() => {
-        if (!expandedInitiativeId || !expandedPhaseId) return [];
+        if (!expandedInitiativeId || !expandedItemId) return [];
 
         const initiative = initiatives.find(i => i.id === expandedInitiativeId);
-        if (!initiative || !initiative.phases) return [];
+        if (!initiative || !initiative.items) return [];
 
-        const phase = initiative.phases.find(p => p.id === expandedPhaseId);
-        if (!phase || !phase.subItems) return [];
+        const item = initiative.items.find(p => p.id === expandedItemId);
+        if (!item || !item.subItems) return [];
 
         // Inicializa objeto com arrays vazios para cada status
         const groupedSubItems = KANBAN_COLUMNS_ORDER.reduce((acc, status) => {
@@ -375,7 +375,7 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
         }, {} as Record<InitiativeStatus, SubItem[]>);
         
         // Agrupa subitens por status
-        phase.subItems.forEach(subItem => {
+        item.subItems.forEach(subItem => {
             if (groupedSubItems[subItem.status]) {
                 groupedSubItems[subItem.status].push(subItem);
             }
@@ -388,33 +388,33 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
             subItems: groupedSubItems[status] || [],
         }));
 
-    }, [initiatives, expandedInitiativeId, expandedPhaseId]);
+    }, [initiatives, expandedInitiativeId, expandedItemId]);
 
     // Obter dados para breadcrumb
     const currentInitiative = expandedInitiativeId 
         ? initiatives.find(i => i.id === expandedInitiativeId)
         : null;
     
-    const currentPhase = expandedInitiativeId && expandedPhaseId && currentInitiative
-        ? currentInitiative.phases?.find(p => p.id === expandedPhaseId)
+    const currentItem = expandedInitiativeId && expandedItemId && currentInitiative
+        ? currentInitiative.items?.find(p => p.id === expandedItemId)
         : null;
 
     /**
-     * Renderiza colunas para fases
+     * Renderiza colunas para itens
      */
-    const renderPhaseColumns = () => {
+    const renderItemColumns = () => {
         if (!expandedInitiativeId) return null;
         
         return (
             <div className="flex gap-4 h-full w-full">
-                {phaseColumns.map((column) => (
-                    <KanbanPhaseColumn
+                {itemColumns.map((column) => (
+                    <KanbanItemColumn
                         key={column.id}
                         column={column}
                         initiativeId={expandedInitiativeId}
-                        onDropPhase={handleDropPhase}
-                        onPhaseClick={() => onInitiativeClick(currentInitiative!)}
-                        onPhaseExpand={expandPhase}
+                        onDropItem={handleDropItem}
+                        onItemClick={() => onInitiativeClick(currentInitiative!)}
+                        onItemExpand={expandItem}
                     />
                 ))}
             </div>
@@ -425,7 +425,7 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
      * Renderiza colunas para subitens
      */
     const renderSubItemColumns = () => {
-        if (!expandedInitiativeId || !expandedPhaseId) return null;
+        if (!expandedInitiativeId || !expandedItemId) return null;
         
         return (
             <div className="flex gap-4 h-full w-full">
@@ -434,7 +434,7 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
                         key={column.id}
                         column={column}
                         initiativeId={expandedInitiativeId}
-                        phaseId={expandedPhaseId}
+                        itemId={expandedItemId}
                         onDropSubItem={handleDropSubItem}
                         onSubItemClick={() => onInitiativeClick(currentInitiative!)}
                     />
@@ -457,7 +457,7 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
             <KanbanBreadcrumb
                 currentLevel={currentLevel}
                 initiativeTitle={currentInitiative?.title}
-                phaseTitle={currentPhase?.title}
+                itemTitle={currentItem?.title}
                 onGoBack={goBack}
                 onGoHome={goHome}
             />
@@ -477,7 +477,7 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
                 </div>
             )}
 
-            {currentLevel === 'phases' && renderPhaseColumns()}
+            {currentLevel === 'items' && renderItemColumns()}
             {currentLevel === 'subitems' && renderSubItemColumns()}
         </div>
     );

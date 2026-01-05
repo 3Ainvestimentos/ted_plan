@@ -137,7 +137,7 @@ function getEffectiveAreaId(
 }
 
 export default function InitiativesPage() {
-  const { initiatives, isLoading, updateInitiativeStatus, updateSubItem, updatePhase, archiveInitiative, unarchiveInitiative } = useInitiatives();
+  const { initiatives, isLoading, updateInitiativeStatus, updateSubItem, updateItem, archiveInitiative, unarchiveInitiative } = useInitiatives();
   const { user, getUserArea } = useAuth();
   const { businessAreas } = useStrategicPanel();
   const { toast } = useToast();
@@ -229,19 +229,19 @@ export default function InitiativesPage() {
       return;
     }
 
-    // Validação: não pode concluir iniciativa se nem todas as fases estão concluídas
+    // Validação: não pode concluir iniciativa se nem todos os itens estão concluídos
     // IMPORTANTE: Esta validação deve ser SEMPRE aplicada, mesmo se a iniciativa estiver em atraso
-    // IMPORTANTE: Fases sem status ou com status vazio são consideradas não concluídas
+    // IMPORTANTE: Itens sem status ou com status vazio são considerados não concluídos
     if (newStatus === 'Concluído') {
-      // Se não tem fases, pode concluir
-      if (initiative.phases && initiative.phases.length > 0) {
-        // Verificar se todas as fases têm status definido e igual a 'Concluído'
-        const allPhasesCompleted = initiative.phases.every(phase => phase.status === 'Concluído');
-        if (!allPhasesCompleted) {
+      // Se não tem itens, pode concluir
+      if (initiative.items && initiative.items.length > 0) {
+        // Verificar se todos os itens têm status definido e igual a 'Concluído'
+        const allItemsCompleted = initiative.items.every(item => item.status === 'Concluído');
+        if (!allItemsCompleted) {
           toast({
             variant: 'destructive',
             title: "Não é possível concluir",
-            description: "Todas as fases devem estar concluídas antes de concluir a iniciativa.",
+            description: "Todos os itens devem estar concluídos antes de concluir a iniciativa.",
           });
           return;
         }
@@ -252,11 +252,11 @@ export default function InitiativesPage() {
   }
 
   /**
-   * Handler para atualizar status de fase diretamente do Gantt
+   * Handler para atualizar status de item diretamente do Gantt
    * 
-   * Quando o usuário muda o status de uma fase no dropdown, essa função é chamada
+   * Quando o usuário muda o status de um item no dropdown, essa função é chamada
    */
-  const handlePhaseStatusChange = (initiativeId: string, phaseId: string, newStatus: InitiativeStatus) => {
+  const handleItemStatusChange = (initiativeId: string, itemId: string, newStatus: InitiativeStatus) => {
     const initiative = initiatives.find(i => i.id === initiativeId);
     if (!initiative) return;
 
@@ -267,34 +267,34 @@ export default function InitiativesPage() {
       toast({
         variant: 'destructive',
         title: "Acesso Negado",
-        description: "Você não tem permissão para alterar o status desta fase.",
+                description: "Você não tem permissão para alterar o status deste item.",
       });
       return;
     }
 
-    // Buscar a fase
-    const phase = initiative.phases?.find(p => p.id === phaseId);
-    if (!phase) return;
+    // Buscar o item
+    const item = initiative.items?.find(p => p.id === itemId);
+    if (!item) return;
 
-    // Validação: não pode concluir fase se nem todos os subitens estão concluídos
-    // IMPORTANTE: Esta validação deve ser SEMPRE aplicada, mesmo se a fase estiver em atraso
+    // Validação: não pode concluir item se nem todos os subitens estão concluídos
+    // IMPORTANTE: Esta validação deve ser SEMPRE aplicada, mesmo se o item estiver em atraso
     if (newStatus === 'Concluído') {
       // Se não tem subitens, pode concluir
-      if (phase.subItems && phase.subItems.length > 0) {
-        const allSubItemsCompleted = phase.subItems.every(subItem => subItem.status === 'Concluído');
+      if (item.subItems && item.subItems.length > 0) {
+        const allSubItemsCompleted = item.subItems.every(subItem => subItem.status === 'Concluído');
         if (!allSubItemsCompleted) {
           toast({
             variant: 'destructive',
             title: "Não é possível concluir",
-            description: "Todos os subitens devem estar concluídos antes de concluir a fase.",
+            description: "Todos os subitens devem estar concluídos antes de concluir o item.",
           });
           return;
         }
       }
     }
 
-    // Atualizar fase com novo status
-    updatePhase(initiativeId, phaseId, { status: newStatus });
+    // Atualizar item com novo status
+    updateItem(initiativeId, itemId, { status: newStatus });
   }
 
   /**
@@ -302,7 +302,7 @@ export default function InitiativesPage() {
    * 
    * Quando o usuário muda o status de um subitem no dropdown, essa função é chamada
    */
-  const handleSubItemStatusChange = (initiativeId: string, phaseId: string, subItemId: string, newStatus: InitiativeStatus) => {
+  const handleSubItemStatusChange = (initiativeId: string, itemId: string, subItemId: string, newStatus: InitiativeStatus) => {
     const initiative = initiatives.find(i => i.id === initiativeId);
     if (!initiative) return;
 
@@ -318,18 +318,18 @@ export default function InitiativesPage() {
       return;
     }
 
-    // Buscar a fase e o subitem
-    const phase = initiative.phases?.find(p => p.id === phaseId);
-    if (!phase || !phase.subItems) return;
+    // Buscar o item e o subitem
+    const item = initiative.items?.find(p => p.id === itemId);
+    if (!item || !item.subItems) return;
 
-    const subItem = phase.subItems.find(si => si.id === subItemId);
+    const subItem = item.subItems.find(si => si.id === subItemId);
     if (!subItem) return;
 
     // Atualizar subitem: sincronizar completed com status
     // IMPORTANTE: "Concluído" = completed true, outros status = completed false
     const completed = newStatus === 'Concluído';
     // Usar updateSubItem com o novo status diretamente para permitir qualquer status (Pendente, Suspenso, etc.)
-    updateSubItem(initiativeId, phaseId, subItemId, completed, newStatus);
+    updateSubItem(initiativeId, itemId, subItemId, completed, newStatus);
   }
   
   // Filtrar iniciativas por área efetiva (aplicar filtro automático quando não há selectedAreaId)
@@ -479,7 +479,7 @@ export default function InitiativesPage() {
             onArchive={archiveInitiative}
             onUnarchive={unarchiveInitiative}
             onStatusChange={handleStatusChange}
-            onPhaseStatusChange={handlePhaseStatusChange}
+            onItemStatusChange={handleItemStatusChange}
             onSubItemStatusChange={handleSubItemStatusChange}
           />
         ) : (
