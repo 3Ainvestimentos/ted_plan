@@ -27,6 +27,7 @@ import type { UserType } from '@/types';
 export const PAGE_KEYS = {
   DASHBOARD: '', // Página inicial (/)
   STRATEGIC_INITIATIVES: 'strategic-initiatives',
+  AGENDA: 'agenda',
   MEETING_AGENDA: 'meeting-agenda',
   TASKS: 'tasks',
   NOTES: 'notes',
@@ -54,6 +55,7 @@ export const DEFAULT_PERMISSIONS_BY_ROLE: Record<UserType, string[]> = {
   admin: [
     PAGE_KEYS.DASHBOARD,
     PAGE_KEYS.STRATEGIC_INITIATIVES,
+    PAGE_KEYS.AGENDA,
     PAGE_KEYS.MEETING_AGENDA,
     PAGE_KEYS.TASKS,
     PAGE_KEYS.NOTES,
@@ -67,6 +69,7 @@ export const DEFAULT_PERMISSIONS_BY_ROLE: Record<UserType, string[]> = {
   pmo: [
     PAGE_KEYS.DASHBOARD,
     PAGE_KEYS.STRATEGIC_INITIATIVES,
+    PAGE_KEYS.AGENDA,
     PAGE_KEYS.MEETING_AGENDA,
     PAGE_KEYS.TASKS,
     PAGE_KEYS.NOTES,
@@ -77,10 +80,12 @@ export const DEFAULT_PERMISSIONS_BY_ROLE: Record<UserType, string[]> = {
    * Pode acessar apenas:
    * - Painel Estratégico (Dashboard)
    * - Iniciativas Estratégicas
+   * - Agenda
    */
   head: [
     PAGE_KEYS.DASHBOARD,
     PAGE_KEYS.STRATEGIC_INITIATIVES,
+    PAGE_KEYS.AGENDA,
   ],
 };
 

@@ -1,10 +1,11 @@
 
 import type { NavItem, UserRole, Initiative, InitiativeStatus, InitiativePriority, RecurringMeeting, Collaborator } from '@/types';
-import { LayoutDashboard, Target, CalendarClock, Settings, Shield, User, BarChart3, ListTodo, CircleCheck, AlertTriangle, Clock, CheckCircle, TrendingUp, TrendingDown, Minus, Lightbulb, FileText, Bug, PlayCircle, PauseCircle, CheckSquare, StickyNote, ClipboardList, Users } from 'lucide-react';
+import { LayoutDashboard, Target, CalendarClock, Settings, Shield, User, BarChart3, ListTodo, CircleCheck, AlertTriangle, Clock, CheckCircle, TrendingUp, TrendingDown, Minus, Lightbulb, FileText, Bug, PlayCircle, PauseCircle, CheckSquare, StickyNote, ClipboardList, Users, Calendar } from 'lucide-react';
 
 export const NAV_ITEMS_CONFIG: NavItem[] = [
   { title: 'Painel Estratégico', href: '/', icon: LayoutDashboard },
   { title: 'Iniciativas Estratégicas', href: '/strategic-initiatives', icon: Target },
+  { title: 'Agenda', href: '/agenda', icon: Calendar },
   { title: 'Agenda de Reuniões', href: '/meeting-agenda', icon: CalendarClock },
   { title: 'Tarefas', href: '/tasks', icon: ClipboardList },
   { title: 'Anotações', href: '/notes', icon: StickyNote },
@@ -13,6 +14,7 @@ export const NAV_ITEMS_CONFIG: NavItem[] = [
 // Mapeamento de páginas para chaves de permissão
 export const PAGE_PERMISSIONS_MAP: Record<string, string> = {
   'Iniciativas Estratégicas': 'strategic-initiatives',
+  'Agenda': 'agenda',
   'Agenda de Reuniões': 'meeting-agenda',
   'Tarefas': 'tasks',
   'Anotações': 'notes',
@@ -21,6 +23,7 @@ export const PAGE_PERMISSIONS_MAP: Record<string, string> = {
 // Páginas que requerem permissão (excluindo Painel Estratégico que é apenas para Administradores)
 export const PERMISSIONABLE_PAGES = [
   { title: 'Iniciativas Estratégicas', key: 'strategic-initiatives' },
+  { title: 'Agenda', key: 'agenda' },
   { title: 'Agenda de Reuniões', key: 'meeting-agenda' },
   { title: 'Tarefas', key: 'tasks' },
   { title: 'Anotações', key: 'notes' },
