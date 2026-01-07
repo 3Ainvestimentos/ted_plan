@@ -14,9 +14,10 @@ import { canCreateInitiative, canEditDeadline } from "@/lib/permissions-config";
 interface CreateInitiativeModalProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
+    preselectedAreaId?: string | null;
 }
 
-export function CreateInitiativeModal({ isOpen, onOpenChange }: CreateInitiativeModalProps) {
+export function CreateInitiativeModal({ isOpen, onOpenChange, preselectedAreaId }: CreateInitiativeModalProps) {
     const { addInitiative } = useInitiatives();
     const { toast } = useToast();
     const router = useRouter();
@@ -80,6 +81,7 @@ export function CreateInitiativeModal({ isOpen, onOpenChange }: CreateInitiative
                     onCancel={() => onOpenChange(false)} 
                     isLoading={isLoading}
                     canEditDeadline={canEditDeadlineValue}
+                    preselectedAreaId={preselectedAreaId}
                 />
             </DialogContent>
         </Dialog>

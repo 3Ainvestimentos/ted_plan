@@ -351,7 +351,11 @@ export default function InitiativesPage() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <CreateInitiativeModal isOpen={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
+      <CreateInitiativeModal 
+        isOpen={isCreateModalOpen} 
+        onOpenChange={setIsCreateModalOpen}
+        preselectedAreaId={selectedAreaId}
+      />
       
       {selectedInitiative && (
         <InitiativeDossierModal

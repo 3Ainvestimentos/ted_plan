@@ -96,10 +96,18 @@ interface InitiativeFormProps {
     isLimitedMode?: boolean; // Modo limitado para heads (só pode editar responsible e status)
     canEditStatus?: boolean; // Se pode editar status de execução
     canEditDeadline?: boolean; // Se pode editar prazo (deadline) - PMO pode, Head não pode
+    preselectedAreaId?: string | null; // Área pré-selecionada (quando há filtro explícito na URL)
 }
 
-export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isLimitedMode = false, canEditStatus = true, canEditDeadline = true }: InitiativeFormProps) {
+export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isLimitedMode = false, canEditStatus = true, canEditDeadline = true, preselectedAreaId }: InitiativeFormProps) {
   const { businessAreas } = useStrategicPanel();
+  
+  // Validar se preselectedAreaId existe em businessAreas
+  const isValidArea = preselectedAreaId 
+    ? businessAreas.some(area => area.id === preselectedAreaId)
+    : false;
+  
+  const finalPreselectedAreaId = isValidArea ? preselectedAreaId : undefined;
   
   const {
     register,
@@ -114,7 +122,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
     defaultValues: initialData || {
       status: 'Pendente',
       priority: 'Baixa',
-      areaId: '',
+      areaId: finalPreselectedAreaId || '',
       owner: '',
       items: [],
     },
@@ -153,6 +161,18 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
       });
     }
   }, [watchItems?.length, watchAreaId, setValue, getValues]);
+
+  // Garantir que preselectedAreaId seja setado quando o modal abrir ou quando a área pré-selecionada mudar
+  // Útil quando o modal é reaberto com uma área diferente (caso o componente não seja desmontado)
+  useEffect(() => {
+    if (finalPreselectedAreaId) {
+      const currentAreaId = getValues('areaId');
+      // Só atualizar se o valor atual for diferente (evita atualizações desnecessárias)
+      if (currentAreaId !== finalPreselectedAreaId) {
+        setValue('areaId', finalPreselectedAreaId, { shouldValidate: false });
+      }
+    }
+  }, [finalPreselectedAreaId, setValue, getValues]);
 
   // Função para adicionar subitem a uma item específica
   const appendSubItem = (itemIndex: number) => {
@@ -307,7 +327,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                   name="areaId"
                   control={control}
                   render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value} disabled={isLimitedMode}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isLimitedMode || !!finalPreselectedAreaId}>
                           <SelectTrigger>
                               <SelectValue placeholder="Selecione a área" />
                           </SelectTrigger>
@@ -321,6 +341,11 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       </Select>
                   )}
               />
+              {finalPreselectedAreaId && (
+                <p className="text-xs text-muted-foreground">
+                  A área está bloqueada porque você está criando dentro de uma área específica.
+                </p>
+              )}
               {errors.areaId && <p className="text-sm text-destructive">{errors.areaId.message}</p>}
           </div>
       </div>
