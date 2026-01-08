@@ -13,9 +13,8 @@ export interface SubItem {
   title: string;
   completed: boolean;
   startDate: string; // ISO date string 'YYYY-MM-DD' - OBRIGATÓRIO
-  endDate: string; // ISO date string 'YYYY-MM-DD' - OBRIGATÓRIO (usado como deadline)
+  endDate: string; // ISO date string 'YYYY-MM-DD' - OBRIGATÓRIO (prazo/deadline)
   linkedToPrevious?: boolean; // Default false - indica se está vinculado ao subitem anterior
-  deadline?: string | null; // Campo legado - será preenchido com endDate durante migração
   status: InitiativeStatus;
   responsible: string; // Responsável obrigatório
   priority: InitiativePriority;
@@ -26,9 +25,8 @@ export interface InitiativeItem {
   id: string;
   title: string;
   startDate: string; // ISO date string 'YYYY-MM-DD' - OBRIGATÓRIO
-  endDate: string; // ISO date string 'YYYY-MM-DD' - OBRIGATÓRIO (usado como deadline)
+  endDate: string; // ISO date string 'YYYY-MM-DD' - OBRIGATÓRIO (prazo/deadline)
   linkedToPrevious?: boolean; // Default false - indica se está vinculado ao item anterior
-  deadline?: string | null; // Campo legado - será preenchido com endDate durante migração
   status: InitiativeStatus;
   areaId: string; // Área obrigatória
   priority: InitiativePriority;
@@ -49,8 +47,7 @@ export interface Initiative {
   progress: number; // Percentage 0-100
   priority: InitiativePriority;
   startDate: string; // ISO date string 'YYYY-MM-DD' - OBRIGATÓRIO
-  endDate: string; // ISO date string 'YYYY-MM-DD' - OBRIGATÓRIO (usado como deadline)
-  deadline?: string | null; // Campo legado - será preenchido com endDate durante migração
+  endDate: string; // ISO date string 'YYYY-MM-DD' - OBRIGATÓRIO (prazo/deadline)
   keyMetrics: { name: string; value: string; trend: 'up' | 'down' | 'neutral' }[];
   icon?: React.ElementType; // Optional: for specific task icons
   areaId: string; // Área obrigatória (seletor com áreas de negócio)

@@ -54,7 +54,7 @@ export function KanbanSubItemCard({ subItem, initiativeId, itemId, onClick }: Ka
   }));
   
   // Verificar se está em atraso
-  const subItemIsOverdue = isOverdue(subItem.deadline, subItem.status);
+  const subItemIsOverdue = isOverdue(subItem.endDate, subItem.status);
   
   const priorityColorMapping: Record<typeof subItem.priority, string> = {
     'Alta': 'bg-red-100 text-red-700',
@@ -106,8 +106,8 @@ export function KanbanSubItemCard({ subItem, initiativeId, itemId, onClick }: Ka
               {subItem.priority}
             </Badge>
             <div className="flex items-center gap-2">
-              {subItem.deadline && (
-                <span>{new Date(subItem.deadline).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+              {subItem.endDate && (
+                <span>{new Date(subItem.endDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
               )}
               <Avatar className="h-6 w-6">
                 <AvatarImage 

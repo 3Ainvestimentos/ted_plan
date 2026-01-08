@@ -242,82 +242,82 @@ function parseFlexibleDate(dateInput: any): Date | null {
 }
 
 /**
- * Extrai deadline de uma Initiative
+ * Extrai endDate de uma Initiative
  * 
- * Busca o prazo (deadline) da iniciativa, considerando:
- * 1. Deadline direto da iniciativa
- * 2. Deadlines das items
- * 3. Deadlines dos subitens dentro das items
+ * Busca o prazo (endDate) da iniciativa, considerando:
+ * 1. EndDate direto da iniciativa
+ * 2. EndDates das items
+ * 3. EndDates dos subitens dentro das items
  * 4. Fallback para estrutura antiga (subitens diretos)
  * 
- * Retorna o MAIOR deadline encontrado (prazo mais distante)
+ * Retorna o MAIOR endDate encontrado (prazo mais distante)
  */
 function extractInitiativeDeadline(initiative: Initiative): Date | null {
-  // 1. Tenta deadline direto da iniciativa
-  const initiativeDeadline = parseFlexibleDate(initiative.deadline);
-  if (initiativeDeadline) {
+  // 1. Tenta endDate direto da iniciativa
+  const initiativeEndDate = parseFlexibleDate(initiative.endDate);
+  if (initiativeEndDate) {
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[Gantt] Iniciativa "${initiative.title}" tem deadline direto:`, initiativeDeadline);
+      console.log(`[Gantt] Iniciativa "${initiative.title}" tem endDate direto:`, initiativeEndDate);
     }
-    return initiativeDeadline;
+    return initiativeEndDate;
   }
   
-  // 2. Busca deadlines nas items e subitens
+  // 2. Busca endDates nas items e subitens
   if (initiative.items && initiative.items.length > 0) {
-    const allDeadlines: Date[] = [];
+    const allEndDates: Date[] = [];
     
     initiative.items.forEach((item, itemIndex) => {
-      const itemDeadline = parseFlexibleDate(item.deadline);
-      if (itemDeadline) {
-        allDeadlines.push(itemDeadline);
+      const itemEndDate = parseFlexibleDate(item.endDate);
+      if (itemEndDate) {
+        allEndDates.push(itemEndDate);
         if (process.env.NODE_ENV === 'development') {
-          console.log(`[Gantt] Item "${item.title}" tem deadline:`, itemDeadline);
+          console.log(`[Gantt] Item "${item.title}" tem endDate:`, itemEndDate);
         }
       }
       
       if (item.subItems && item.subItems.length > 0) {
         item.subItems.forEach((subItem, subItemIndex) => {
-          const subItemDeadline = parseFlexibleDate(subItem.deadline);
-          if (subItemDeadline) {
-            allDeadlines.push(subItemDeadline);
+          const subItemEndDate = parseFlexibleDate(subItem.endDate);
+          if (subItemEndDate) {
+            allEndDates.push(subItemEndDate);
             if (process.env.NODE_ENV === 'development') {
-              console.log(`[Gantt] Subitem "${subItem.title}" tem deadline:`, subItemDeadline);
+              console.log(`[Gantt] Subitem "${subItem.title}" tem endDate:`, subItemEndDate);
             }
           }
         });
       }
     });
     
-    if (allDeadlines.length > 0) {
-      const maxDeadline = allDeadlines.reduce((max, d) => d > max ? d : max, allDeadlines[0]);
+    if (allEndDates.length > 0) {
+      const maxEndDate = allEndDates.reduce((max, d) => d > max ? d : max, allEndDates[0]);
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[Gantt] Iniciativa "${initiative.title}" - usando maior deadline das items/subitens:`, maxDeadline);
+        console.log(`[Gantt] Iniciativa "${initiative.title}" - usando maior endDate das items/subitens:`, maxEndDate);
       }
-      return maxDeadline;
+      return maxEndDate;
     } else {
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[Gantt] Iniciativa "${initiative.title}" tem ${initiative.items.length} items mas nenhuma tem deadline`);
+        console.log(`[Gantt] Iniciativa "${initiative.title}" tem ${initiative.items.length} items mas nenhuma tem endDate`);
       }
     }
   }
   
   // 3. Fallback para estrutura antiga (compatibilidade)
   if (initiative.subItems && initiative.subItems.length > 0) {
-    const subItemDeadlines = initiative.subItems
-      .map(si => parseFlexibleDate(si.deadline))
+    const subItemEndDates = initiative.subItems
+      .map(si => parseFlexibleDate(si.endDate))
       .filter((d): d is Date => d !== null);
     
-    if (subItemDeadlines.length > 0) {
-      const maxDeadline = subItemDeadlines.reduce((max, d) => d > max ? d : max, subItemDeadlines[0]);
+    if (subItemEndDates.length > 0) {
+      const maxEndDate = subItemEndDates.reduce((max, d) => d > max ? d : max, subItemEndDates[0]);
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[Gantt] Iniciativa "${initiative.title}" - usando deadline de subitens antigos:`, maxDeadline);
+        console.log(`[Gantt] Iniciativa "${initiative.title}" - usando endDate de subitens antigos:`, maxEndDate);
       }
-      return maxDeadline;
+      return maxEndDate;
     }
   }
   
   if (process.env.NODE_ENV === 'development') {
-    console.warn(`[Gantt] Iniciativa "${initiative.title}" não tem nenhum deadline definido`);
+    console.warn(`[Gantt] Iniciativa "${initiative.title}" não tem nenhum endDate definido`);
   }
   return null;
 }
@@ -327,60 +327,72 @@ function extractInitiativeDeadline(initiative: Initiative): Date | null {
  * 
  * Lógica:
  * 1. Se tem startDate explícito, usa ele
- * 2. Se não, busca o menor deadline das items/subitens como aproximação
- * 3. Se não encontrar, usa 30 dias antes do deadline final como fallback
+ * 2. Se não, busca o menor endDate das items/subitens como aproximação
+ * 3. Se não encontrar, usa 30 dias antes do endDate final como fallback
  */
-function extractInitiativeStartDate(initiative: Initiative, deadline: Date): Date {
+function extractInitiativeStartDate(initiative: Initiative, endDate: Date): Date {
   // 1. Tenta usar startDate explícito da iniciativa
   const initiativeStartDate = parseFlexibleDate(initiative.startDate);
   if (initiativeStartDate) return initiativeStartDate;
   
-  // 2. Busca o menor deadline das items e subitens como data de início aproximada
+  // 2. Busca o menor endDate das items e subitens como data de início aproximada
   if (initiative.items && initiative.items.length > 0) {
-    const allDeadlines: Date[] = [];
+    const allEndDates: Date[] = [];
     
     initiative.items.forEach(item => {
-      const itemDeadline = parseFlexibleDate(item.deadline);
-      if (itemDeadline) allDeadlines.push(itemDeadline);
+      // Prioriza startDate do item, depois endDate
+      const itemStartDate = parseFlexibleDate(item.startDate);
+      if (itemStartDate) {
+        allEndDates.push(itemStartDate);
+      } else {
+        const itemEndDate = parseFlexibleDate(item.endDate);
+        if (itemEndDate) allEndDates.push(itemEndDate);
+      }
       
       if (item.subItems && item.subItems.length > 0) {
         item.subItems.forEach(subItem => {
-          const subItemDeadline = parseFlexibleDate(subItem.deadline);
-          if (subItemDeadline) allDeadlines.push(subItemDeadline);
+          // Prioriza startDate do subitem, depois endDate
+          const subItemStartDate = parseFlexibleDate(subItem.startDate);
+          if (subItemStartDate) {
+            allEndDates.push(subItemStartDate);
+          } else {
+            const subItemEndDate = parseFlexibleDate(subItem.endDate);
+            if (subItemEndDate) allEndDates.push(subItemEndDate);
+          }
         });
       }
     });
     
-    if (allDeadlines.length > 0) {
-      // Retorna o menor deadline como data de início aproximada
-      const minDeadline = allDeadlines.reduce((min, d) => d < min ? d : min, allDeadlines[0]);
-      // Se o menor deadline for muito próximo do deadline final, usa 30 dias antes
-      const daysDiff = Math.ceil((deadline.getTime() - minDeadline.getTime()) / (1000 * 60 * 60 * 24));
+    if (allEndDates.length > 0) {
+      // Retorna o menor endDate como data de início aproximada
+      const minEndDate = allEndDates.reduce((min, d) => d < min ? d : min, allEndDates[0]);
+      // Se o menor endDate for muito próximo do endDate final, usa 30 dias antes
+      const daysDiff = Math.ceil((endDate.getTime() - minEndDate.getTime()) / (1000 * 60 * 60 * 24));
       if (daysDiff < 7) {
-        return subDays(deadline, 30);
+        return subDays(endDate, 30);
       }
-      return minDeadline;
+      return minEndDate;
     }
   }
   
   // 3. Fallback para estrutura antiga (compatibilidade)
   if (initiative.subItems && initiative.subItems.length > 0) {
-    const subItemDeadlines = initiative.subItems
-      .map(si => parseFlexibleDate(si.deadline))
+    const subItemEndDates = initiative.subItems
+      .map(si => parseFlexibleDate(si.endDate))
       .filter((d): d is Date => d !== null);
     
-    if (subItemDeadlines.length > 0) {
-      const minDeadline = subItemDeadlines.reduce((min, d) => d < min ? d : min, subItemDeadlines[0]);
-      const daysDiff = Math.ceil((deadline.getTime() - minDeadline.getTime()) / (1000 * 60 * 60 * 24));
+    if (subItemEndDates.length > 0) {
+      const minEndDate = subItemEndDates.reduce((min, d) => d < min ? d : min, subItemEndDates[0]);
+      const daysDiff = Math.ceil((endDate.getTime() - minEndDate.getTime()) / (1000 * 60 * 60 * 24));
       if (daysDiff < 7) {
-        return subDays(deadline, 30);
+        return subDays(endDate, 30);
       }
-      return minDeadline;
+      return minEndDate;
     }
   }
   
-  // 4. Fallback final: 30 dias antes do deadline
-  return subDays(deadline, 30);
+  // 4. Fallback final: 30 dias antes do endDate
+  return subDays(endDate, 30);
 }
 
 /**
@@ -425,7 +437,7 @@ function generateMonthHeaders(dateHeaders: Date[]): { name: string; colSpan: num
  * Transforma uma Initiative em GanttTask para renderização no Gantt.
  * 
  * @param initiative - Iniciativa para transformar
- * @returns GanttTask ou null se não tiver deadline válido
+ * @returns GanttTask ou null se não tiver endDate válido
  */
 function transformInitiativeToGanttTask(initiative: Initiative): GanttTask | null {
   const endDate = extractInitiativeDeadline(initiative);
@@ -452,22 +464,23 @@ function transformInitiativeToGanttTask(initiative: Initiative): GanttTask | nul
 /**
  * Transforma uma Item em GanttTask para renderização no Gantt.
  * 
- * Extrai deadline, startDate, status, responsible da item.
- * Se a item não tiver deadline, retorna null.
+ * Extrai endDate, startDate, status, responsible da item.
+ * Se a item não tiver endDate, retorna null.
  * 
  * @param item - Item para transformar
  * @param initiative - Iniciativa pai (para referência)
- * @returns GanttTask ou null se não tiver deadline válido
+ * @returns GanttTask ou null se não tiver endDate válido
  */
 function transformItemToGanttTask(item: InitiativeItem, initiative: Initiative): GanttTask | null {
-  const endDate = parseFlexibleDate(item.deadline);
+  const endDate = parseFlexibleDate(item.endDate);
   if (!endDate) return null;
   
-  // Para item, startDate pode ser o deadline da iniciativa ou 30 dias antes do deadline da item
-  const initiativeDeadline = parseFlexibleDate(initiative.deadline);
-  const startDate = initiativeDeadline 
-    ? (isBefore(initiativeDeadline, endDate) ? initiativeDeadline : subDays(endDate, 30))
-    : subDays(endDate, 30);
+  // Para item, startDate pode ser o endDate da iniciativa ou usar startDate do item ou 30 dias antes do endDate da item
+  const initiativeEndDate = parseFlexibleDate(initiative.endDate);
+  const itemStartDate = parseFlexibleDate(item.startDate);
+  const startDate = itemStartDate || (initiativeEndDate 
+    ? (isBefore(initiativeEndDate, endDate) ? initiativeEndDate : subDays(endDate, 30))
+    : subDays(endDate, 30));
   
   const isOverdue = isBefore(endDate, startOfDay(new Date())) && 
                     item.status !== 'Concluído';
@@ -495,23 +508,24 @@ function transformItemToGanttTask(item: InitiativeItem, initiative: Initiative):
 /**
  * Transforma um SubItem em GanttTask para renderização no Gantt.
  * 
- * Extrai deadline, startDate, status, responsible do subitem.
- * Se o subitem não tiver deadline, retorna null.
+ * Extrai endDate, startDate, status, responsible do subitem.
+ * Se o subitem não tiver endDate, retorna null.
  * 
  * @param subItem - Subitem para transformar
  * @param item - Item pai (para referência)
  * @param initiative - Iniciativa pai (para referência)
- * @returns GanttTask ou null se não tiver deadline válido
+ * @returns GanttTask ou null se não tiver endDate válido
  */
 function transformSubItemToGanttTask(subItem: SubItem, item: InitiativeItem, initiative: Initiative): GanttTask | null {
-  const endDate = parseFlexibleDate(subItem.deadline);
+  const endDate = parseFlexibleDate(subItem.endDate);
   if (!endDate) return null;
   
-  // Para subitem, startDate pode ser o deadline da item ou 7 dias antes do deadline do subitem
-  const itemDeadline = parseFlexibleDate(item.deadline);
-  const startDate = itemDeadline 
-    ? (isBefore(itemDeadline, endDate) ? itemDeadline : subDays(endDate, 7))
-    : subDays(endDate, 7);
+  // Para subitem, startDate pode ser o endDate da item ou usar startDate do subitem ou 7 dias antes do endDate do subitem
+  const itemEndDate = parseFlexibleDate(item.endDate);
+  const subItemStartDate = parseFlexibleDate(subItem.startDate);
+  const startDate = subItemStartDate || (itemEndDate 
+    ? (isBefore(itemEndDate, endDate) ? itemEndDate : subDays(endDate, 7))
+    : subDays(endDate, 7));
   
   const isOverdue = isBefore(endDate, startOfDay(new Date())) && 
                     subItem.status !== 'Concluído';
@@ -743,17 +757,17 @@ export function TableGanttView({
                 // Busca task correspondente no Gantt
                 const ganttTask = tasks.find(t => t.id === initiative.id);
                 
-                // Debug: log se não encontrou task (pode indicar falta de deadline)
+                // Debug: log se não encontrou task (pode indicar falta de endDate)
                 if (!ganttTask && process.env.NODE_ENV === 'development') {
-                  console.log(`[Gantt Debug] Iniciativa "${initiative.title}" não tem GanttTask (sem deadline?)`, {
-                    hasDeadline: !!initiative.deadline,
+                  console.log(`[Gantt Debug] Iniciativa "${initiative.title}" não tem GanttTask (sem endDate?)`, {
+                    hasEndDate: !!initiative.endDate,
                     hasItems: !!(initiative.items && initiative.items.length > 0),
-                    itemsWithDeadline: initiative.items?.filter(p => p.deadline).length || 0
+                    itemsWithEndDate: initiative.items?.filter(p => p.endDate).length || 0
                   });
                 }
 
                 // Verificar se está em atraso
-                const initiativeIsOverdue = isOverdue(initiative.deadline, initiative.status);
+                const initiativeIsOverdue = isOverdue(initiative.endDate, initiative.status);
                 
                 return (
                   <React.Fragment key={initiative.id}>
@@ -1097,8 +1111,8 @@ export function TableGanttView({
                                           : true; // Se não tem subitens, pode concluir
                                         
                                         // Se está atrasado, limitar opções para apenas Atrasado ou Concluído
-                                        const itemDeadline = parseFlexibleDate(item.deadline);
-                                        const itemIsOverdue = itemDeadline ? isOverdue(itemDeadline, item.status) : false;
+                                        const itemEndDate = parseFlexibleDate(item.endDate);
+                                        const itemIsOverdue = itemEndDate ? isOverdue(itemEndDate, item.status) : false;
                                         let availableStatuses = itemIsOverdue 
                                           ? getAvailableStatuses(true)
                                           : initiativeStatuses.filter(s => s !== 'all') as InitiativeStatus[];
@@ -1119,8 +1133,8 @@ export function TableGanttView({
                                     </SelectContent>
                                   </Select>
                                   {(() => {
-                                    const itemDeadline = parseFlexibleDate(item.deadline);
-                                    const itemIsOverdue = itemDeadline ? isOverdue(itemDeadline, item.status) : false;
+                                    const itemEndDate = parseFlexibleDate(item.endDate);
+                                    const itemIsOverdue = itemEndDate ? isOverdue(itemEndDate, item.status) : false;
                                     const itemSubItems = item.subItems || [];
                                     const allSubItemsCompleted = itemSubItems.length > 0 
                                       ? itemSubItems.every((si: SubItem) => si.status === 'Concluído')
@@ -1353,8 +1367,8 @@ export function TableGanttView({
                                         <SelectContent>
                                           {(() => {
                                             // Se está atrasado, limitar opções para apenas Atrasado ou Concluído
-                                            const subItemDeadline = parseFlexibleDate(subItem.deadline);
-                                            const subItemIsOverdue = subItemDeadline ? isOverdue(subItemDeadline, subItem.status) : false;
+                                            const subItemEndDate = parseFlexibleDate(subItem.endDate);
+                                            const subItemIsOverdue = subItemEndDate ? isOverdue(subItemEndDate, subItem.status) : false;
                                             const availableStatuses = subItemIsOverdue 
                                               ? getAvailableStatuses(true)
                                               : initiativeStatuses.filter(s => s !== 'all') as InitiativeStatus[];
@@ -1366,8 +1380,8 @@ export function TableGanttView({
                                         </SelectContent>
                                       </Select>
                                       {(() => {
-                                        const subItemDeadline = parseFlexibleDate(subItem.deadline);
-                                        const subItemIsOverdue = subItemDeadline ? isOverdue(subItemDeadline, subItem.status) : false;
+                                        const subItemEndDate = parseFlexibleDate(subItem.endDate);
+                                        const subItemIsOverdue = subItemEndDate ? isOverdue(subItemEndDate, subItem.status) : false;
                                         if (subItemIsOverdue) {
                                           return (
                                             <p className="text-xs text-muted-foreground">

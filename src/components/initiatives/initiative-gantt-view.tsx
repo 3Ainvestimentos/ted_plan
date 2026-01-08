@@ -114,7 +114,7 @@ interface GanttTask {
   responsible: string;            // Responsável (owner)
   status: InitiativeStatus;      // Status atual
   startDate: Date;               // Data de início (calculada ou definida)
-  endDate: Date;                 // Data de término (deadline)
+  endDate: Date;                 // Data de término (prazo)
   progress: number;              // Progresso 0-100
   isOverdue: boolean;            // Se está atrasado
   originalInitiative: Initiative; // Referência à iniciativa original
@@ -192,30 +192,30 @@ function parseFlexibleDate(dateInput: any): Date | null {
 }
 
 /**
- * Extrai deadline de uma Initiative
+ * Extrai endDate de uma Initiative
  * 
- * Como a Initiative pode não ter um deadline próprio,
+ * Como a Initiative pode não ter um endDate próprio,
  * calculamos baseado nos subitens:
- * - Se tem deadline definido na iniciativa, usa ele
- * - Senão, pega o MAIOR deadline dos subitens
+ * - Se tem endDate definido na iniciativa, usa ele
+ * - Senão, pega o MAIOR endDate dos subitens
  * 
- * @param initiative - Iniciativa para extrair deadline
+ * @param initiative - Iniciativa para extrair endDate
  * @returns Date válida ou null se não encontrar
  */
 function extractInitiativeDeadline(initiative: Initiative): Date | null {
-  // Primeiro tenta o deadline da iniciativa
-  const initiativeDeadline = parseFlexibleDate(initiative.deadline);
-  if (initiativeDeadline) return initiativeDeadline;
+  // Primeiro tenta o endDate da iniciativa
+  const initiativeEndDate = parseFlexibleDate(initiative.endDate);
+  if (initiativeEndDate) return initiativeEndDate;
   
-  // Se não tem, busca nos subitems
+  // Se não tem, busca nos subitems (estrutura antiga - compatibilidade)
   if (initiative.subItems && initiative.subItems.length > 0) {
-    const subItemDeadlines = initiative.subItems
-      .map(si => parseFlexibleDate(si.deadline))
+    const subItemEndDates = initiative.subItems
+      .map(si => parseFlexibleDate(si.endDate))
       .filter((d): d is Date => d !== null);
     
-    if (subItemDeadlines.length > 0) {
-      // Retorna o maior deadline (mais distante)
-      return subItemDeadlines.reduce((max, d) => d > max ? d : max, subItemDeadlines[0]);
+    if (subItemEndDates.length > 0) {
+      // Retorna o maior endDate (mais distante)
+      return subItemEndDates.reduce((max, d) => d > max ? d : max, subItemEndDates[0]);
     }
   }
   
@@ -227,32 +227,32 @@ function extractInitiativeDeadline(initiative: Initiative): Date | null {
  * 
  * Calcula a data de início:
  * - Se tem startDate definido, usa ele
- * - Senão, pega o MENOR deadline dos subitens como aproximação
- * - Ou usa 30 dias antes do deadline como fallback
+ * - Senão, pega o MENOR endDate dos subitens como aproximação
+ * - Ou usa 30 dias antes do endDate como fallback
  * 
  * @param initiative - Iniciativa para extrair startDate
- * @param deadline - Deadline já calculado (para fallback)
+ * @param endDate - EndDate já calculado (para fallback)
  * @returns Date válida
  */
-function extractInitiativeStartDate(initiative: Initiative, deadline: Date): Date {
+function extractInitiativeStartDate(initiative: Initiative, endDate: Date): Date {
   // Primeiro tenta o startDate da iniciativa
   const initiativeStartDate = parseFlexibleDate(initiative.startDate);
   if (initiativeStartDate) return initiativeStartDate;
   
-  // Se não tem, busca nos subitems o menor deadline
+  // Se não tem, busca nos subitems o menor endDate (estrutura antiga - compatibilidade)
   if (initiative.subItems && initiative.subItems.length > 0) {
-    const subItemDeadlines = initiative.subItems
-      .map(si => parseFlexibleDate(si.deadline))
+    const subItemEndDates = initiative.subItems
+      .map(si => parseFlexibleDate(si.endDate))
       .filter((d): d is Date => d !== null);
     
-    if (subItemDeadlines.length > 0) {
-      // Retorna o menor deadline como "início"
-      return subItemDeadlines.reduce((min, d) => d < min ? d : min, subItemDeadlines[0]);
+    if (subItemEndDates.length > 0) {
+      // Retorna o menor endDate como "início"
+      return subItemEndDates.reduce((min, d) => d < min ? d : min, subItemEndDates[0]);
     }
   }
   
-  // Fallback: 30 dias antes do deadline
-  return subDays(deadline, 30);
+  // Fallback: 30 dias antes do endDate
+  return subDays(endDate, 30);
 }
 
 /**
@@ -320,13 +320,13 @@ function generateMonthHeaders(dateHeaders: Date[]): { name: string; colSpan: num
  * Transforma Initiative em GanttTask para renderização
  * 
  * @param initiative - Iniciativa para transformar
- * @returns GanttTask ou null se não tiver deadline válido
+ * @returns GanttTask ou null se não tiver endDate válido
  */
 function transformInitiativeToGanttTask(initiative: Initiative): GanttTask | null {
-  // Extrai deadline
+  // Extrai endDate
   const endDate = extractInitiativeDeadline(initiative);
   
-  // Se não tem deadline válido, não inclui no Gantt
+  // Se não tem endDate válido, não inclui no Gantt
   if (!endDate) {
     return null;
   }

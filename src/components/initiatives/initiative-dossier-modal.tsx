@@ -197,7 +197,7 @@ export function InitiativeDossierModal({ isOpen, onOpenChange, initiative, isMna
                         {'auc' in initiative && initiative.auc && <p><strong className="text-foreground/80">AUC:</strong> R$ {initiative.auc.toLocaleString('pt-BR')}</p>}
                         {!isMna && 'owner' in initiative && <p><strong className="text-foreground/80">Responsável:</strong> {initiative.owner}</p>}
                         <p><strong className="text-foreground/80">Última Atualização:</strong> {new Date(initiative.lastUpdate).toLocaleDateString()}</p>
-                        {!isMna && 'deadline' in initiative && <p><strong className="text-foreground/80">Conclusão Alvo:</strong> <span className="text-muted-foreground">{initiative.deadline ? new Date(initiative.deadline).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : 'N/D'}</span></p>}
+                        {!isMna && 'endDate' in initiative && <p><strong className="text-foreground/80">Conclusão Alvo:</strong> <span className="text-muted-foreground">{initiative.endDate ? new Date(initiative.endDate).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : 'N/D'}</span></p>}
                       </CardContent>
                     </Card>
                   </aside>

@@ -24,57 +24,57 @@ export interface AgendaItem {
   responsible: string;
   priority: InitiativePriority;
   status: InitiativeStatus;
-  deadline: string; // ISO date string 'YYYY-MM-DD'
+  endDate: string; // ISO date string 'YYYY-MM-DD' (prazo/deadline)
   daysRemaining: number; // Dias até o prazo (negativo se atrasado)
   isOverdue: boolean;
   risk?: string; // Campo de risco (opcional, pode ser "-" se não aplicável)
 }
 
 /**
- * Calcula os dias restantes até o deadline.
+ * Calcula os dias restantes até a data de fim (endDate).
  * 
- * @param deadline - Data de prazo (string ISO 'YYYY-MM-DD' ou Date)
+ * @param endDate - Data de fim/prazo (string ISO 'YYYY-MM-DD' ou Date)
  * @returns Número de dias restantes (negativo se atrasado, 0 se é hoje, positivo se futuro)
  * 
  * @example
- * // Deadline no passado
+ * // EndDate no passado
  * calculateDaysRemaining('2024-01-01');
  * // Retorna: -5 (se hoje for 2024-01-06)
  * 
  * @example
- * // Deadline hoje
+ * // EndDate hoje
  * calculateDaysRemaining(new Date().toISOString().split('T')[0]);
  * // Retorna: 0
  * 
  * @example
- * // Deadline no futuro
+ * // EndDate no futuro
  * calculateDaysRemaining('2024-12-31');
  * // Retorna: 365 (se hoje for 2024-01-01)
  */
-export function calculateDaysRemaining(deadline: string | Date | null | undefined): number {
-  if (!deadline) return Infinity; // Sem deadline = não tem prazo definido
+export function calculateDaysRemaining(endDate: string | Date | null | undefined): number {
+  if (!endDate) return Infinity; // Sem endDate = não tem prazo definido
   
-  // Converte deadline para Date se necessário
-  let deadlineDate: Date;
-  if (typeof deadline === 'string') {
+  // Converte endDate para Date se necessário
+  let endDateObj: Date;
+  if (typeof endDate === 'string') {
     // Se é string ISO (YYYY-MM-DD), adiciona horário para evitar problemas de timezone
-    if (/^\d{4}-\d{2}-\d{2}$/.test(deadline)) {
-      deadlineDate = new Date(deadline + 'T00:00:00');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      endDateObj = new Date(endDate + 'T00:00:00');
     } else {
-      deadlineDate = new Date(deadline);
+      endDateObj = new Date(endDate);
     }
   } else {
-    deadlineDate = deadline;
+    endDateObj = endDate;
   }
   
   // Verifica se a data é válida
-  if (isNaN(deadlineDate.getTime())) return Infinity;
+  if (isNaN(endDateObj.getTime())) return Infinity;
   
   // Compara com hoje (início do dia)
   const today = startOfDay(new Date());
-  const deadlineDay = startOfDay(deadlineDate);
+  const endDateDay = startOfDay(endDateObj);
   
-  return differenceInDays(deadlineDay, today);
+  return differenceInDays(endDateDay, today);
 }
 
 /**
@@ -149,30 +149,30 @@ export function getHierarchyPath(
 }
 
 /**
- * Verifica se um deadline está dentro da semana vigente (7 dias).
+ * Verifica se uma data de fim (endDate) está dentro da semana vigente (7 dias).
  * 
- * @param deadline - Data de prazo (string ISO 'YYYY-MM-DD' ou Date)
- * @returns true se o deadline está dentro de 7 dias (inclui atrasados)
+ * @param endDate - Data de fim/prazo (string ISO 'YYYY-MM-DD' ou Date)
+ * @returns true se o endDate está dentro de 7 dias (inclui atrasados)
  * 
  * @example
- * // Deadline em 5 dias
+ * // EndDate em 5 dias
  * isWithinWeek('2024-01-06'); // Se hoje for 2024-01-01
  * // Retorna: true
  * 
  * @example
- * // Deadline em 10 dias
+ * // EndDate em 10 dias
  * isWithinWeek('2024-01-11'); // Se hoje for 2024-01-01
  * // Retorna: false
  * 
  * @example
- * // Deadline atrasado
+ * // EndDate atrasado
  * isWithinWeek('2023-12-25'); // Se hoje for 2024-01-01
  * // Retorna: true (inclui atrasados)
  */
-export function isWithinWeek(deadline: string | Date | null | undefined): boolean {
-  if (!deadline) return false;
+export function isWithinWeek(endDate: string | Date | null | undefined): boolean {
+  if (!endDate) return false;
   
-  const daysRemaining = calculateDaysRemaining(deadline);
+  const daysRemaining = calculateDaysRemaining(endDate);
   
   // Inclui itens atrasados e itens até 7 dias no futuro
   return daysRemaining <= 7;
@@ -183,7 +183,7 @@ export function isWithinWeek(deadline: string | Date | null | undefined): boolea
  * 
  * REGRAS:
  * - Apenas itens/subitens não concluídos
- * - Deadline dentro de 7 dias (inclui atrasados)
+ * - EndDate dentro de 7 dias (inclui atrasados)
  * - Retorna array de AgendaItem com todas as informações necessárias
  * 
  * @param initiatives - Array de iniciativas
@@ -202,13 +202,13 @@ export function getWeekItems(initiatives: Initiative[]): AgendaItem[] {
     // Processar itens
     if (initiative.items && initiative.items.length > 0) {
       initiative.items.forEach(item => {
-        // Verificar se item não está concluído e tem deadline
-        if (item.status !== 'Concluído' && item.deadline) {
-          const deadlineDate = new Date(item.deadline + 'T00:00:00');
+        // Verificar se item não está concluído e tem endDate
+        if (item.status !== 'Concluído' && item.endDate) {
+          const endDateObj = new Date(item.endDate + 'T00:00:00');
           
           // Verificar se está dentro da semana vigente (inclui atrasados)
-          if (deadlineDate <= weekEnd) {
-            const daysRemaining = calculateDaysRemaining(item.deadline);
+          if (endDateObj <= weekEnd) {
+            const daysRemaining = calculateDaysRemaining(item.endDate);
             const isOverdue = daysRemaining < 0;
             
             items.push({
@@ -220,7 +220,7 @@ export function getWeekItems(initiatives: Initiative[]): AgendaItem[] {
               responsible: item.responsible || '-',
               priority: item.priority,
               status: item.status,
-              deadline: item.deadline,
+              endDate: item.endDate,
               daysRemaining,
               isOverdue,
               risk: '-',
@@ -231,13 +231,13 @@ export function getWeekItems(initiatives: Initiative[]): AgendaItem[] {
         // Processar subitens do item
         if (item.subItems && item.subItems.length > 0) {
           item.subItems.forEach(subItem => {
-            // Verificar se subitem não está concluído e tem deadline
-            if (subItem.status !== 'Concluído' && subItem.deadline) {
-              const deadlineDate = new Date(subItem.deadline + 'T00:00:00');
+            // Verificar se subitem não está concluído e tem endDate
+            if (subItem.status !== 'Concluído' && subItem.endDate) {
+              const endDateObj = new Date(subItem.endDate + 'T00:00:00');
               
               // Verificar se está dentro da semana vigente (inclui atrasados)
-              if (deadlineDate <= weekEnd) {
-                const daysRemaining = calculateDaysRemaining(subItem.deadline);
+              if (endDateObj <= weekEnd) {
+                const daysRemaining = calculateDaysRemaining(subItem.endDate);
                 const isOverdue = daysRemaining < 0;
                 
                 items.push({
@@ -251,7 +251,7 @@ export function getWeekItems(initiatives: Initiative[]): AgendaItem[] {
                   responsible: subItem.responsible || '-',
                   priority: subItem.priority,
                   status: subItem.status,
-                  deadline: subItem.deadline,
+                  endDate: subItem.endDate,
                   daysRemaining,
                   isOverdue,
                   risk: '-',

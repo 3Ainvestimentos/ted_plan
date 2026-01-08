@@ -11,15 +11,15 @@ import { startOfDay, isBefore } from 'date-fns';
 import type { InitiativeStatus, InitiativeItem, SubItem } from '@/types';
 
 /**
- * Verifica se um item está em atraso baseado em seu deadline e status.
+ * Verifica se um item está em atraso baseado em sua data de fim (endDate) e status.
  * 
  * LÓGICA:
  * - Item está atrasado se:
- *   1. Tem deadline definido
- *   2. Deadline já passou (é anterior a hoje)
+ *   1. Tem endDate definido
+ *   2. EndDate já passou (é anterior a hoje)
  *   3. Status não é 'Concluído'
  * 
- * @param deadline - Data de prazo (pode ser string ISO, Date ou null)
+ * @param endDate - Data de fim/prazo (pode ser string ISO, Date ou null)
  * @param status - Status atual do item
  * @returns true se o item está em atraso, false caso contrário
  * 
@@ -34,41 +34,41 @@ import type { InitiativeStatus, InitiativeItem, SubItem } from '@/types';
  * // Retorna: false
  * 
  * @example
- * // Item sem deadline não é considerado atrasado
+ * // Item sem endDate não é considerado atrasado
  * isOverdue(null, 'Em execução');
  * // Retorna: false
  */
 export function isOverdue(
-  deadline: string | Date | null | undefined,
+  endDate: string | Date | null | undefined,
   status?: InitiativeStatus
 ): boolean {
-  // Se não tem deadline, não está atrasado
-  if (!deadline) return false;
+  // Se não tem endDate, não está atrasado
+  if (!endDate) return false;
   
   // Se está concluído, não está atrasado
   if (status === 'Concluído') return false;
   
-  // Converte deadline para Date se necessário
-  let deadlineDate: Date;
-  if (typeof deadline === 'string') {
+  // Converte endDate para Date se necessário
+  let endDateObj: Date;
+  if (typeof endDate === 'string') {
     // Se é string ISO (YYYY-MM-DD), adiciona horário para evitar problemas de timezone
-    if (/^\d{4}-\d{2}-\d{2}$/.test(deadline)) {
-      deadlineDate = new Date(deadline + 'T00:00:00');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      endDateObj = new Date(endDate + 'T00:00:00');
     } else {
-      deadlineDate = new Date(deadline);
+      endDateObj = new Date(endDate);
     }
   } else {
-    deadlineDate = deadline;
+    endDateObj = endDate;
   }
   
   // Verifica se a data é válida
-  if (isNaN(deadlineDate.getTime())) return false;
+  if (isNaN(endDateObj.getTime())) return false;
   
   // Compara com hoje (início do dia)
   const today = startOfDay(new Date());
-  const deadlineDay = startOfDay(deadlineDate);
+  const endDateDay = startOfDay(endDateObj);
   
-  return isBefore(deadlineDay, today);
+  return isBefore(endDateDay, today);
 }
 
 /**
@@ -119,7 +119,7 @@ export function getAvailableStatuses(isOverdue: boolean): InitiativeStatus[] {
  * @returns true se o item está em atraso
  */
 export function isItemOverdue(item: InitiativeItem): boolean {
-  return isOverdue(item.deadline, item.status);
+  return isOverdue(item.endDate, item.status);
 }
 
 /**
@@ -129,6 +129,6 @@ export function isItemOverdue(item: InitiativeItem): boolean {
  * @returns true se o subitem está em atraso
  */
 export function isSubItemOverdue(subItem: SubItem): boolean {
-  return isOverdue(subItem.deadline, subItem.status);
+  return isOverdue(subItem.endDate, subItem.status);
 }
 

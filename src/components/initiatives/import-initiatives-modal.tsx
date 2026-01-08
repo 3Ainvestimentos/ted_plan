@@ -27,12 +27,14 @@ interface CSVRow {
     description?: string;
     status?: string;
     priority?: string;
-    deadline?: string;
+    startDate?: string; // Data de início (opcional)
+    endDate?: string; // Data de fim (obrigatório)
     areaId?: string;
     
     // Campos do item
     item_title?: string;
-    item_deadline?: string;
+    item_startDate?: string; // Data de início do item (opcional)
+    item_endDate?: string; // Data de fim do item (obrigatório)
     item_status?: string;
     item_areaId?: string;
     item_priority?: string;
@@ -41,7 +43,8 @@ interface CSVRow {
     
     // Campos do subitem
     subitem_title?: string;
-    subitem_deadline?: string;
+    subitem_startDate?: string; // Data de início do subitem (opcional)
+    subitem_endDate?: string; // Data de fim do subitem (obrigatório)
     subitem_status?: string;
     subitem_responsible?: string;
     subitem_priority?: string;
@@ -52,7 +55,7 @@ interface CSVRow {
  * Agrupa linhas do CSV por iniciativa, item e subitem
  * 
  * @param rows - Array de linhas do CSV
- * @returns Array de iniciativas com itens e subitens agrupados
+ * @returns Array de iniciativas com itens e subitens agrupados (usando startDate e endDate)
  */
 function groupCSVRowsByHierarchy(rows: CSVRow[]): Array<{
     title: string;
@@ -60,11 +63,13 @@ function groupCSVRowsByHierarchy(rows: CSVRow[]): Array<{
     description?: string;
     status: InitiativeStatus;
     priority: InitiativePriority;
-    deadline: string;
+    startDate: string;
+    endDate: string;
     areaId: string;
     items: Array<{
         title: string;
-        deadline: string;
+        startDate: string;
+        endDate: string;
         status: InitiativeStatus;
         areaId: string;
         priority: InitiativePriority;
@@ -72,7 +77,8 @@ function groupCSVRowsByHierarchy(rows: CSVRow[]): Array<{
         responsible: string;
         subItems: Array<{
             title: string;
-            deadline: string;
+            startDate: string;
+            endDate: string;
             status: InitiativeStatus;
             responsible: string;
             priority: InitiativePriority;
@@ -86,11 +92,13 @@ function groupCSVRowsByHierarchy(rows: CSVRow[]): Array<{
         description?: string;
         status: InitiativeStatus;
         priority: InitiativePriority;
-        deadline: string;
+        startDate: string;
+        endDate: string;
         areaId: string;
         items: Map<string, {
             title: string;
-            deadline: string;
+            startDate: string;
+            endDate: string;
             status: InitiativeStatus;
             areaId: string;
             priority: InitiativePriority;
@@ -98,7 +106,8 @@ function groupCSVRowsByHierarchy(rows: CSVRow[]): Array<{
             responsible: string;
             subItems: Array<{
                 title: string;
-                deadline: string;
+                startDate: string;
+                endDate: string;
                 status: InitiativeStatus;
                 responsible: string;
                 priority: InitiativePriority;
@@ -109,13 +118,13 @@ function groupCSVRowsByHierarchy(rows: CSVRow[]): Array<{
 
     rows.forEach((row, index) => {
         // Validar campos obrigatórios da iniciativa
-        if (!row.title || !row.owner || !row.status || !row.priority || !row.deadline || !row.areaId) {
-            throw new Error(`Linha ${index + 2}: Campos obrigatórios da iniciativa faltando. Requeridos: title, owner, status, priority, deadline, areaId`);
+        if (!row.title || !row.owner || !row.status || !row.priority || !row.startDate || !row.endDate || !row.areaId) {
+            throw new Error(`Linha ${index + 2}: Campos obrigatórios da iniciativa faltando. Requeridos: title, owner, status, priority, startDate, endDate, areaId`);
         }
 
         // Validar campos obrigatórios do item
-        if (!row.item_title || !row.item_deadline || !row.item_status || !row.item_areaId || !row.item_priority || !row.item_responsible) {
-            throw new Error(`Linha ${index + 2}: Campos obrigatórios do item faltando. Requeridos: item_title, item_deadline, item_status, item_areaId, item_priority, item_responsible`);
+        if (!row.item_title || !row.item_startDate || !row.item_endDate || !row.item_status || !row.item_areaId || !row.item_priority || !row.item_responsible) {
+            throw new Error(`Linha ${index + 2}: Campos obrigatórios do item faltando. Requeridos: item_title, item_startDate, item_endDate, item_status, item_areaId, item_priority, item_responsible`);
         }
 
         // Validar status e priority
@@ -138,15 +147,34 @@ function groupCSVRowsByHierarchy(rows: CSVRow[]): Array<{
             throw new Error(`Linha ${index + 2}: Prioridade do item inválida "${row.item_priority}". Valores válidos: ${validPriorities.join(', ')}`);
         }
 
-        // Validar datas
-        const deadlineDate = new Date(row.deadline);
-        if (isNaN(deadlineDate.getTime())) {
-            throw new Error(`Linha ${index + 2}: Data de deadline inválida "${row.deadline}". Formato esperado: YYYY-MM-DD`);
+        // Validar datas da iniciativa
+        const startDate = new Date(row.startDate!);
+        if (isNaN(startDate.getTime())) {
+            throw new Error(`Linha ${index + 2}: Data de início inválida "${row.startDate}". Formato esperado: YYYY-MM-DD`);
         }
 
-        const itemDeadlineDate = new Date(row.item_deadline);
-        if (isNaN(itemDeadlineDate.getTime())) {
-            throw new Error(`Linha ${index + 2}: Data de deadline do item inválida "${row.item_deadline}". Formato esperado: YYYY-MM-DD`);
+        const endDate = new Date(row.endDate!);
+        if (isNaN(endDate.getTime())) {
+            throw new Error(`Linha ${index + 2}: Data de fim inválida "${row.endDate}". Formato esperado: YYYY-MM-DD`);
+        }
+
+        if (endDate < startDate) {
+            throw new Error(`Linha ${index + 2}: A data de fim deve ser maior ou igual à data de início.`);
+        }
+
+        // Validar datas do item
+        const itemStartDate = new Date(row.item_startDate!);
+        if (isNaN(itemStartDate.getTime())) {
+            throw new Error(`Linha ${index + 2}: Data de início do item inválida "${row.item_startDate}". Formato esperado: YYYY-MM-DD`);
+        }
+
+        const itemEndDate = new Date(row.item_endDate!);
+        if (isNaN(itemEndDate.getTime())) {
+            throw new Error(`Linha ${index + 2}: Data de fim do item inválida "${row.item_endDate}". Formato esperado: YYYY-MM-DD`);
+        }
+
+        if (itemEndDate < itemStartDate) {
+            throw new Error(`Linha ${index + 2}: A data de fim do item deve ser maior ou igual à data de início.`);
         }
 
         // Obter ou criar iniciativa
@@ -158,7 +186,8 @@ function groupCSVRowsByHierarchy(rows: CSVRow[]): Array<{
                 description: row.description?.trim() || '',
                 status: row.status as InitiativeStatus,
                 priority: row.priority as InitiativePriority,
-                deadline: row.deadline.trim(),
+                startDate: row.startDate!.trim(),
+                endDate: row.endDate!.trim(),
                 areaId: row.areaId.trim(),
                 items: new Map(),
             });
@@ -171,7 +200,8 @@ function groupCSVRowsByHierarchy(rows: CSVRow[]): Array<{
         if (!initiative.items.has(itemKey)) {
             initiative.items.set(itemKey, {
                 title: row.item_title.trim(),
-                deadline: row.item_deadline.trim(),
+                startDate: row.item_startDate!.trim(),
+                endDate: row.item_endDate!.trim(),
                 status: row.item_status as InitiativeStatus,
                 areaId: row.item_areaId.trim(),
                 priority: row.item_priority as InitiativePriority,
@@ -184,14 +214,14 @@ function groupCSVRowsByHierarchy(rows: CSVRow[]): Array<{
         const item = initiative.items.get(itemKey)!;
 
         // Adicionar subitem se presente (todos os campos ou nenhum)
-        const hasSubItemFields = row.subitem_title || row.subitem_deadline || row.subitem_status || 
+        const hasSubItemFields = row.subitem_title || row.subitem_startDate || row.subitem_endDate || row.subitem_status || 
                                  row.subitem_responsible || row.subitem_priority || row.subitem_description;
         
         if (hasSubItemFields) {
             // Validar que todos os campos obrigatórios do subitem estão presentes
-            if (!row.subitem_title || !row.subitem_deadline || !row.subitem_status || 
+            if (!row.subitem_title || !row.subitem_startDate || !row.subitem_endDate || !row.subitem_status || 
                 !row.subitem_responsible || !row.subitem_priority) {
-                throw new Error(`Linha ${index + 2}: Se houver campos de subitem, todos os campos obrigatórios devem estar presentes. Requeridos: subitem_title, subitem_deadline, subitem_status, subitem_responsible, subitem_priority`);
+                throw new Error(`Linha ${index + 2}: Se houver campos de subitem, todos os campos obrigatórios devem estar presentes. Requeridos: subitem_title, subitem_startDate, subitem_endDate, subitem_status, subitem_responsible, subitem_priority`);
             }
 
             // Validar status e priority do subitem
@@ -203,15 +233,25 @@ function groupCSVRowsByHierarchy(rows: CSVRow[]): Array<{
                 throw new Error(`Linha ${index + 2}: Prioridade do subitem inválida "${row.subitem_priority}". Valores válidos: ${validPriorities.join(', ')}`);
             }
 
-            // Validar data do subitem
-            const subItemDeadlineDate = new Date(row.subitem_deadline);
-            if (isNaN(subItemDeadlineDate.getTime())) {
-                throw new Error(`Linha ${index + 2}: Data de deadline do subitem inválida "${row.subitem_deadline}". Formato esperado: YYYY-MM-DD`);
+            // Validar datas do subitem
+            const subItemStartDate = new Date(row.subitem_startDate);
+            if (isNaN(subItemStartDate.getTime())) {
+                throw new Error(`Linha ${index + 2}: Data de início do subitem inválida "${row.subitem_startDate}". Formato esperado: YYYY-MM-DD`);
+            }
+
+            const subItemEndDate = new Date(row.subitem_endDate);
+            if (isNaN(subItemEndDate.getTime())) {
+                throw new Error(`Linha ${index + 2}: Data de fim do subitem inválida "${row.subitem_endDate}". Formato esperado: YYYY-MM-DD`);
+            }
+
+            if (subItemEndDate < subItemStartDate) {
+                throw new Error(`Linha ${index + 2}: A data de fim do subitem deve ser maior ou igual à data de início.`);
             }
 
             item.subItems.push({
                 title: row.subitem_title.trim(),
-                deadline: row.subitem_deadline.trim(),
+                startDate: row.subitem_startDate.trim(),
+                endDate: row.subitem_endDate.trim(),
                 status: row.subitem_status as InitiativeStatus,
                 responsible: row.subitem_responsible.trim(),
                 priority: row.subitem_priority as InitiativePriority,
@@ -276,8 +316,8 @@ export function ImportInitiativesModal({ isOpen, onOpenChange }: ImportInitiativ
                     }
 
                     // Validar campos obrigatórios básicos
-                    const requiredInitiativeFields = ['title', 'owner', 'status', 'priority', 'deadline', 'areaId'];
-                    const requiredItemFields = ['item_title', 'item_deadline', 'item_status', 'item_areaId', 'item_priority', 'item_responsible'];
+                    const requiredInitiativeFields = ['title', 'owner', 'status', 'priority', 'startDate', 'endDate', 'areaId'];
+                    const requiredItemFields = ['item_title', 'item_startDate', 'item_endDate', 'item_status', 'item_areaId', 'item_priority', 'item_responsible'];
                     const fileFields = results.meta.fields || [];
                     
                     const missingInitiativeFields = requiredInitiativeFields.filter(field => !fileFields.includes(field));
@@ -365,14 +405,16 @@ export function ImportInitiativesModal({ isOpen, onOpenChange }: ImportInitiativ
                                 <li><code className="bg-muted px-1 py-0.5 rounded">owner</code> - Responsável da iniciativa</li>
                                 <li><code className="bg-muted px-1 py-0.5 rounded">status</code> - Pendente, Em execução, Concluído ou Suspenso</li>
                                 <li><code className="bg-muted px-1 py-0.5 rounded">priority</code> - Baixa, Média ou Alta</li>
-                                <li><code className="bg-muted px-1 py-0.5 rounded">deadline</code> - Data no formato YYYY-MM-DD</li>
+                                <li><code className="bg-muted px-1 py-0.5 rounded">startDate</code> - Data de início no formato YYYY-MM-DD</li>
+                                <li><code className="bg-muted px-1 py-0.5 rounded">endDate</code> - Data de fim no formato YYYY-MM-DD</li>
                                 <li><code className="bg-muted px-1 py-0.5 rounded">areaId</code> - ID da área de negócio</li>
                             </ul>
 
                             <p className="mt-3"><strong>Campos Obrigatórios do Item:</strong></p>
                             <ul className="list-disc list-inside ml-2 space-y-1">
                                 <li><code className="bg-muted px-1 py-0.5 rounded">item_title</code> - Título do item (mín. 3 caracteres)</li>
-                                <li><code className="bg-muted px-1 py-0.5 rounded">item_deadline</code> - Data no formato YYYY-MM-DD</li>
+                                <li><code className="bg-muted px-1 py-0.5 rounded">item_startDate</code> - Data de início no formato YYYY-MM-DD</li>
+                                <li><code className="bg-muted px-1 py-0.5 rounded">item_endDate</code> - Data de fim no formato YYYY-MM-DD</li>
                                 <li><code className="bg-muted px-1 py-0.5 rounded">item_status</code> - Pendente, Em execução, Concluído ou Suspenso</li>
                                 <li><code className="bg-muted px-1 py-0.5 rounded">item_areaId</code> - ID da área (geralmente igual ao areaId da iniciativa)</li>
                                 <li><code className="bg-muted px-1 py-0.5 rounded">item_priority</code> - Baixa, Média ou Alta</li>
@@ -383,7 +425,7 @@ export function ImportInitiativesModal({ isOpen, onOpenChange }: ImportInitiativ
                             <ul className="list-disc list-inside ml-2 space-y-1">
                                 <li><code className="bg-muted px-1 py-0.5 rounded">description</code> - Descrição da iniciativa</li>
                                 <li><code className="bg-muted px-1 py-0.5 rounded">item_description</code> - Descrição do item</li>
-                                <li>Campos de subitem (se presentes, todos são obrigatórios): <code className="bg-muted px-1 py-0.5 rounded">subitem_title</code>, <code className="bg-muted px-1 py-0.5 rounded">subitem_deadline</code>, <code className="bg-muted px-1 py-0.5 rounded">subitem_status</code>, <code className="bg-muted px-1 py-0.5 rounded">subitem_responsible</code>, <code className="bg-muted px-1 py-0.5 rounded">subitem_priority</code>, <code className="bg-muted px-1 py-0.5 rounded">subitem_description</code></li>
+                                <li>Campos de subitem (se presentes, todos são obrigatórios): <code className="bg-muted px-1 py-0.5 rounded">subitem_title</code>, <code className="bg-muted px-1 py-0.5 rounded">subitem_startDate</code>, <code className="bg-muted px-1 py-0.5 rounded">subitem_endDate</code>, <code className="bg-muted px-1 py-0.5 rounded">subitem_status</code>, <code className="bg-muted px-1 py-0.5 rounded">subitem_responsible</code>, <code className="bg-muted px-1 py-0.5 rounded">subitem_priority</code>, <code className="bg-muted px-1 py-0.5 rounded">subitem_description</code></li>
                             </ul>
                         </div>
                     </div>

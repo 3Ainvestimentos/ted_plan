@@ -57,9 +57,8 @@ const subItemSchema = z.object({
   title: z.string().min(3, "O título do subitem deve ter pelo menos 3 caracteres."),
   completed: z.boolean().optional().default(false),
   startDate: dateSchema.optional(), // Obrigatório se linkedToPrevious === false, calculado se linkedToPrevious === true
-  endDate: dateSchema, // Sempre obrigatório (substitui deadline)
+  endDate: dateSchema, // Sempre obrigatório
   linkedToPrevious: z.boolean().optional().default(false),
-  deadline: dateSchema.optional(), // Campo legado - será substituído por endDate
   status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso']).optional().default('Pendente'),
   responsible: z.string().min(1, "O responsável é obrigatório."),
   priority: z.enum(['Baixa', 'Média', 'Alta']).optional().default('Baixa'),
@@ -88,9 +87,8 @@ const itemSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(3, "O título do item deve ter pelo menos 3 caracteres."),
   startDate: dateSchema.optional(), // Obrigatório se linkedToPrevious === false, calculado se linkedToPrevious === true
-  endDate: dateSchema, // Sempre obrigatório (substitui deadline)
+  endDate: dateSchema, // Sempre obrigatório
   linkedToPrevious: z.boolean().optional().default(false),
-  deadline: dateSchema.optional(), // Campo legado - será substituído por endDate
   status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso']),
   areaId: z.string().min(1, "A área é obrigatória."), // Será sempre igual à área do projeto
   priority: z.enum(['Baixa', 'Média', 'Alta']),
@@ -123,8 +121,7 @@ const initiativeSchema = z.object({
   description: z.string().optional(),
   status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso']),
   startDate: dateSchema, // Obrigatório
-  endDate: dateSchema, // Obrigatório (substitui deadline)
-  deadline: dateSchema.optional(), // Campo legado - será substituído por endDate
+  endDate: dateSchema, // Obrigatório
   priority: z.enum(['Baixa', 'Média', 'Alta']),
   areaId: z.string().min(1, "A área é obrigatória."),
   items: z.array(itemSchema).min(1, "É necessário pelo menos um item."),
@@ -148,7 +145,7 @@ interface InitiativeFormProps {
     isLoading?: boolean;
     isLimitedMode?: boolean; // Modo limitado para heads (só pode editar responsible e status)
     canEditStatus?: boolean; // Se pode editar status de execução
-    canEditDeadline?: boolean; // Se pode editar prazo (deadline) - PMO pode, Head não pode
+    canEditDeadline?: boolean; // Se pode editar prazo (endDate) - PMO pode, Head não pode
     preselectedAreaId?: string | null; // Área pré-selecionada (quando há filtro explícito na URL)
 }
 
@@ -283,7 +280,6 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
       startDate: undefined as any, // Obrigatório se não vinculado, calculado se vinculado
       endDate: undefined as any, // Obrigatório, usuário deve preencher antes de salvar
       linkedToPrevious: false,
-      deadline: undefined as any, // Campo legado
       status: 'Pendente' as const,
       responsible: "",
       priority: 'Baixa' as const,
@@ -588,7 +584,6 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                   startDate: undefined as any, // Obrigatório se não vinculado, calculado se vinculado
                   endDate: undefined as any, // Obrigatório, usuário deve preencher antes de salvar
                   linkedToPrevious: false,
-                  deadline: undefined as any, // Campo legado
                   status: 'Pendente',
                   areaId: currentAreaId, // Usar a área do projeto
                   priority: 'Baixa',

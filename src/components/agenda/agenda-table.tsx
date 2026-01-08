@@ -119,7 +119,7 @@ export function AgendaTable({ items, onItemStatusChange, onSubItemStatusChange }
                     </SelectContent>
                   </Select>
                 </TableCell>
-                <TableCell>{formatDate(item.deadline)}</TableCell>
+                <TableCell>{formatDate(item.endDate)}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     {item.isOverdue && (

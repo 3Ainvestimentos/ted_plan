@@ -8,7 +8,7 @@ import { collection, getDocs, addDoc, doc, updateDoc, query, orderBy, deleteDoc,
 import type { InitiativeFormData } from '@/components/initiatives/initiative-form';
 
 
-type InitiativeData = Omit<Initiative, 'id' | 'lastUpdate' | 'topicNumber' | 'progress' | 'keyMetrics' | 'deadline'> & { deadline: Date };
+type InitiativeData = Omit<Initiative, 'id' | 'lastUpdate' | 'topicNumber' | 'progress' | 'keyMetrics' | 'endDate' | 'startDate'> & { startDate: Date; endDate: Date };
 
 interface InitiativesContextType {
   initiatives: Initiative[];
@@ -24,7 +24,35 @@ interface InitiativesContextType {
   deleteItem: (initiativeId: string, itemId: string) => Promise<void>;
   addSubItem: (initiativeId: string, itemId: string, subItem: Omit<SubItem, 'id'>) => Promise<void>;
   deleteSubItem: (initiativeId: string, itemId: string, subItemId: string) => Promise<void>;
-  bulkAddInitiatives: (newInitiatives: Omit<Initiative, 'id' | 'lastUpdate' | 'topicNumber' | 'progress' | 'keyMetrics' | 'items' | 'deadline'>[]) => void;
+  bulkAddInitiatives: (newInitiatives: Array<{
+    title: string;
+    owner: string;
+    description?: string;
+    status: InitiativeStatus;
+    priority: InitiativePriority;
+    startDate: string;
+    endDate: string;
+    areaId: string;
+    items: Array<{
+      title: string;
+      startDate: string;
+      endDate: string;
+      status: InitiativeStatus;
+      areaId: string;
+      priority: InitiativePriority;
+      description?: string;
+      responsible: string;
+      subItems?: Array<{
+        title: string;
+        startDate: string;
+        endDate: string;
+        status: InitiativeStatus;
+        responsible: string;
+        priority: InitiativePriority;
+        description?: string;
+      }>;
+    }>;
+  }>) => void;
   isLoading: boolean;
 }
 
@@ -223,13 +251,20 @@ const migrateInitiativeToThreeLayer = (initiative: Initiative): Initiative => {
             items: phases.map((phase: any) => ({
                 id: phase.id,
                 title: phase.title,
-                deadline: phase.deadline,
+                startDate: phase.startDate || '',
+                endDate: phase.endDate || '',
+                linkedToPrevious: phase.linkedToPrevious || false,
                 status: phase.status,
                 areaId: phase.areaId,
                 priority: phase.priority,
                 description: phase.description,
                 responsible: phase.responsible,
-                subItems: phase.subItems || [],
+                subItems: (phase.subItems || []).map((subItem: any) => ({
+                    ...subItem,
+                    startDate: subItem.startDate || '',
+                    endDate: subItem.endDate || '',
+                    linkedToPrevious: subItem.linkedToPrevious || false,
+                })),
             })),
             areaId: initiative.areaId || '',
         };
@@ -248,23 +283,39 @@ const migrateInitiativeToThreeLayer = (initiative: Initiative): Initiative => {
 
     // Converter cada subItem antigo em um Item com um único subItem dentro
     const migratedItems: InitiativeItem[] = initiative.subItems.map((oldSubItem, index) => {
+        // Usar endDate e startDate diretamente (ou valores vazios se não existirem)
+        const endDate = oldSubItem.endDate || '';
+        const startDate = oldSubItem.startDate || '';
+
         // Criar novo subItem com campos atualizados
         const newSubItem: SubItem = {
             id: oldSubItem.id,
             title: oldSubItem.title,
             completed: oldSubItem.completed,
-            deadline: oldSubItem.deadline,
+            startDate: startDate,
+            endDate: endDate,
+            linkedToPrevious: false,
             status: 'Pendente', // Default
             responsible: '', // Será obrigatório, mas migração usa vazio
             priority: 'Baixa', // Default
             description: '', // Default
         };
 
+        // Calcular datas do item: usar endDate do subitem como referência
+        const itemEndDate = endDate;
+        const itemStartDate = itemEndDate ? (() => {
+            const endDateObj = new Date(itemEndDate);
+            endDateObj.setDate(endDateObj.getDate() - 30);
+            return endDateObj.toISOString().split('T')[0];
+        })() : '';
+
         // Criar item com o subItem
         return {
             id: doc(collection(db, 'dummy')).id, // Gerar ID temporário
             title: `Item ${index + 1}`, // Título padrão
-            deadline: oldSubItem.deadline,
+            startDate: itemStartDate,
+            endDate: itemEndDate,
+            linkedToPrevious: false,
             status: oldSubItem.completed ? 'Concluído' : 'Pendente',
             areaId: initiative.areaId || '', // Usar área do projeto
             priority: 'Baixa',
@@ -399,7 +450,6 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
         priority: initiativeData.priority,
         startDate: initiativeData.startDate ? (typeof initiativeData.startDate === 'string' ? initiativeData.startDate : initiativeData.startDate.toISOString().split('T')[0]) : '',
         endDate: initiativeData.endDate ? (typeof initiativeData.endDate === 'string' ? initiativeData.endDate : initiativeData.endDate.toISOString().split('T')[0]) : '',
-        deadline: initiativeData.endDate ? (typeof initiativeData.endDate === 'string' ? initiativeData.endDate : initiativeData.endDate.toISOString().split('T')[0]) : null, // Campo legado - preencher com endDate
         areaId: initiativeData.areaId,
         lastUpdate: new Date().toISOString(),
         topicNumber: nextTopicNumber,
@@ -413,7 +463,6 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
             startDate: p.startDate ? (typeof p.startDate === 'string' ? p.startDate : p.startDate.toISOString().split('T')[0]) : '',
             endDate: p.endDate ? (typeof p.endDate === 'string' ? p.endDate : p.endDate.toISOString().split('T')[0]) : '',
             linkedToPrevious: p.linkedToPrevious || false,
-            deadline: p.endDate ? (typeof p.endDate === 'string' ? p.endDate : p.endDate.toISOString().split('T')[0]) : null, // Campo legado - preencher com endDate
             status: p.status,
             areaId: p.areaId,
             priority: p.priority,
@@ -426,7 +475,6 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
                 startDate: si.startDate ? (typeof si.startDate === 'string' ? si.startDate : si.startDate.toISOString().split('T')[0]) : '',
                 endDate: si.endDate ? (typeof si.endDate === 'string' ? si.endDate : si.endDate.toISOString().split('T')[0]) : '',
                 linkedToPrevious: si.linkedToPrevious || false,
-                deadline: si.endDate ? (typeof si.endDate === 'string' ? si.endDate : si.endDate.toISOString().split('T')[0]) : null, // Campo legado - preencher com endDate
                 status: si.status || 'Pendente',
                 responsible: si.responsible || '',
                 priority: si.priority || 'Baixa',
@@ -450,11 +498,11 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
    * 
    * @param newInitiativesData - Array de iniciativas com itens e subitens
    * Cada iniciativa deve ter:
-   * - Campos obrigatórios: title, owner, status, priority, deadline, areaId
+   * - Campos obrigatórios: title, owner, status, priority, startDate, endDate, areaId
    * - items: Array de itens (mínimo 1)
-   *   - Cada item deve ter: title, deadline, status, areaId, priority, responsible
+   *   - Cada item deve ter: title, startDate, endDate, status, areaId, priority, responsible
    *   - Cada item pode ter subItems: Array de subitens (opcional)
-   *     - Cada subitem deve ter: title, deadline, status, responsible, priority
+   *     - Cada subitem deve ter: title, startDate, endDate, status, responsible, priority
    */
   const bulkAddInitiatives = useCallback(async (newInitiativesData: Array<{
     title: string;
@@ -462,11 +510,13 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
     description?: string;
     status: InitiativeStatus;
     priority: InitiativePriority;
-    deadline: string;
+    startDate: string;
+    endDate: string;
     areaId: string;
     items: Array<{
       title: string;
-      deadline: string;
+      startDate: string;
+      endDate: string;
       status: InitiativeStatus;
       areaId: string;
       priority: InitiativePriority;
@@ -474,7 +524,8 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
       responsible: string;
       subItems?: Array<{
         title: string;
-        deadline: string;
+        startDate: string;
+        endDate: string;
         status: InitiativeStatus;
         responsible: string;
         priority: InitiativePriority;
@@ -492,33 +543,32 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
             return;
         }
 
-        // Validar e formatar datas da iniciativa (deadline é usado como endDate)
-        const endDate = initiativeData.deadline && !isNaN(new Date(initiativeData.deadline).getTime())
-          ? new Date(initiativeData.deadline).toISOString().split('T')[0]
+        // Validar e formatar datas da iniciativa
+        const startDate = initiativeData.startDate && !isNaN(new Date(initiativeData.startDate).getTime())
+          ? new Date(initiativeData.startDate).toISOString().split('T')[0]
           : '';
-        // Calcular startDate como 30 dias antes do endDate (ou usar lógica de negócio)
-        const startDate = endDate 
-          ? new Date(new Date(endDate).getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        const endDate = initiativeData.endDate && !isNaN(new Date(initiativeData.endDate).getTime())
+          ? new Date(initiativeData.endDate).toISOString().split('T')[0]
           : '';
 
         // Mapear itens com subitens
         const items = initiativeData.items.map(item => {
-            // Validar e formatar datas do item (deadline é usado como endDate)
-            const itemEndDate = item.deadline && !isNaN(new Date(item.deadline).getTime())
-              ? new Date(item.deadline).toISOString().split('T')[0]
+            // Validar e formatar datas do item
+            const itemStartDate = item.startDate && !isNaN(new Date(item.startDate).getTime())
+              ? new Date(item.startDate).toISOString().split('T')[0]
               : '';
-            const itemStartDate = itemEndDate 
-              ? new Date(new Date(itemEndDate).getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            const itemEndDate = item.endDate && !isNaN(new Date(item.endDate).getTime())
+              ? new Date(item.endDate).toISOString().split('T')[0]
               : '';
 
             // Mapear subitens se presentes
             const subItems = item.subItems?.map(subItem => {
-                // Validar e formatar datas do subitem (deadline é usado como endDate)
-                const subItemEndDate = subItem.deadline && !isNaN(new Date(subItem.deadline).getTime())
-                  ? new Date(subItem.deadline).toISOString().split('T')[0]
+                // Validar e formatar datas do subitem
+                const subItemStartDate = subItem.startDate && !isNaN(new Date(subItem.startDate).getTime())
+                  ? new Date(subItem.startDate).toISOString().split('T')[0]
                   : '';
-                const subItemStartDate = subItemEndDate 
-                  ? new Date(new Date(subItemEndDate).getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                const subItemEndDate = subItem.endDate && !isNaN(new Date(subItem.endDate).getTime())
+                  ? new Date(subItem.endDate).toISOString().split('T')[0]
                   : '';
 
                 return {
@@ -528,7 +578,6 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
                     startDate: subItemStartDate,
                     endDate: subItemEndDate,
                     linkedToPrevious: false,
-                    deadline: subItemEndDate, // Campo legado - preencher com endDate
                     status: subItem.status,
                     responsible: subItem.responsible,
                     priority: subItem.priority,
@@ -542,7 +591,6 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
                 startDate: itemStartDate,
                 endDate: itemEndDate,
                 linkedToPrevious: false,
-                deadline: itemEndDate, // Campo legado - preencher com endDate
                 status: item.status,
                 areaId: item.areaId,
                 priority: item.priority,
@@ -560,7 +608,6 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
           priority: initiativeData.priority,
           startDate: startDate,
           endDate: endDate,
-          deadline: endDate, // Campo legado - preencher com endDate
           areaId: initiativeData.areaId,
           lastUpdate: new Date().toISOString(),
           topicNumber: (nextTopicNumber++).toString(),
@@ -596,7 +643,6 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
           priority: data.priority,
           startDate: data.startDate ? (typeof data.startDate === 'string' ? data.startDate : data.startDate.toISOString().split('T')[0]) : '',
           endDate: data.endDate ? (typeof data.endDate === 'string' ? data.endDate : data.endDate.toISOString().split('T')[0]) : '',
-          deadline: data.endDate ? (typeof data.endDate === 'string' ? data.endDate : data.endDate.toISOString().split('T')[0]) : null, // Campo legado - preencher com endDate
           areaId: data.areaId,
           lastUpdate: new Date().toISOString(),
           items: data.items?.map(p => ({
@@ -605,7 +651,6 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
               startDate: p.startDate ? (typeof p.startDate === 'string' ? p.startDate : p.startDate.toISOString().split('T')[0]) : '',
               endDate: p.endDate ? (typeof p.endDate === 'string' ? p.endDate : p.endDate.toISOString().split('T')[0]) : '',
               linkedToPrevious: p.linkedToPrevious || false,
-              deadline: p.endDate ? (typeof p.endDate === 'string' ? p.endDate : p.endDate.toISOString().split('T')[0]) : null, // Campo legado - preencher com endDate
               status: p.status,
               areaId: p.areaId,
               priority: p.priority,
@@ -618,7 +663,6 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
                   startDate: si.startDate ? (typeof si.startDate === 'string' ? si.startDate : si.startDate.toISOString().split('T')[0]) : '',
                   endDate: si.endDate ? (typeof si.endDate === 'string' ? si.endDate : si.endDate.toISOString().split('T')[0]) : '',
                   linkedToPrevious: si.linkedToPrevious || false,
-                  deadline: si.endDate ? (typeof si.endDate === 'string' ? si.endDate : si.endDate.toISOString().split('T')[0]) : null, // Campo legado - preencher com endDate
                   status: si.status || 'Pendente',
                   responsible: si.responsible || '',
                   priority: si.priority || 'Baixa',

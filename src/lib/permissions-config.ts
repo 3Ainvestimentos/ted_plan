@@ -278,7 +278,7 @@ export function canImportInitiatives(userType: UserType): boolean {
 }
 
 /**
- * Verifica se o usuário pode editar o prazo (deadline) de iniciativas, itens ou subitens.
+ * Verifica se o usuário pode editar o prazo (endDate) de iniciativas, itens ou subitens.
  * 
  * REGRAS:
  * - Admin e PMO: Sempre podem editar prazo

@@ -112,8 +112,8 @@ function calculateCompletedPercentage(initiatives: Initiative[]): number {
  * 
  * LÓGICA:
  * - Iniciativa está atrasada se:
- *   1. Tem deadline definido
- *   2. Deadline já passou (é anterior a hoje)
+ *   1. Tem endDate definido
+ *   2. EndDate já passou (é anterior a hoje)
  *   3. Status não é 'Concluído'
  * 
  * @param initiatives - Array de iniciativas
@@ -128,12 +128,12 @@ function calculateOverduePercentage(initiatives: Initiative[]): number {
   
   const overdue = active.filter(i => {
     if (i.status === 'Concluído') return false;
-    if (!i.deadline) return false;
+    if (!i.endDate) return false;
     
-    const deadline = new Date(i.deadline);
-    deadline.setHours(0, 0, 0, 0);
+    const endDate = new Date(i.endDate);
+    endDate.setHours(0, 0, 0, 0);
     
-    return deadline < today;
+    return endDate < today;
   }).length;
   
   return Math.round((overdue / active.length) * 100);
@@ -145,8 +145,8 @@ function calculateOverduePercentage(initiatives: Initiative[]): number {
  * LÓGICA:
  * - Iniciativa está em dia se:
  *   1. Status é 'Em Dia' OU
- *   2. Tem deadline e ainda não passou OU
- *   3. Não tem deadline mas não está concluída nem atrasada
+ *   2. Tem endDate e ainda não passou OU
+ *   3. Não tem endDate mas não está concluída nem atrasada
  * 
  * @param initiatives - Array de iniciativas
  * @returns Percentual de iniciativas em dia
@@ -162,13 +162,13 @@ function calculateOnTimePercentage(initiatives: Initiative[]): number {
     if (i.status === 'Concluído') return false;
     if (i.status === 'Em Dia') return true;
     
-    if (i.deadline) {
-      const deadline = new Date(i.deadline);
-      deadline.setHours(0, 0, 0, 0);
-      return deadline >= today;
+    if (i.endDate) {
+      const endDate = new Date(i.endDate);
+      endDate.setHours(0, 0, 0, 0);
+      return endDate >= today;
     }
     
-    // Sem deadline, considera em dia se não está atrasada
+    // Sem endDate, considera em dia se não está atrasada
     return true;
   }).length;
   

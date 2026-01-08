@@ -143,7 +143,7 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
 
         // Verificar se está em atraso e validar status permitido
         // IMPORTANTE: Só limita status se realmente estiver em atraso
-        const initiativeIsOverdue = isOverdue(initiative.deadline, initiative.status);
+        const initiativeIsOverdue = isOverdue(initiative.endDate, initiative.status);
         if (initiativeIsOverdue) {
             const availableStatuses = getAvailableStatuses(true);
             if (!availableStatuses.includes(newStatus)) {
@@ -196,7 +196,7 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
 
         // Verificar se está em atraso e validar status permitido
         // IMPORTANTE: Só limita status se realmente estiver em atraso
-        const itemIsOverdue = isOverdue(item.deadline, item.status);
+        const itemIsOverdue = isOverdue(item.endDate, item.status);
         if (itemIsOverdue) {
             const availableStatuses = getAvailableStatuses(true);
             if (!availableStatuses.includes(newStatus)) {
@@ -268,7 +268,7 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
 
         // Verificar se está em atraso e validar status permitido
         // IMPORTANTE: Só limita status se realmente estiver em atraso
-        const subItemIsOverdue = isOverdue(subItem.deadline, subItem.status);
+        const subItemIsOverdue = isOverdue(subItem.endDate, subItem.status);
         if (subItemIsOverdue) {
             const availableStatuses = getAvailableStatuses(true);
             if (!availableStatuses.includes(newStatus)) {

@@ -41,7 +41,7 @@ export function KanbanTaskCard({ task, onClick, onExpand }: KanbanTaskCardProps)
   const TaskIcon = hasSubItems ? CheckSquare : (task.icon || FileText);
   
   // Verificar se está em atraso
-  const taskIsOverdue = isOverdue(task.deadline, task.status);
+  const taskIsOverdue = isOverdue(task.endDate, task.status);
   
   const priorityColorMapping: Record<typeof task.priority, string> = {
     'Alta': 'bg-red-100 text-red-700',

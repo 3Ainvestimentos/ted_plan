@@ -27,10 +27,22 @@ const initiativeSchema = z.object({
   owner: z.string().min(2, "O nome do responsável é obrigatório."),
   description: z.string().min(10, "A descrição deve ter pelo menos 10 caracteres."),
   status: z.enum(['A Fazer', 'Em Dia', 'Em Risco', 'Atrasado', 'Concluído']),
-  deadline: z.date({
-    required_error: "A data de prazo é obrigatória.",
+  startDate: z.date({
+    required_error: "A data de início é obrigatória.",
+  }),
+  endDate: z.date({
+    required_error: "A data de fim é obrigatória.",
   }),
   priority: z.enum(['Baixa', 'Média', 'Alta'])
+}).refine((data) => {
+  // Validar que endDate >= startDate
+  if (data.startDate && data.endDate) {
+    return data.endDate >= data.startDate;
+  }
+  return true;
+}, {
+  message: "A data de fim deve ser maior ou igual à data de início.",
+  path: ["endDate"],
 });
 
 type InitiativeFormData = z.infer<typeof initiativeSchema>;
@@ -94,9 +106,9 @@ export default function NewInitiativePage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                    <Label>Prazo (Conclusão Alvo)</Label>
+                    <Label>Data de Início</Label>
                     <Controller
-                        name="deadline"
+                        name="startDate"
                         control={control}
                         render={({ field }) => (
                         <Popover>
@@ -120,8 +132,40 @@ export default function NewInitiativePage() {
                         </Popover>
                         )}
                     />
-                    {errors.deadline && <p className="text-sm text-destructive">{errors.deadline.message}</p>}
+                    {errors.startDate && <p className="text-sm text-destructive">{errors.startDate.message}</p>}
                 </div>
+                <div className="space-y-2">
+                    <Label>Data de Fim (Prazo)</Label>
+                    <Controller
+                        name="endDate"
+                        control={control}
+                        render={({ field }) => (
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className="w-full justify-start text-left font-normal"
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione uma data</span>}
+                            </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                    mode="single"
+                                    selected={field.value}
+                                    onSelect={field.onChange}
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+                        )}
+                    />
+                    {errors.endDate && <p className="text-sm text-destructive">{errors.endDate.message}</p>}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                     <Label htmlFor="owner">Responsável</Label>
                     <Input id="owner" {...register("owner")} placeholder="Ex: João da Silva" />
