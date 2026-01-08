@@ -43,7 +43,8 @@ import {
   ExternalLink,
   Archive,
   Undo,
-  Pencil
+  Pencil,
+  ChevronsUpDown
 } from 'lucide-react';
 import { 
   startOfDay, 
@@ -584,6 +585,7 @@ export function TableGanttView({
   const [archiveFilter, setArchiveFilter] = useState<string>("active");
   const [expandedInitiatives, setExpandedInitiatives] = useState<Set<string>>(new Set());
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [areAllExpanded, setAreAllExpanded] = useState(false);
   // Estado para mensagens de erro temporárias (desaparecem após 10 segundos)
   const [tempErrorMessages, setTempErrorMessages] = useState<Set<string>>(new Set());
 
@@ -649,6 +651,34 @@ export function TableGanttView({
       });
     }, 10000);
   }, []);
+
+  // Calcula IDs de iniciativas que têm itens (para expandir todas)
+  const parentInitiativeIds = useMemo(() => {
+    return new Set(filteredInitiatives.filter(init => init.items && init.items.length > 0).map(init => init.id));
+  }, [filteredInitiatives]);
+
+  const toggleAllTopics = () => {
+    if (areAllExpanded) {
+      setExpandedInitiatives(new Set());
+      setExpandedItems(new Set());
+    } else {
+      // Expandir todas as iniciativas que têm itens
+      setExpandedInitiatives(new Set(parentInitiativeIds));
+      // Expandir todos os itens que têm subitens
+      const allItemIds = new Set<string>();
+      filteredInitiatives.forEach(init => {
+        if (init.items) {
+          init.items.forEach(item => {
+            if (item.subItems && item.subItems.length > 0) {
+              allItemIds.add(item.id);
+            }
+          });
+        }
+      });
+      setExpandedItems(allItemIds);
+    }
+    setAreAllExpanded(prev => !prev);
+  };
 
   const toggleInitiative = (initiativeId: string) => {
     setExpandedInitiatives(prev => {
@@ -726,7 +756,21 @@ export function TableGanttView({
             <TableHeader>
               {/* Linha 1: Cabeçalhos principais */}
               <TableRow className="bg-muted/50">
-                <TableHead className="w-16 sticky left-0 bg-muted/50 z-20">#</TableHead>
+                <TableHead className="w-16 sticky left-0 bg-muted/50 z-20">
+                  <div className="flex items-center gap-1">
+                    #
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6" 
+                      onClick={toggleAllTopics} 
+                      disabled={parentInitiativeIds.size === 0}
+                      title={areAllExpanded ? "Recolher todas" : "Expandir todas"}
+                    >
+                      <ChevronsUpDown className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableHead>
                 <TableHead className="w-64 sticky left-16 bg-muted/50 z-20">Título da Iniciativa</TableHead>
                 <TableHead className="w-32">Responsável</TableHead>
                 {onEditInitiative && <TableHead className="w-12"></TableHead>}
