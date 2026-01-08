@@ -32,6 +32,7 @@ import { Progress } from '@/components/ui/progress';
 import * as ProgressPrimitive from "@radix-ui/react-progress";
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { STATUS_ICONS } from '@/lib/constants';
 import { isOverdue, getAvailableStatuses } from '@/lib/initiatives-helpers';
@@ -719,8 +720,9 @@ export function TableGanttView({
 
       {/* Tabela com Gantt */}
       <Card className="shadow-sm">
-        <div className="w-full overflow-x-auto overflow-y-visible">
-          <Table className="min-w-full table-auto">
+        <TooltipProvider>
+          <div className="w-full overflow-x-auto overflow-y-visible">
+            <Table className="min-w-full table-auto">
             <TableHeader>
               {/* Linha 1: Cabeçalhos principais */}
               <TableRow className="bg-muted/50">
@@ -1017,20 +1019,27 @@ export function TableGanttView({
                                 const barWidth = Math.max(40, span * cellWidth);
                                 
                                 return (
-                                  <div 
-                                    className={cn(
-                                      "absolute top-1/2 -translate-y-1/2 h-6 opacity-90 z-10 shadow-sm border border-white/20",
-                                      barColor
-                                    )}
-                                    style={{
-                                      left: '0px',
-                                      width: `${barWidth}px`,
-                                      height: '24px',
-                                      minWidth: '40px',
-                                      pointerEvents: 'none',
-                                    }}
-                                    title={`${ganttTask.name}: ${format(ganttTask.startDate, 'dd/MM/yyyy')} - ${format(ganttTask.endDate, 'dd/MM/yyyy')}`}
-                                  />
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div 
+                                        className={cn(
+                                          "absolute top-1/2 -translate-y-1/2 h-6 opacity-90 z-10 shadow-sm border border-white/20 cursor-pointer",
+                                          barColor
+                                        )}
+                                        style={{
+                                          left: '0px',
+                                          width: `${barWidth}px`,
+                                          height: '24px',
+                                          minWidth: '40px',
+                                          pointerEvents: 'auto',
+                                        }}
+                                      />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="text-xs">Início: {format(ganttTask.startDate, 'dd/MM/yyyy')}</p>
+                                      <p className="text-xs">Fim: {format(ganttTask.endDate, 'dd/MM/yyyy')}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
                                 );
                               })()}
                             </TableCell>
@@ -1284,20 +1293,27 @@ export function TableGanttView({
                                       const barWidth = Math.max(40, span * cellWidth);
                                       
                                       return (
-                                        <div 
-                                          className={cn(
-                                            "absolute top-1/2 -translate-y-1/2 h-5 opacity-90 z-10 shadow-sm border border-white/20",
-                                            barColor
-                                          )}
-                                          style={{
-                                            left: '0px',
-                                            width: `${barWidth}px`,
-                                            height: '20px',
-                                            minWidth: '40px',
-                                            pointerEvents: 'none',
-                                          }}
-                                          title={`${itemGanttTask.name}: ${format(itemGanttTask.startDate, 'dd/MM/yyyy')} - ${format(itemGanttTask.endDate, 'dd/MM/yyyy')}`}
-                                        />
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div 
+                                              className={cn(
+                                                "absolute top-1/2 -translate-y-1/2 h-5 opacity-90 z-10 shadow-sm border border-white/20 cursor-pointer",
+                                                barColor
+                                              )}
+                                              style={{
+                                                left: '0px',
+                                                width: `${barWidth}px`,
+                                                height: '20px',
+                                                minWidth: '40px',
+                                                pointerEvents: 'auto',
+                                              }}
+                                            />
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="text-xs">Início: {format(itemGanttTask.startDate, 'dd/MM/yyyy')}</p>
+                                            <p className="text-xs">Fim: {format(itemGanttTask.endDate, 'dd/MM/yyyy')}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
                                       );
                                     })()}
                                   </TableCell>
@@ -1516,20 +1532,27 @@ export function TableGanttView({
                                           const barWidth = Math.max(40, span * cellWidth);
                                           
                                           return (
-                                            <div 
-                                              className={cn(
-                                                "absolute top-1/2 -translate-y-1/2 h-4 opacity-90 z-10 shadow-sm border border-white/20",
-                                                barColor
-                                              )}
-                                              style={{
-                                                left: '0px',
-                                                width: `${barWidth}px`,
-                                                height: '16px',
-                                                minWidth: '40px',
-                                                pointerEvents: 'none',
-                                              }}
-                                              title={`${subItemGanttTask.name}: ${format(subItemGanttTask.startDate, 'dd/MM/yyyy')} - ${format(subItemGanttTask.endDate, 'dd/MM/yyyy')}`}
-                                            />
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <div 
+                                                  className={cn(
+                                                    "absolute top-1/2 -translate-y-1/2 h-4 opacity-90 z-10 shadow-sm border border-white/20 cursor-pointer",
+                                                    barColor
+                                                  )}
+                                                  style={{
+                                                    left: '0px',
+                                                    width: `${barWidth}px`,
+                                                    height: '16px',
+                                                    minWidth: '40px',
+                                                    pointerEvents: 'auto',
+                                                  }}
+                                                />
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p className="text-xs">Início: {format(subItemGanttTask.startDate, 'dd/MM/yyyy')}</p>
+                                                <p className="text-xs">Fim: {format(subItemGanttTask.endDate, 'dd/MM/yyyy')}</p>
+                                              </TooltipContent>
+                                            </Tooltip>
                                           );
                                         })()}
                                       </TableCell>
@@ -1555,8 +1578,9 @@ export function TableGanttView({
             )}
           </TableBody>
         </Table>
-      </div>
-    </Card>
+          </div>
+        </TooltipProvider>
+      </Card>
     </div>
   );
 }
