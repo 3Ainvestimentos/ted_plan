@@ -36,6 +36,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { cn } from '@/lib/utils';
 import { STATUS_ICONS } from '@/lib/constants';
 import { isOverdue, getAvailableStatuses } from '@/lib/initiatives-helpers';
+import { HierarchyItemInfoModal } from './hierarchy-item-info-modal';
 import { 
   ChevronRight, 
   ChevronDown, 
@@ -44,7 +45,8 @@ import {
   Archive,
   Undo,
   Pencil,
-  ChevronsUpDown
+  ChevronsUpDown,
+  MoreHorizontal
 } from 'lucide-react';
 import { 
   startOfDay, 
@@ -588,6 +590,13 @@ export function TableGanttView({
   const [areAllExpanded, setAreAllExpanded] = useState(false);
   // Estado para mensagens de erro temporárias (desaparecem após 10 segundos)
   const [tempErrorMessages, setTempErrorMessages] = useState<Set<string>>(new Set());
+  // Estado para modal de informações
+  const [infoModalOpen, setInfoModalOpen] = useState(false);
+  const [infoModalData, setInfoModalData] = useState<{
+    type: 'initiative' | 'item' | 'subitem';
+    data: Initiative | InitiativeItem | SubItem;
+    children?: Array<InitiativeItem | SubItem>;
+  } | null>(null);
 
   // Filtra iniciativas
   const filteredInitiatives = useMemo(() => {
@@ -771,7 +780,8 @@ export function TableGanttView({
                     </Button>
                   </div>
                 </TableHead>
-                <TableHead className="w-64 sticky left-16 bg-muted/50 z-20">Título da Iniciativa</TableHead>
+                <TableHead className="w-12 sticky left-16 bg-muted/50 z-20"></TableHead>
+                <TableHead className="w-64 sticky left-28 bg-muted/50 z-20">Título da Iniciativa</TableHead>
                 <TableHead className="w-32">Responsável</TableHead>
                 {onEditInitiative && <TableHead className="w-12"></TableHead>}
                 <TableHead className="w-36">Status</TableHead>
@@ -826,8 +836,28 @@ export function TableGanttView({
                         {initiative.topicNumber}
                       </TableCell>
                       
+                      {/* Coluna Ações */}
+                      <TableCell className="sticky left-16 bg-background z-10">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => {
+                            setInfoModalData({
+                              type: 'initiative',
+                              data: initiative,
+                              children: initiative.items || []
+                            });
+                            setInfoModalOpen(true);
+                          }}
+                          title="Ver informações"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                      
                       {/* Coluna Título */}
-                      <TableCell className="font-medium sticky left-16 bg-background z-10">
+                      <TableCell className="font-medium sticky left-28 bg-background z-10">
                         <div className="flex items-center gap-1">
                           {hasItems && (
                             <Button 
@@ -1104,7 +1134,25 @@ export function TableGanttView({
                         <React.Fragment key={item.id}>
                           <TableRow className={cn("bg-secondary/50 hover:bg-secondary/70", itemIsOverdue && "bg-red-50")}>
                             <TableCell className="sticky left-0 bg-secondary/50 z-10"></TableCell>
-                            <TableCell className="pl-12 sticky left-16 bg-secondary/50 z-10">
+                            <TableCell className="sticky left-16 bg-secondary/50 z-10">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => {
+                                  setInfoModalData({
+                                    type: 'item',
+                                    data: item,
+                                    children: item.subItems || []
+                                  });
+                                  setInfoModalOpen(true);
+                                }}
+                                title="Ver informações"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                            <TableCell className="pl-12 sticky left-28 bg-secondary/50 z-10">
                               <div className="flex items-center gap-2">
                                 <CornerDownRight className="h-4 w-4 text-muted-foreground" />
                                 {hasSubItems && (
@@ -1375,29 +1423,29 @@ export function TableGanttView({
                             return (
                               <TableRow key={subItem.id} className={cn("bg-secondary hover:bg-secondary/80", subItemIsOverdue && "bg-red-50")}>
                                 <TableCell className="sticky left-0 bg-secondary z-10"></TableCell>
-                                <TableCell className="pl-20 sticky left-16 bg-secondary z-10">
+                                <TableCell className="sticky left-16 bg-secondary z-10">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => {
+                                      setInfoModalData({
+                                        type: 'subitem',
+                                        data: subItem,
+                                      });
+                                      setInfoModalOpen(true);
+                                    }}
+                                    title="Ver informações"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                                <TableCell className="pl-20 sticky left-28 bg-secondary z-10">
                                   <div className="flex items-center gap-2">
                                     <CornerDownRight className="h-4 w-4 text-muted-foreground" />
-                                    <Checkbox 
-                                      id={`subitem-${subItem.id}`} 
-                                      checked={subItem.status === 'Concluído'}
-                                      onCheckedChange={(checked) => {
-                                        // Sincronizar checkbox com status: marcado = "Concluído", desmarcado = "Em execução"
-                                        const newStatus = checked ? 'Concluído' as InitiativeStatus : 'Em execução' as InitiativeStatus;
-                                        if (onSubItemStatusChange) {
-                                          onSubItemStatusChange(initiative.id, item.id, subItem.id, newStatus);
-                                        } else if (onUpdateSubItem) {
-                                          // Fallback: usar updateSubItem se onSubItemStatusChange não estiver disponível
-                                          onUpdateSubItem(initiative.id, item.id, subItem.id, !!checked);
-                                        }
-                                      }}
-                                    />
-                                    <label 
-                                      htmlFor={`subitem-${subItem.id}`} 
-                                      className={cn("text-sm", subItem.status === 'Concluído' && "line-through text-muted-foreground")}
-                                    >
+                                    <span className={cn("text-sm", subItem.status === 'Concluído' && "line-through text-muted-foreground")}>
                                       {subItem.title}
-                                    </label>
+                                    </span>
                                   </div>
                                 </TableCell>
                                 
@@ -1625,6 +1673,17 @@ export function TableGanttView({
           </div>
         </TooltipProvider>
       </Card>
+
+      {/* Modal de Informações */}
+      {infoModalData && (
+        <HierarchyItemInfoModal
+          isOpen={infoModalOpen}
+          onOpenChange={setInfoModalOpen}
+          type={infoModalData.type}
+          data={infoModalData.data}
+          children={infoModalData.children}
+        />
+      )}
     </div>
   );
 }
