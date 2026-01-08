@@ -506,21 +506,17 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
               )}
               {errors.areaId && <p className="text-sm text-destructive">{errors.areaId.message}</p>}
           </div>
-      </div>
-
-      <div className="space-y-2">
-          <Label htmlFor="owner">Responsável <span className="text-destructive">*</span></Label>
-          <Input 
-              id="owner" 
-              {...register("owner")} 
-              placeholder="Ex: João da Silva" 
-              className={cn(errors.owner && "border-destructive")}
-              disabled={isLimitedMode}
-          />
-          {errors.owner && <p className="text-sm text-destructive">{errors.owner.message}</p>}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+              <Label htmlFor="owner">Responsável <span className="text-destructive">*</span></Label>
+              <Input 
+                  id="owner" 
+                  {...register("owner")} 
+                  placeholder="Ex: João da Silva" 
+                  className={cn(errors.owner && "border-destructive")}
+                  disabled={isLimitedMode}
+              />
+              {errors.owner && <p className="text-sm text-destructive">{errors.owner.message}</p>}
+          </div>
           <div className="space-y-2">
               <Label htmlFor="status">Execução (Status)</Label>
               <Controller
@@ -680,6 +676,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Linha 1: Título | Responsável */}
                   <div className="space-y-2">
                     <Label>Título da Item</Label>
                     <Input
@@ -692,7 +689,22 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       <p className="text-sm text-destructive">{errors.items[index]?.title?.message}</p>
                     )}
                   </div>
+                  <div className="space-y-2">
+                    <Label>
+                      Responsável <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      {...register(`items.${index}.responsible`)}
+                      placeholder="Ex: Maria Silva"
+                      className={cn(errors.items?.[index]?.responsible && "border-destructive")}
+                      disabled={isLimitedMode}
+                    />
+                    {errors.items?.[index]?.responsible && (
+                      <p className="text-sm text-destructive">{errors.items[index]?.responsible?.message}</p>
+                    )}
+                  </div>
 
+                  {/* Linha 2: Data de Início | Data de Fim */}
                   <div className="space-y-2">
                     <Label>Data de Início {!watchItems?.[index]?.linkedToPrevious && <span className="text-destructive">*</span>}</Label>
                     <Controller
@@ -742,7 +754,6 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       <p className="text-sm text-destructive">{errors.items[index]?.startDate?.message}</p>
                     )}
                   </div>
-
                   <div className="space-y-2">
                     <Label>Data de Fim <span className="text-destructive">*</span></Label>
                     <Controller
@@ -782,6 +793,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                     )}
                   </div>
                   
+                  {/* Linha 3: Status | Prioridade */}
                   <div className="space-y-2">
                     <Label>Status</Label>
                     <Controller
@@ -851,39 +863,6 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       return null;
                     })()}
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Área</Label>
-                    <Controller
-                      name={`items.${index}.areaId`}
-                      control={control}
-                      render={({ field }) => (
-                        <Select 
-                          onValueChange={(value) => {
-                            // Não permitir mudança - sempre usar a área do projeto
-                            field.onChange(watchAreaId || value);
-                          }} 
-                          value={watchAreaId || field.value} 
-                          disabled={true}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione a área" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {businessAreas.map(area => (
-                              <SelectItem key={area.id} value={area.id}>
-                                {area.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {errors.items?.[index]?.areaId && (
-                      <p className="text-sm text-destructive">{errors.items[index]?.areaId?.message}</p>
-                    )}
-                  </div>
-                  
                   <div className="space-y-2">
                     <Label>Prioridade</Label>
                     <Controller
@@ -902,21 +881,6 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                         </Select>
                       )}
                     />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>
-                      Responsável <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      {...register(`items.${index}.responsible`)}
-                      placeholder="Ex: Maria Silva"
-                      className={cn(errors.items?.[index]?.responsible && "border-destructive")}
-                      disabled={isLimitedMode}
-                    />
-                    {errors.items?.[index]?.responsible && (
-                      <p className="text-sm text-destructive">{errors.items[index]?.responsible?.message}</p>
-                    )}
                   </div>
                 </div>
                 

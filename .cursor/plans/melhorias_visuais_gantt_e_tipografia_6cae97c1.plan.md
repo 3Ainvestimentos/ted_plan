@@ -28,7 +28,7 @@ Aplicar melhorias visuais na visualização Gantt/Tabela e padronizar tipografia
 ## Arquivos Principais Afetados
 
 - [src/components/initiatives/table-gantt-view.tsx](src/components/initiatives/table-gantt-view.tsx) - Componente principal do Gantt/Tabela
-- [src/app/(app)/layout.tsx](src/app/\\(app)/layout.tsx) - Layout principal (tipografia global)
+- [src/app/(app)/layout.tsx](src/app/\\\(app)/layout.tsx) - Layout principal (tipografia global)
 - [src/app/globals.css](src/app/globals.css) - Estilos globais (se existir)
 
 ## Alterações Detalhadas
@@ -184,4 +184,3 @@ const PROGRESS_COLORS: Record<InitiativeStatus, string> = {
 ## Observações
 
 - Manter compatibilidade com dark mode
-- Verificar se há outros componentes usando `STATUS_COLORS` que não devem ser alterados
