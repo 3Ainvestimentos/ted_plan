@@ -113,6 +113,19 @@ const itemSchema = z.object({
 }, {
   message: "A data de fim deve ser maior ou igual à data de início.",
   path: ["endDate"],
+}).refine((data) => {
+  // Validar que todos os subitens têm endDate <= item.endDate
+  if (data.subItems && data.subItems.length > 0 && data.endDate) {
+    return data.subItems.every(subItem => {
+      if (!subItem.endDate) return true; // Se não tem endDate, skip (será validado pelo schema do subitem)
+      // Comparar datas: subItem.endDate <= item.endDate
+      return subItem.endDate <= data.endDate;
+    });
+  }
+  return true;
+}, {
+  message: "A data de fim do subitem não pode ser maior que a data de fim do item.",
+  path: ["subItems"],
 });
 
 const initiativeSchema = z.object({
@@ -134,6 +147,19 @@ const initiativeSchema = z.object({
 }, {
   message: "A data de fim deve ser maior ou igual à data de início.",
   path: ["endDate"],
+}).refine((data) => {
+  // Validar que todos os itens têm endDate <= initiative.endDate
+  if (data.items && data.items.length > 0 && data.endDate) {
+    return data.items.every(item => {
+      if (!item.endDate) return true; // Se não tem endDate, skip (será validado pelo schema do item)
+      // Comparar datas: item.endDate <= initiative.endDate
+      return item.endDate <= data.endDate;
+    });
+  }
+  return true;
+}, {
+  message: "A data de fim do item não pode ser maior que a data de fim da iniciativa.",
+  path: ["items"],
 });
 
 export type InitiativeFormData = z.infer<typeof initiativeSchema>;
@@ -1190,6 +1216,8 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       <p className="font-medium">Item {idx + 1}:</p>
                       <ul className="list-disc list-inside ml-4 space-y-1">
                         {itemError.title && <li>{itemError.title.message}</li>}
+                        {itemError.startDate && <li>{itemError.startDate.message}</li>}
+                        {itemError.endDate && <li>{itemError.endDate.message}</li>}
                         {itemError.description && <li>{itemError.description.message}</li>}
                         {itemError.responsible && <li>{itemError.responsible.message}</li>}
                         {itemError.areaId && <li>{itemError.areaId.message}</li>}
@@ -1200,18 +1228,25 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                               Subitem {subIdx + 1}:
                               <ul className="list-disc list-inside ml-4 space-y-1">
                                 {subItemError.title && <li>{subItemError.title.message}</li>}
+                                {subItemError.startDate && <li>{subItemError.startDate.message}</li>}
+                                {subItemError.endDate && <li>{subItemError.endDate.message}</li>}
                                 {subItemError.responsible && <li>{subItemError.responsible.message}</li>}
                                 {subItemError.description && <li>{subItemError.description.message}</li>}
                               </ul>
                             </li>
                           );
                         })}
+                        {/* Exibir erro de subItems quando há erro no array inteiro (validação pai-filho) */}
+                        {itemError.subItems && typeof itemError.subItems === 'object' && !Array.isArray(itemError.subItems) && 'message' in itemError.subItems && (
+                          <li className="font-semibold text-destructive">{String(itemError.subItems.message)}</li>
+                        )}
                       </ul>
                     </div>
                   );
                 })}
+                {/* Exibir erro de items quando há erro no array inteiro (validação pai-filho) */}
                 {typeof errors.items === 'object' && !Array.isArray(errors.items) && 'message' in errors.items && (
-                  <p className="mt-2">{String(errors.items.message)}</p>
+                  <p className="mt-2 font-semibold">{String(errors.items.message)}</p>
                 )}
               </div>
             )}
