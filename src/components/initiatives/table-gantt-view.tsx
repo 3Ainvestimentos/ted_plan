@@ -473,18 +473,42 @@ function transformInitiativeToGanttTask(initiative: Initiative): GanttTask | nul
  * 
  * @param item - Item para transformar
  * @param initiative - Iniciativa pai (para referência)
+ * @param allItems - Lista completa de itens da iniciativa (para verificar linkedToPrevious)
  * @returns GanttTask ou null se não tiver endDate válido
  */
-function transformItemToGanttTask(item: InitiativeItem, initiative: Initiative): GanttTask | null {
+function transformItemToGanttTask(item: InitiativeItem, initiative: Initiative, allItems?: InitiativeItem[]): GanttTask | null {
   const endDate = parseFlexibleDate(item.endDate);
   if (!endDate) return null;
   
-  // Para item, startDate pode ser o endDate da iniciativa ou usar startDate do item ou 30 dias antes do endDate da item
-  const initiativeEndDate = parseFlexibleDate(initiative.endDate);
-  const itemStartDate = parseFlexibleDate(item.startDate);
-  const startDate = itemStartDate || (initiativeEndDate 
-    ? (isBefore(initiativeEndDate, endDate) ? initiativeEndDate : subDays(endDate, 30))
-    : subDays(endDate, 30));
+  let startDate: Date;
+  
+  // Se está vinculado ao anterior, usa o endDate do item anterior
+  if (item.linkedToPrevious && allItems && allItems.length > 0) {
+    const currentIndex = allItems.findIndex(i => i.id === item.id);
+    if (currentIndex > 0) {
+      // Item anterior existe
+      const previousItem = allItems[currentIndex - 1];
+      const previousEndDate = parseFlexibleDate(previousItem.endDate);
+      if (previousEndDate) {
+        startDate = previousEndDate;
+      } else {
+        // Fallback: se item anterior não tem endDate, usa startDate do item atual ou fallback
+        const itemStartDate = parseFlexibleDate(item.startDate);
+        startDate = itemStartDate || subDays(endDate, 30);
+      }
+    } else {
+      // É o primeiro item, não pode estar vinculado (mas se estiver, usa fallback)
+      const itemStartDate = parseFlexibleDate(item.startDate);
+      startDate = itemStartDate || subDays(endDate, 30);
+    }
+  } else {
+    // Não está vinculado, usa startDate explícito ou fallback
+    const itemStartDate = parseFlexibleDate(item.startDate);
+    const initiativeEndDate = parseFlexibleDate(initiative.endDate);
+    startDate = itemStartDate || (initiativeEndDate 
+      ? (isBefore(initiativeEndDate, endDate) ? initiativeEndDate : subDays(endDate, 30))
+      : subDays(endDate, 30));
+  }
   
   const isOverdue = isBefore(endDate, startOfDay(new Date())) && 
                     item.status !== 'Concluído';
@@ -518,18 +542,48 @@ function transformItemToGanttTask(item: InitiativeItem, initiative: Initiative):
  * @param subItem - Subitem para transformar
  * @param item - Item pai (para referência)
  * @param initiative - Iniciativa pai (para referência)
+ * @param allSubItems - Lista completa de subitens do item (para verificar linkedToPrevious)
  * @returns GanttTask ou null se não tiver endDate válido
  */
-function transformSubItemToGanttTask(subItem: SubItem, item: InitiativeItem, initiative: Initiative): GanttTask | null {
+function transformSubItemToGanttTask(subItem: SubItem, item: InitiativeItem, initiative: Initiative, allSubItems?: SubItem[]): GanttTask | null {
   const endDate = parseFlexibleDate(subItem.endDate);
   if (!endDate) return null;
   
-  // Para subitem, startDate pode ser o endDate da item ou usar startDate do subitem ou 7 dias antes do endDate do subitem
-  const itemEndDate = parseFlexibleDate(item.endDate);
-  const subItemStartDate = parseFlexibleDate(subItem.startDate);
-  const startDate = subItemStartDate || (itemEndDate 
-    ? (isBefore(itemEndDate, endDate) ? itemEndDate : subDays(endDate, 7))
-    : subDays(endDate, 7));
+  let startDate: Date;
+  
+  // Se está vinculado ao anterior, usa o endDate do subitem anterior
+  if (subItem.linkedToPrevious && allSubItems && allSubItems.length > 0) {
+    const currentIndex = allSubItems.findIndex(si => si.id === subItem.id);
+    if (currentIndex > 0) {
+      // Subitem anterior existe
+      const previousSubItem = allSubItems[currentIndex - 1];
+      const previousEndDate = parseFlexibleDate(previousSubItem.endDate);
+      if (previousEndDate) {
+        startDate = previousEndDate;
+      } else {
+        // Fallback: se subitem anterior não tem endDate, usa startDate do subitem atual ou fallback
+        const subItemStartDate = parseFlexibleDate(subItem.startDate);
+        const itemEndDate = parseFlexibleDate(item.endDate);
+        startDate = subItemStartDate || (itemEndDate 
+          ? (isBefore(itemEndDate, endDate) ? itemEndDate : subDays(endDate, 7))
+          : subDays(endDate, 7));
+      }
+    } else {
+      // É o primeiro subitem, não pode estar vinculado (mas se estiver, usa fallback)
+      const subItemStartDate = parseFlexibleDate(subItem.startDate);
+      const itemEndDate = parseFlexibleDate(item.endDate);
+      startDate = subItemStartDate || (itemEndDate 
+        ? (isBefore(itemEndDate, endDate) ? itemEndDate : subDays(endDate, 7))
+        : subDays(endDate, 7));
+    }
+  } else {
+    // Não está vinculado, usa startDate explícito ou fallback
+    const subItemStartDate = parseFlexibleDate(subItem.startDate);
+    const itemEndDate = parseFlexibleDate(item.endDate);
+    startDate = subItemStartDate || (itemEndDate 
+      ? (isBefore(itemEndDate, endDate) ? itemEndDate : subDays(endDate, 7))
+      : subDays(endDate, 7));
+  }
   
   const isOverdue = isBefore(endDate, startOfDay(new Date())) && 
                     subItem.status !== 'Concluído';
@@ -584,7 +638,7 @@ export function TableGanttView({
 }: TableGanttViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [archiveFilter, setArchiveFilter] = useState<string>("active");
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [expandedInitiatives, setExpandedInitiatives] = useState<Set<string>>(new Set());
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [areAllExpanded, setAreAllExpanded] = useState(false);
@@ -609,11 +663,11 @@ export function TableGanttView({
                               (p.responsible && p.responsible.toLowerCase().includes(searchTerm.toLowerCase()))
                             ));
       const matchesStatus = statusFilter === "all" || initiative.status === statusFilter;
-      const matchesArchive = archiveFilter === 'all' || (archiveFilter === 'active' && !initiative.archived) || (archiveFilter === 'archived' && initiative.archived);
-      return matchesSearch && matchesStatus && matchesArchive;
+      const matchesPriority = priorityFilter === "all" || initiative.priority === priorityFilter;
+      return matchesSearch && matchesStatus && matchesPriority;
     });
     return sortInitiatives(filtered);
-  }, [searchTerm, statusFilter, archiveFilter, initiatives]);
+  }, [searchTerm, statusFilter, priorityFilter, initiatives]);
 
   // Calcula dados do Gantt
   const { tasks, dateHeaders, monthHeaders, cellWidth } = useMemo(() => {
@@ -743,14 +797,15 @@ export function TableGanttView({
             </Select>
           </div>
           <div className="w-[150px]">
-            <Select value={archiveFilter} onValueChange={setArchiveFilter}>
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
               <SelectTrigger className="h-8">
-                <SelectValue placeholder="Filtrar" />
+                <SelectValue placeholder="Prioridade" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="active">Ativas</SelectItem>
-                <SelectItem value="archived">Arquivadas</SelectItem>
                 <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="Alta">Alta</SelectItem>
+                <SelectItem value="Média">Média</SelectItem>
+                <SelectItem value="Baixa">Baixa</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -1027,15 +1082,21 @@ export function TableGanttView({
                           const taskEnd = startOfDay(ganttTask.endDate);
                           
                           // Encontra o índice da primeira célula que corresponde ou é posterior à data de início
+                          // Usa comparação de timestamp para garantir precisão
                           barStartIndex = dateHeaders.findIndex(day => {
                             const dayStart = startOfDay(day);
-                            return dayStart.getTime() >= taskStart.getTime();
+                            const dayTime = dayStart.getTime();
+                            const taskTime = taskStart.getTime();
+                            return dayTime >= taskTime;
                           });
                           
                           // Encontra o índice da primeira célula que é posterior à data de fim
+                          // Inclui a última célula do intervalo (endDate inclusivo)
                           barEndIndex = dateHeaders.findIndex(day => {
                             const dayStart = startOfDay(day);
-                            return dayStart.getTime() > taskEnd.getTime();
+                            const dayTime = dayStart.getTime();
+                            const taskTime = taskEnd.getTime();
+                            return dayTime > taskTime;
                           });
                           
                           // Se não encontrou uma célula posterior, usa a última célula
@@ -1126,7 +1187,7 @@ export function TableGanttView({
                     {isInitiativeExpanded && hasItems && initiative.items.map(item => {
                       const isItemExpanded = expandedItems.has(item.id);
                       const hasSubItems = item.subItems && item.subItems.length > 0;
-                      const itemGanttTask = transformItemToGanttTask(item, initiative);
+                      const itemGanttTask = transformItemToGanttTask(item, initiative, initiative.items);
                       const itemIsOverdue = itemGanttTask ? itemGanttTask.isOverdue : false;
                       const ItemStatusIcon = STATUS_ICONS[item.status];
                       
@@ -1330,12 +1391,16 @@ export function TableGanttView({
                               
                               let barStartIndex = dateHeaders.findIndex(day => {
                                 const dayStart = startOfDay(day);
-                                return dayStart.getTime() >= taskStart.getTime();
+                                const dayTime = dayStart.getTime();
+                                const taskTime = taskStart.getTime();
+                                return dayTime >= taskTime;
                               });
                               
                               let barEndIndex = dateHeaders.findIndex(day => {
                                 const dayStart = startOfDay(day);
-                                return dayStart.getTime() > taskEnd.getTime();
+                                const dayTime = dayStart.getTime();
+                                const taskTime = taskEnd.getTime();
+                                return dayTime > taskTime;
                               });
                               
                               if (barEndIndex < 0) {
@@ -1416,7 +1481,7 @@ export function TableGanttView({
                           
                           {/* Subitens expandidos */}
                           {isItemExpanded && hasSubItems && item.subItems && item.subItems.map(subItem => {
-                            const subItemGanttTask = transformSubItemToGanttTask(subItem, item, initiative);
+                            const subItemGanttTask = transformSubItemToGanttTask(subItem, item, initiative, item.subItems);
                             const subItemIsOverdue = subItemGanttTask ? subItemGanttTask.isOverdue : false;
                             const SubItemStatusIcon = STATUS_ICONS[subItem.status];
                             
@@ -1569,12 +1634,16 @@ export function TableGanttView({
                                   
                                   let barStartIndex = dateHeaders.findIndex(day => {
                                     const dayStart = startOfDay(day);
-                                    return dayStart.getTime() >= taskStart.getTime();
+                                    const dayTime = dayStart.getTime();
+                                    const taskTime = taskStart.getTime();
+                                    return dayTime >= taskTime;
                                   });
                                   
                                   let barEndIndex = dateHeaders.findIndex(day => {
                                     const dayStart = startOfDay(day);
-                                    return dayStart.getTime() > taskEnd.getTime();
+                                    const dayTime = dayStart.getTime();
+                                    const taskTime = taskEnd.getTime();
+                                    return dayTime > taskTime;
                                   });
                                   
                                   if (barEndIndex < 0) {
