@@ -15,11 +15,13 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useInitiatives } from "@/contexts/initiatives-context";
+import { CreateInitiativeModal } from "@/components/initiatives/create-initiative-modal";
 
 export default function InitiativesPage() {
   const { initiatives } = useInitiatives();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [expandedTopics, setExpandedTopics] = useState<Set<string>>(() => 
     new Set(initiatives.filter(i => !i.topicNumber.includes('.')).map(i => i.topicNumber))
   );
@@ -65,12 +67,15 @@ export default function InitiativesPage() {
 
   return (
     <div className="space-y-8">
+      <CreateInitiativeModal 
+        isOpen={isCreateModalOpen} 
+        onOpenChange={setIsCreateModalOpen}
+      />
+      
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <h1 className="font-headline text-3xl font-semibold tracking-tight">Iniciativas Estratégicas</h1>
-        <Button asChild>
-          <Link href="/initiatives/new"> 
-            <PlusCircle className="mr-2 h-4 w-4" /> Criar Nova Iniciativa
-          </Link>
+        <Button onClick={() => setIsCreateModalOpen(true)}>
+          <PlusCircle className="mr-2 h-4 w-4" /> Criar Nova Iniciativa
         </Button>
       </div>
 
