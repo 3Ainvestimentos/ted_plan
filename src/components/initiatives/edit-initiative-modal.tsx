@@ -129,13 +129,21 @@ export function EditInitiativeModal({ isOpen, onOpenChange, initiative }: EditIn
 
     const initialData = {
         ...initiative,
-        deadline: getDeadlineDate(initiative.deadline),
+        startDate: getDeadlineDate(initiative.startDate),
+        endDate: getDeadlineDate(initiative.endDate || initiative.deadline), // Usar endDate ou deadline como fallback
+        deadline: getDeadlineDate(initiative.deadline || initiative.endDate), // Campo legado - manter para compatibilidade
         items: initiative.items?.map(item => ({
             ...item,
-            deadline: getDeadlineDate(item.deadline),
+            startDate: getDeadlineDate(item.startDate),
+            endDate: getDeadlineDate(item.endDate || item.deadline), // Usar endDate ou deadline como fallback
+            linkedToPrevious: item.linkedToPrevious || false,
+            deadline: getDeadlineDate(item.deadline || item.endDate), // Campo legado - manter para compatibilidade
             subItems: item.subItems?.map(subItem => ({
                 ...subItem,
-                deadline: getDeadlineDate(subItem.deadline),
+                startDate: getDeadlineDate(subItem.startDate),
+                endDate: getDeadlineDate(subItem.endDate || subItem.deadline), // Usar endDate ou deadline como fallback
+                linkedToPrevious: subItem.linkedToPrevious || false,
+                deadline: getDeadlineDate(subItem.deadline || subItem.endDate), // Campo legado - manter para compatibilidade
             })) || [],
         })) || [],
     };

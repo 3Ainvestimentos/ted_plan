@@ -12,7 +12,10 @@ export interface SubItem {
   id: string;
   title: string;
   completed: boolean;
-  deadline?: string | null; // ISO date string 'YYYY-MM-DD'
+  startDate: string; // ISO date string 'YYYY-MM-DD' - OBRIGATÓRIO
+  endDate: string; // ISO date string 'YYYY-MM-DD' - OBRIGATÓRIO (usado como deadline)
+  linkedToPrevious?: boolean; // Default false - indica se está vinculado ao subitem anterior
+  deadline?: string | null; // Campo legado - será preenchido com endDate durante migração
   status: InitiativeStatus;
   responsible: string; // Responsável obrigatório
   priority: InitiativePriority;
@@ -22,7 +25,10 @@ export interface SubItem {
 export interface InitiativeItem {
   id: string;
   title: string;
-  deadline?: string | null; // ISO date string 'YYYY-MM-DD'
+  startDate: string; // ISO date string 'YYYY-MM-DD' - OBRIGATÓRIO
+  endDate: string; // ISO date string 'YYYY-MM-DD' - OBRIGATÓRIO (usado como deadline)
+  linkedToPrevious?: boolean; // Default false - indica se está vinculado ao item anterior
+  deadline?: string | null; // Campo legado - será preenchido com endDate durante migração
   status: InitiativeStatus;
   areaId: string; // Área obrigatória
   priority: InitiativePriority;
@@ -37,13 +43,14 @@ export interface Initiative {
   parentId?: string | null; // ID of the parent initiative
   title: string;
   status: InitiativeStatus;
-  owner?: string; // Assignee (opcional - removido, mantido para compatibilidade)
+  owner: string; // Responsável obrigatório
   description: string;
   lastUpdate: string; // Date string
   progress: number; // Percentage 0-100
   priority: InitiativePriority;
-  deadline?: string | null; // ISO date string 'YYYY-MM-DD'
-  startDate?: string | null; // ISO date string 'YYYY-MM-DD' - Para visualização Gantt
+  startDate: string; // ISO date string 'YYYY-MM-DD' - OBRIGATÓRIO
+  endDate: string; // ISO date string 'YYYY-MM-DD' - OBRIGATÓRIO (usado como deadline)
+  deadline?: string | null; // Campo legado - será preenchido com endDate durante migração
   keyMetrics: { name: string; value: string; trend: 'up' | 'down' | 'neutral' }[];
   icon?: React.ElementType; // Optional: for specific task icons
   areaId: string; // Área obrigatória (seletor com áreas de negócio)
@@ -57,7 +64,7 @@ export interface Initiative {
 
 export interface MnaDeal extends Initiative {
   // Campos adicionais para visualização Gantt
-  startDate?: string | null; // Data de início 'YYYY-MM-DD'
+  // startDate já é obrigatório em Initiative, não precisa redefinir
   responsible?: string; // Responsável pelo deal
 }
 

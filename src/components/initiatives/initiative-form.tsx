@@ -56,23 +56,65 @@ const subItemSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(3, "O título do subitem deve ter pelo menos 3 caracteres."),
   completed: z.boolean().optional().default(false),
-  deadline: dateSchema,
+  startDate: dateSchema.optional(), // Obrigatório se linkedToPrevious === false, calculado se linkedToPrevious === true
+  endDate: dateSchema, // Sempre obrigatório (substitui deadline)
+  linkedToPrevious: z.boolean().optional().default(false),
+  deadline: dateSchema.optional(), // Campo legado - será substituído por endDate
   status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso']).optional().default('Pendente'),
   responsible: z.string().min(1, "O responsável é obrigatório."),
   priority: z.enum(['Baixa', 'Média', 'Alta']).optional().default('Baixa'),
   description: z.string().optional(),
+}).refine((data) => {
+  // Se não está vinculado, startDate é obrigatório
+  if (!data.linkedToPrevious && !data.startDate) {
+    return false;
+  }
+  return true;
+}, {
+  message: "A data de início é obrigatória quando o subitem não está vinculado ao anterior.",
+  path: ["startDate"],
+}).refine((data) => {
+  // Validar que endDate >= startDate (se ambos existirem)
+  if (data.startDate && data.endDate) {
+    return data.endDate >= data.startDate;
+  }
+  return true;
+}, {
+  message: "A data de fim deve ser maior ou igual à data de início.",
+  path: ["endDate"],
 });
 
 const itemSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(3, "O título do item deve ter pelo menos 3 caracteres."),
-  deadline: dateSchema,
+  startDate: dateSchema.optional(), // Obrigatório se linkedToPrevious === false, calculado se linkedToPrevious === true
+  endDate: dateSchema, // Sempre obrigatório (substitui deadline)
+  linkedToPrevious: z.boolean().optional().default(false),
+  deadline: dateSchema.optional(), // Campo legado - será substituído por endDate
   status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso']),
   areaId: z.string().min(1, "A área é obrigatória."), // Será sempre igual à área do projeto
   priority: z.enum(['Baixa', 'Média', 'Alta']),
   description: z.string().optional(),
   responsible: z.string().min(1, "O responsável é obrigatório."),
   subItems: z.array(subItemSchema).optional(),
+}).refine((data) => {
+  // Se não está vinculado, startDate é obrigatório
+  if (!data.linkedToPrevious && !data.startDate) {
+    return false;
+  }
+  return true;
+}, {
+  message: "A data de início é obrigatória quando o item não está vinculado ao anterior.",
+  path: ["startDate"],
+}).refine((data) => {
+  // Validar que endDate >= startDate (se ambos existirem)
+  if (data.startDate && data.endDate) {
+    return data.endDate >= data.startDate;
+  }
+  return true;
+}, {
+  message: "A data de fim deve ser maior ou igual à data de início.",
+  path: ["endDate"],
 });
 
 const initiativeSchema = z.object({
@@ -80,10 +122,21 @@ const initiativeSchema = z.object({
   owner: z.string().min(1, "O responsável é obrigatório."),
   description: z.string().optional(),
   status: z.enum(['Pendente', 'Em execução', 'Concluído', 'Suspenso']),
-  deadline: dateSchema,
+  startDate: dateSchema, // Obrigatório
+  endDate: dateSchema, // Obrigatório (substitui deadline)
+  deadline: dateSchema.optional(), // Campo legado - será substituído por endDate
   priority: z.enum(['Baixa', 'Média', 'Alta']),
   areaId: z.string().min(1, "A área é obrigatória."),
   items: z.array(itemSchema).min(1, "É necessário pelo menos um item."),
+}).refine((data) => {
+  // Validar que endDate >= startDate
+  if (data.startDate && data.endDate) {
+    return data.endDate >= data.startDate;
+  }
+  return true;
+}, {
+  message: "A data de fim deve ser maior ou igual à data de início.",
+  path: ["endDate"],
 });
 
 export type InitiativeFormData = z.infer<typeof initiativeSchema>;
@@ -124,6 +177,8 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
       priority: 'Baixa',
       areaId: finalPreselectedAreaId || '',
       owner: '',
+      startDate: undefined as any,
+      endDate: undefined as any,
       items: [],
     },
     mode: 'onChange' // Para validação em tempo real
@@ -162,6 +217,48 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
     }
   }, [watchItems?.length, watchAreaId, setValue, getValues]);
 
+  // Calcular startDate automaticamente quando item está vinculado ao anterior
+  useEffect(() => {
+    if (watchItems && watchItems.length > 0) {
+      watchItems.forEach((item, index) => {
+        // Se não é o primeiro item e está vinculado
+        if (index > 0 && item.linkedToPrevious) {
+          const previousItem = watchItems[index - 1];
+          // Se o item anterior tem endDate, usar como startDate do atual
+          if (previousItem?.endDate) {
+            const currentStartDate = getValues(`items.${index}.startDate`);
+            const previousEndDate = previousItem.endDate;
+            
+            // Só atualizar se for diferente para evitar loops infinitos
+            if (currentStartDate !== previousEndDate) {
+              setValue(`items.${index}.startDate`, previousEndDate, { shouldValidate: true });
+            }
+          }
+        }
+
+        // Calcular startDate para subitens vinculados
+        if (item.subItems && item.subItems.length > 0) {
+          item.subItems.forEach((subItem: any, subItemIndex: number) => {
+            // Se não é o primeiro subitem e está vinculado
+            if (subItemIndex > 0 && subItem.linkedToPrevious) {
+              const previousSubItem = item.subItems?.[subItemIndex - 1];
+              // Se o subitem anterior tem endDate, usar como startDate do atual
+              if (previousSubItem?.endDate) {
+                const currentStartDate = getValues(`items.${index}.subItems.${subItemIndex}.startDate`);
+                const previousEndDate = previousSubItem.endDate;
+                
+                // Só atualizar se for diferente para evitar loops infinitos
+                if (currentStartDate !== previousEndDate) {
+                  setValue(`items.${index}.subItems.${subItemIndex}.startDate`, previousEndDate, { shouldValidate: true });
+                }
+              }
+            }
+          });
+        }
+      });
+    }
+  }, [watchItems, setValue, getValues]);
+
   // Garantir que preselectedAreaId seja setado quando o modal abrir ou quando a área pré-selecionada mudar
   // Útil quando o modal é reaberto com uma área diferente (caso o componente não seja desmontado)
   useEffect(() => {
@@ -183,7 +280,10 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
     const newSubItem = {
       title: "",
       completed: false,
-      deadline: undefined as any, // Obrigatório, usuário deve preencher antes de salvar
+      startDate: undefined as any, // Obrigatório se não vinculado, calculado se vinculado
+      endDate: undefined as any, // Obrigatório, usuário deve preencher antes de salvar
+      linkedToPrevious: false,
+      deadline: undefined as any, // Campo legado
       status: 'Pendente' as const,
       responsible: "",
       priority: 'Baixa' as const,
@@ -286,17 +386,17 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-              <Label>Prazo (Conclusão Alvo) <span className="text-destructive">*</span></Label>
+              <Label>Data de Início <span className="text-destructive">*</span></Label>
               <Controller
-                  name="deadline"
+                  name="startDate"
                   control={control}
                   render={({ field }) => (
                   <Popover>
                       <PopoverTrigger asChild>
                       <Button
                           variant={"outline"}
-                          className={cn("w-full justify-start text-left font-normal", errors.deadline && "border-destructive")}
-                          disabled={!canEditDeadline}
+                          className={cn("w-full justify-start text-left font-normal", errors.startDate && "border-destructive")}
+                          disabled={!canEditDeadline || isLimitedMode}
                       >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione uma data</span>}
@@ -308,7 +408,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                               selected={field.value || undefined}
                               onSelect={field.onChange}
                               initialFocus
-                              disabled={!canEditDeadline}
+                              disabled={!canEditDeadline || isLimitedMode}
                           />
                       </PopoverContent>
                   </Popover>
@@ -316,10 +416,46 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
               />
               {!canEditDeadline && (
                 <p className="text-xs text-muted-foreground">
-                  Você não tem permissão para editar o prazo. Apenas PMO pode alterar prazos.
+                  Você não tem permissão para editar as datas. Apenas PMO pode alterar datas.
                 </p>
               )}
-              {errors.deadline && <p className="text-sm text-destructive">{errors.deadline.message}</p>}
+              {errors.startDate && <p className="text-sm text-destructive">{errors.startDate.message}</p>}
+          </div>
+          <div className="space-y-2">
+              <Label>Data de Fim <span className="text-destructive">*</span></Label>
+              <Controller
+                  name="endDate"
+                  control={control}
+                  render={({ field }) => (
+                  <Popover>
+                      <PopoverTrigger asChild>
+                      <Button
+                          variant={"outline"}
+                          className={cn("w-full justify-start text-left font-normal", errors.endDate && "border-destructive")}
+                          disabled={!canEditDeadline || isLimitedMode}
+                      >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione uma data</span>}
+                      </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                          <Calendar
+                              mode="single"
+                              selected={field.value || undefined}
+                              onSelect={field.onChange}
+                              initialFocus
+                              disabled={!canEditDeadline || isLimitedMode}
+                          />
+                      </PopoverContent>
+                  </Popover>
+                  )}
+              />
+              {!canEditDeadline && (
+                <p className="text-xs text-muted-foreground">
+                  Você não tem permissão para editar as datas. Apenas PMO pode alterar datas.
+                </p>
+              )}
+              {errors.endDate && <p className="text-sm text-destructive">{errors.endDate.message}</p>}
           </div>
           <div className="space-y-2">
               <Label htmlFor="areaId">Área</Label>
@@ -449,7 +585,10 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                 const currentAreaId = getValues('areaId') || '';
                 appendItem({ 
                   title: "", 
-                  deadline: undefined as any, // Obrigatório, usuário deve preencher antes de salvar
+                  startDate: undefined as any, // Obrigatório se não vinculado, calculado se vinculado
+                  endDate: undefined as any, // Obrigatório, usuário deve preencher antes de salvar
+                  linkedToPrevious: false,
+                  deadline: undefined as any, // Campo legado
                   status: 'Pendente',
                   areaId: currentAreaId, // Usar a área do projeto
                   priority: 'Baixa',
@@ -481,6 +620,44 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                   </Button>
                 </div>
                 
+                {/* Checkbox de Vinculação (apenas para itens após o primeiro) */}
+                {index > 0 && (
+                  <div className="flex items-center space-x-2 pb-2">
+                    <Controller
+                      name={`items.${index}.linkedToPrevious`}
+                      control={control}
+                      render={({ field }) => {
+                        const previousItem = watchItems?.[index - 1];
+                        const previousHasEndDate = previousItem?.endDate ? true : false;
+                        const isDisabled = isLimitedMode || !canEditDeadline || !previousHasEndDate;
+                        
+                        return (
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`linked-${index}`}
+                              checked={field.value || false}
+                              onCheckedChange={(checked) => {
+                                if (previousHasEndDate) {
+                                  field.onChange(checked);
+                                }
+                              }}
+                              disabled={isDisabled}
+                            />
+                            <Label htmlFor={`linked-${index}`} className="text-sm font-normal cursor-pointer">
+                              Vincular ao item anterior
+                            </Label>
+                            {!previousHasEndDate && (
+                              <p className="text-xs text-muted-foreground">
+                                O item anterior precisa ter data de fim definida para vincular.
+                              </p>
+                            )}
+                          </div>
+                        );
+                      }}
+                    />
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>Título da Item</Label>
@@ -494,19 +671,69 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       <p className="text-sm text-destructive">{errors.items[index]?.title?.message}</p>
                     )}
                   </div>
-                  
+
                   <div className="space-y-2">
-                    <Label>Prazo <span className="text-destructive">*</span></Label>
+                    <Label>Data de Início {!watchItems?.[index]?.linkedToPrevious && <span className="text-destructive">*</span>}</Label>
                     <Controller
-                      name={`items.${index}.deadline`}
+                      name={`items.${index}.startDate`}
+                      control={control}
+                      render={({ field }) => {
+                        const isLinked = watchItems?.[index]?.linkedToPrevious;
+                        const previousItem = index > 0 ? watchItems?.[index - 1] : null;
+                        // Se vinculado, usar endDate do anterior
+                        const displayValue = isLinked && previousItem?.endDate ? previousItem.endDate : field.value;
+                        
+                        return (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                className={cn("w-full justify-start text-left font-normal", errors.items?.[index]?.startDate && "border-destructive")} 
+                                disabled={!canEditDeadline || isLimitedMode || isLinked}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {displayValue ? format(displayValue, "dd/MM/yyyy") : <span>Selecione</span>}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar
+                                mode="single"
+                                selected={displayValue || undefined}
+                                onSelect={(date) => {
+                                  if (!isLinked) {
+                                    field.onChange(date);
+                                  }
+                                }}
+                                initialFocus
+                                disabled={!canEditDeadline || isLimitedMode || isLinked}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        );
+                      }}
+                    />
+                    {watchItems?.[index]?.linkedToPrevious && (
+                      <p className="text-xs text-muted-foreground">
+                        Data de início definida automaticamente pela data de fim do item anterior.
+                      </p>
+                    )}
+                    {errors.items?.[index]?.startDate && (
+                      <p className="text-sm text-destructive">{errors.items[index]?.startDate?.message}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Data de Fim <span className="text-destructive">*</span></Label>
+                    <Controller
+                      name={`items.${index}.endDate`}
                       control={control}
                       render={({ field }) => (
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button 
                               variant="outline" 
-                              className={cn("w-full justify-start text-left font-normal", errors.items?.[index]?.deadline && "border-destructive")} 
-                              disabled={!canEditDeadline}
+                              className={cn("w-full justify-start text-left font-normal", errors.items?.[index]?.endDate && "border-destructive")} 
+                              disabled={!canEditDeadline || isLimitedMode}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
                               {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
@@ -518,7 +745,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                               selected={field.value || undefined}
                               onSelect={field.onChange}
                               initialFocus
-                              disabled={!canEditDeadline}
+                              disabled={!canEditDeadline || isLimitedMode}
                             />
                           </PopoverContent>
                         </Popover>
@@ -526,11 +753,11 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                     />
                     {!canEditDeadline && (
                       <p className="text-xs text-muted-foreground">
-                        Você não tem permissão para editar o prazo. Apenas PMO pode alterar prazos.
+                        Você não tem permissão para editar as datas. Apenas PMO pode alterar datas.
                       </p>
                     )}
-                    {errors.items?.[index]?.deadline && (
-                      <p className="text-sm text-destructive">{errors.items[index]?.deadline?.message}</p>
+                    {errors.items?.[index]?.endDate && (
+                      <p className="text-sm text-destructive">{errors.items[index]?.endDate?.message}</p>
                     )}
                   </div>
                   
@@ -541,9 +768,9 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       control={control}
                       render={({ field }) => {
                         // Verificar se a item está em atraso
-                        const itemDeadline = watchItems?.[index]?.deadline;
+                        const itemEndDate = watchItems?.[index]?.endDate;
                         const itemStatus = field.value;
-                        const itemIsOverdue = itemDeadline ? isOverdue(itemDeadline, itemStatus) : false;
+                        const itemIsOverdue = itemEndDate ? isOverdue(itemEndDate, itemStatus) : false;
                         
                         // Verificar se todos os subitens estão concluídos
                         const itemSubItems = watchItems?.[index]?.subItems || [];
@@ -576,9 +803,9 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       }}
                     />
                     {(() => {
-                      const itemDeadline = watchItems?.[index]?.deadline;
+                      const itemEndDate = watchItems?.[index]?.endDate;
                       const itemStatus = watchItems?.[index]?.status;
-                      const itemIsOverdue = itemDeadline ? isOverdue(itemDeadline, itemStatus) : false;
+                      const itemIsOverdue = itemEndDate ? isOverdue(itemEndDate, itemStatus) : false;
                       const itemSubItems = watchItems?.[index]?.subItems || [];
                       const allSubItemsCompleted = itemSubItems.length > 0 
                         ? itemSubItems.every((si: any) => si.status === 'Concluído')
@@ -719,6 +946,44 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                             </Button>
                           </div>
                           
+                          {/* Checkbox de Vinculação (apenas para subitens após o primeiro) */}
+                          {subItemIndex > 0 && (
+                            <div className="flex items-center space-x-2 pb-1">
+                              <Controller
+                                name={`items.${index}.subItems.${subItemIndex}.linkedToPrevious`}
+                                control={control}
+                                render={({ field }) => {
+                                  const previousSubItem = watchItems?.[index]?.subItems?.[subItemIndex - 1];
+                                  const previousHasEndDate = previousSubItem?.endDate ? true : false;
+                                  const isDisabled = isLimitedMode || !canEditDeadline || !previousHasEndDate;
+                                  
+                                  return (
+                                    <div className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id={`linked-subitem-${index}-${subItemIndex}`}
+                                        checked={field.value || false}
+                                        onCheckedChange={(checked) => {
+                                          if (previousHasEndDate) {
+                                            field.onChange(checked);
+                                          }
+                                        }}
+                                        disabled={isDisabled}
+                                      />
+                                      <Label htmlFor={`linked-subitem-${index}-${subItemIndex}`} className="text-xs font-normal cursor-pointer">
+                                        Vincular ao subitem anterior
+                                      </Label>
+                                      {!previousHasEndDate && (
+                                        <p className="text-xs text-muted-foreground">
+                                          O subitem anterior precisa ter data de fim definida para vincular.
+                                        </p>
+                                      )}
+                                    </div>
+                                  );
+                                }}
+                              />
+                            </div>
+                          )}
+
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             <div className="space-y-1">
                               <Label className="text-xs">Título</Label>
@@ -739,6 +1004,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                 {...register(`items.${index}.subItems.${subItemIndex}.responsible`)}
                                 placeholder="Responsável"
                                 className="h-8 text-sm"
+                                disabled={isLimitedMode}
                               />
                               {errors.items?.[index]?.subItems?.[subItemIndex]?.responsible && (
                                 <p className="text-xs text-destructive">{errors.items[index]?.subItems?.[subItemIndex]?.responsible?.message}</p>
@@ -746,17 +1012,67 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                             </div>
                             
                             <div className="space-y-1">
-                              <Label className="text-xs">Prazo <span className="text-destructive">*</span></Label>
+                              <Label className="text-xs">Data de Início {!watchItems?.[index]?.subItems?.[subItemIndex]?.linkedToPrevious && <span className="text-destructive">*</span>}</Label>
                               <Controller
-                                name={`items.${index}.subItems.${subItemIndex}.deadline`}
+                                name={`items.${index}.subItems.${subItemIndex}.startDate`}
+                                control={control}
+                                render={({ field }) => {
+                                  const isLinked = watchItems?.[index]?.subItems?.[subItemIndex]?.linkedToPrevious;
+                                  const previousSubItem = subItemIndex > 0 ? watchItems?.[index]?.subItems?.[subItemIndex - 1] : null;
+                                  // Se vinculado, usar endDate do anterior
+                                  const displayValue = isLinked && previousSubItem?.endDate ? previousSubItem.endDate : field.value;
+                                  
+                                  return (
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button 
+                                          variant="outline" 
+                                          className={cn("w-full justify-start text-left font-normal h-8 text-sm", errors.items?.[index]?.subItems?.[subItemIndex]?.startDate && "border-destructive")} 
+                                          disabled={!canEditDeadline || isLimitedMode || isLinked}
+                                        >
+                                          <CalendarIcon className="mr-2 h-3 w-3" />
+                                          {displayValue ? format(displayValue, "dd/MM/yyyy") : <span>Selecione</span>}
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-0">
+                                        <Calendar
+                                          mode="single"
+                                          selected={displayValue || undefined}
+                                          onSelect={(date) => {
+                                            if (!isLinked) {
+                                              field.onChange(date);
+                                            }
+                                          }}
+                                          initialFocus
+                                          disabled={!canEditDeadline || isLimitedMode || isLinked}
+                                        />
+                                      </PopoverContent>
+                                    </Popover>
+                                  );
+                                }}
+                              />
+                              {watchItems?.[index]?.subItems?.[subItemIndex]?.linkedToPrevious && (
+                                <p className="text-xs text-muted-foreground">
+                                  Data de início definida automaticamente pela data de fim do subitem anterior.
+                                </p>
+                              )}
+                              {errors.items?.[index]?.subItems?.[subItemIndex]?.startDate && (
+                                <p className="text-xs text-destructive">{errors.items[index]?.subItems?.[subItemIndex]?.startDate?.message}</p>
+                              )}
+                            </div>
+
+                            <div className="space-y-1">
+                              <Label className="text-xs">Data de Fim <span className="text-destructive">*</span></Label>
+                              <Controller
+                                name={`items.${index}.subItems.${subItemIndex}.endDate`}
                                 control={control}
                                 render={({ field }) => (
                                   <Popover>
                                     <PopoverTrigger asChild>
                                       <Button 
                                         variant="outline" 
-                                        className={cn("w-full justify-start text-left font-normal h-8 text-sm", errors.items?.[index]?.subItems?.[subItemIndex]?.deadline && "border-destructive")} 
-                                        disabled={!canEditDeadline}
+                                        className={cn("w-full justify-start text-left font-normal h-8 text-sm", errors.items?.[index]?.subItems?.[subItemIndex]?.endDate && "border-destructive")} 
+                                        disabled={!canEditDeadline || isLimitedMode}
                                       >
                                         <CalendarIcon className="mr-2 h-3 w-3" />
                                         {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
@@ -768,7 +1084,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                         selected={field.value || undefined}
                                         onSelect={field.onChange}
                                         initialFocus
-                                        disabled={!canEditDeadline}
+                                        disabled={!canEditDeadline || isLimitedMode}
                                       />
                                     </PopoverContent>
                                   </Popover>
@@ -776,11 +1092,11 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                               />
                               {!canEditDeadline && (
                                 <p className="text-xs text-muted-foreground">
-                                  Você não tem permissão para editar o prazo. Apenas PMO pode alterar prazos.
+                                  Você não tem permissão para editar as datas. Apenas PMO pode alterar datas.
                                 </p>
                               )}
-                              {errors.items?.[index]?.subItems?.[subItemIndex]?.deadline && (
-                                <p className="text-xs text-destructive">{errors.items[index]?.subItems?.[subItemIndex]?.deadline?.message}</p>
+                              {errors.items?.[index]?.subItems?.[subItemIndex]?.endDate && (
+                                <p className="text-xs text-destructive">{errors.items[index]?.subItems?.[subItemIndex]?.endDate?.message}</p>
                               )}
                             </div>
                             
@@ -791,9 +1107,9 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                 control={control}
                                 render={({ field }) => {
                                   // Verificar se o subitem está em atraso
-                                  const subItemDeadline = watchItems?.[index]?.subItems?.[subItemIndex]?.deadline;
+                                  const subItemEndDate = watchItems?.[index]?.subItems?.[subItemIndex]?.endDate;
                                   const subItemStatus = field.value;
-                                  const subItemIsOverdue = subItemDeadline ? isOverdue(subItemDeadline, subItemStatus) : false;
+                                  const subItemIsOverdue = subItemEndDate ? isOverdue(subItemEndDate, subItemStatus) : false;
                                   const availableStatuses = subItemIsOverdue 
                                     ? getAvailableStatuses(true)
                                     : ['Pendente', 'Em execução', 'Concluído', 'Suspenso'] as const;
@@ -813,9 +1129,9 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                 }}
                               />
                               {(() => {
-                                const subItemDeadline = watchItems?.[index]?.subItems?.[subItemIndex]?.deadline;
+                                const subItemEndDate = watchItems?.[index]?.subItems?.[subItemIndex]?.endDate;
                                 const subItemStatus = watchItems?.[index]?.subItems?.[subItemIndex]?.status;
-                                const subItemIsOverdue = subItemDeadline ? isOverdue(subItemDeadline, subItemStatus) : false;
+                                const subItemIsOverdue = subItemEndDate ? isOverdue(subItemEndDate, subItemStatus) : false;
                                 return subItemIsOverdue ? (
                                   <p className="text-xs text-muted-foreground">
                                     Subitem em atraso: apenas Atrasado ou Concluído disponíveis
