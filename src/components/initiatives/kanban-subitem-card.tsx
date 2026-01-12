@@ -31,7 +31,7 @@ interface KanbanSubItemCardProps {
   subItem: SubItem;
   initiativeId: string; // ID da iniciativa pai (necessário para drag and drop)
   itemId: string; // ID do item pai (necessário para drag and drop)
-  onClick: () => void;
+  onClick: () => void; // Função chamada ao clicar no card (abre modal de informações)
 }
 
 function getInitials(name: string | null | undefined): string {

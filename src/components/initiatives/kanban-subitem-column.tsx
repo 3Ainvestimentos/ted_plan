@@ -34,7 +34,7 @@ interface KanbanSubItemColumnProps {
   initiativeId: string; // ID da iniciativa pai (necessário para os cards)
   itemId: string; // ID do item pai (necessário para os cards)
   onDropSubItem: (subItemId: string, initiativeId: string, itemId: string, newStatus: InitiativeStatus) => void;
-  onSubItemClick: (subItem: SubItem) => void;
+  onSubItemClick: (subItem: SubItem) => void; // Função chamada ao clicar no card (abre modal de informações)
 }
 
 export function KanbanSubItemColumn({ 
@@ -42,7 +42,7 @@ export function KanbanSubItemColumn({
   initiativeId,
   itemId,
   onDropSubItem, 
-  onSubItemClick 
+  onSubItemClick
 }: KanbanSubItemColumnProps) {
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: 'subitem',

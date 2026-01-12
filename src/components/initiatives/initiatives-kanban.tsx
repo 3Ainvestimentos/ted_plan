@@ -38,6 +38,7 @@ import { KANBAN_COLUMNS_ORDER } from '@/lib/constants';
 import { KanbanBreadcrumb } from './kanban-breadcrumb';
 import { KanbanItemColumn } from './kanban-item-column';
 import { KanbanSubItemColumn } from './kanban-subitem-column';
+import { HierarchyItemInfoModal } from './hierarchy-item-info-modal';
 
 // ============================================
 // INTERFACES E TIPOS
@@ -45,7 +46,7 @@ import { KanbanSubItemColumn } from './kanban-subitem-column';
 
 interface InitiativesKanbanProps {
     initiatives: Initiative[];
-    onInitiativeClick: (initiative: Initiative) => void;
+    onInitiativeClick?: (initiative: Initiative) => void; // Opcional - não usado mais (modal gerenciado internamente)
 }
 
 interface Column {
@@ -81,6 +82,14 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
     const [currentLevel, setCurrentLevel] = useState<KanbanLevel>('initiatives');
     const [expandedInitiativeId, setExpandedInitiativeId] = useState<string | null>(null);
     const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+    
+    // Estados para modal de informações
+    const [infoModalOpen, setInfoModalOpen] = useState(false);
+    const [infoModalData, setInfoModalData] = useState<{
+        type: 'initiative' | 'item' | 'subitem';
+        data: Initiative | InitiativeItem | SubItem;
+        children?: Array<InitiativeItem | SubItem>;
+    } | null>(null);
 
     /**
      * Funções de navegação hierárquica
@@ -400,6 +409,39 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
         : null;
 
     /**
+     * Handlers para abrir modal de informações
+     * IMPORTANTE: Cada handler passa APENAS os dados do seu próprio nível hierárquico
+     */
+    const handleInitiativeInfoClick = (initiative: Initiative) => {
+        setInfoModalData({
+            type: 'initiative',
+            data: initiative, // Dados da iniciativa
+            children: initiative.items || [] // Apenas os itens desta iniciativa
+        });
+        setInfoModalOpen(true);
+    };
+
+    const handleItemInfoClick = (item: InitiativeItem) => {
+        // IMPORTANTE: Passar apenas o item e seus subitens (NÃO passar dados da iniciativa pai)
+        setInfoModalData({
+            type: 'item',
+            data: item, // Dados do item
+            children: item.subItems || [] // Apenas os subitens deste item
+        });
+        setInfoModalOpen(true);
+    };
+
+    const handleSubItemInfoClick = (subItem: SubItem) => {
+        // IMPORTANTE: Passar apenas o subitem, sem filhos (NÃO passar dados do item pai ou iniciativa)
+        setInfoModalData({
+            type: 'subitem',
+            data: subItem, // Dados do subitem
+            children: [] // Sempre vazio, pois subitem não tem filhos
+        });
+        setInfoModalOpen(true);
+    };
+
+    /**
      * Renderiza colunas para itens
      */
     const renderItemColumns = () => {
@@ -413,7 +455,7 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
                         column={column}
                         initiativeId={expandedInitiativeId}
                         onDropItem={handleDropItem}
-                        onItemClick={() => onInitiativeClick(currentInitiative!)}
+                        onItemClick={handleItemInfoClick}
                         onItemExpand={expandItem}
                     />
                 ))}
@@ -436,7 +478,7 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
                         initiativeId={expandedInitiativeId}
                         itemId={expandedItemId}
                         onDropSubItem={handleDropSubItem}
-                        onSubItemClick={() => onInitiativeClick(currentInitiative!)}
+                        onSubItemClick={handleSubItemInfoClick}
                     />
                 ))}
             </div>
@@ -470,7 +512,7 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
                             key={column.id} 
                             column={column} 
                             onDropTask={handleDropInitiative} 
-                            onInitiativeClick={onInitiativeClick}
+                            onInitiativeClick={handleInitiativeInfoClick}
                             onInitiativeExpand={expandInitiative}
                         />
                     ))}
@@ -479,6 +521,17 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
 
             {currentLevel === 'items' && renderItemColumns()}
             {currentLevel === 'subitems' && renderSubItemColumns()}
+
+            {/* Modal de Informações */}
+            {infoModalData && (
+                <HierarchyItemInfoModal
+                    isOpen={infoModalOpen}
+                    onOpenChange={setInfoModalOpen}
+                    type={infoModalData.type}
+                    data={infoModalData.data}
+                    children={infoModalData.children}
+                />
+            )}
         </div>
     );
 }

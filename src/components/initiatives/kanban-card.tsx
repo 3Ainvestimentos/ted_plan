@@ -13,7 +13,7 @@ import { isOverdue } from "@/lib/initiatives-helpers";
 
 interface KanbanTaskCardProps {
   task: Initiative;
-  onClick: () => void;
+  onClick: () => void; // Função chamada ao clicar no card (abre modal de informações)
   onExpand?: () => void; // Função chamada ao clicar no botão de expandir (se tiver itens)
 }
 

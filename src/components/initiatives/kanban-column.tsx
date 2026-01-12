@@ -17,7 +17,7 @@ interface ColumnProps {
     tasks: Initiative[];
   };
   onDropTask: (taskId: string, newStatus: InitiativeStatus) => void;
-  onInitiativeClick: (initiative: Initiative) => void;
+  onInitiativeClick: (initiative: Initiative) => void; // Função chamada ao clicar no card (abre modal de informações)
   onInitiativeExpand?: (initiativeId: string) => void; // Função chamada ao clicar no botão de expandir
 }
 
