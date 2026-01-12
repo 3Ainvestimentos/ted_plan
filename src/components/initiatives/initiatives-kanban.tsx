@@ -500,8 +500,12 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
                 currentLevel={currentLevel}
                 initiativeTitle={currentInitiative?.title}
                 itemTitle={currentItem?.title}
+                initiativeId={expandedInitiativeId || undefined}
+                itemId={expandedItemId || undefined}
                 onGoBack={goBack}
                 onGoHome={goHome}
+                onNavigateToInitiative={expandInitiative}
+                onNavigateToItem={expandItem}
             />
 
             {/* Renderização condicional por nível */}
