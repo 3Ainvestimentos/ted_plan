@@ -215,6 +215,7 @@ export interface BusinessArea {
     order: number;
     okrs: Okr[];
     kpis: Kpi[];
+    generalContext?: string; // Contextualização geral da área (formato texto com bullets)
 }
 
 // Form data types for Strategic Panel Management

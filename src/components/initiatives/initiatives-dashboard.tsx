@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { STATUS_ICONS } from '@/lib/constants';
+import { AreaContextEditor } from './area-context-editor';
 
 // ============================================
 // SEÇÃO 2: INTERFACES E TIPOS
@@ -50,6 +51,10 @@ import { STATUS_ICONS } from '@/lib/constants';
 
 interface InitiativesDashboardProps {
   initiatives: Initiative[];
+  selectedAreaId?: string | null;
+  selectedAreaName?: string | null;
+  selectedAreaGeneralContext?: string | null;
+  onUpdateArea?: (areaId: string, generalContext: string) => Promise<void>;
 }
 
 interface MetricCard {
@@ -108,7 +113,7 @@ function calculateCompletedPercentage(initiatives: Initiative[]): number {
 }
 
 /**
- * Calcula percentual de iniciativas atrasadas
+ * Calcula percentual e contagem de iniciativas atrasadas
  * 
  * LÓGICA:
  * - Iniciativa está atrasada se:
@@ -117,11 +122,11 @@ function calculateCompletedPercentage(initiatives: Initiative[]): number {
  *   3. Status não é 'Concluído'
  * 
  * @param initiatives - Array de iniciativas
- * @returns Percentual de iniciativas atrasadas
+ * @returns Objeto com percentual e contagem de iniciativas atrasadas
  */
-function calculateOverduePercentage(initiatives: Initiative[]): number {
+function calculateOverdue(initiatives: Initiative[]): { percentage: number; count: number } {
   const active = initiatives.filter(i => !i.archived);
-  if (active.length === 0) return 0;
+  if (active.length === 0) return { percentage: 0, count: 0 };
   
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -136,7 +141,10 @@ function calculateOverduePercentage(initiatives: Initiative[]): number {
     return endDate < today;
   }).length;
   
-  return Math.round((overdue / active.length) * 100);
+  return {
+    count: overdue,
+    percentage: Math.round((overdue / active.length) * 100)
+  };
 }
 
 /**
@@ -282,7 +290,13 @@ function calculatePriorityDistribution(initiatives: Initiative[]): PriorityDistr
 // SEÇÃO 4: COMPONENTE PRINCIPAL
 // ============================================
 
-export function InitiativesDashboard({ initiatives }: InitiativesDashboardProps) {
+export function InitiativesDashboard({ 
+  initiatives, 
+  selectedAreaId, 
+  selectedAreaName,
+  selectedAreaGeneralContext,
+  onUpdateArea 
+}: InitiativesDashboardProps) {
   
   /**
    * useMemo - Otimiza cálculos pesados
@@ -293,7 +307,7 @@ export function InitiativesDashboard({ initiatives }: InitiativesDashboardProps)
   const metrics = useMemo(() => {
     const total = calculateTotalInitiatives(initiatives);
     const completed = calculateCompletedPercentage(initiatives);
-    const overdue = calculateOverduePercentage(initiatives);
+    const overdue = calculateOverdue(initiatives);
     const onTime = calculateOnTimePercentage(initiatives);
     const avgProgress = calculateAverageProgress(initiatives);
     const statusDist = calculateStatusDistribution(initiatives);
@@ -316,9 +330,12 @@ export function InitiativesDashboard({ initiatives }: InitiativesDashboardProps)
   // RENDERIZAÇÃO: Cards de Métricas Principais
   // ============================================
   
+  // Calcular contagem de iniciativas concluídas para o card consolidado
+  const completedCount = metrics.statusDist.find(s => s.status === 'Concluído')?.count || 0;
+
   return (
     <div className="space-y-6">
-      {/* ========== CARDS DE MÉTRICAS PRINCIPAIS ========== */}
+      {/* ========== LINHA 1: CARDS PRINCIPAIS (4 colunas) ========== */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Card: Total de Iniciativas */}
         <Card>
@@ -334,54 +351,55 @@ export function InitiativesDashboard({ initiatives }: InitiativesDashboardProps)
           </CardContent>
         </Card>
 
-        {/* Card: Concluídas */}
+        {/* Card: Status das Iniciativas (Consolidado) */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Concluídas</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
+          <CardHeader>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Status das Iniciativas
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{metrics.completed}%</div>
-            <Progress value={metrics.completed} className="mt-2 h-2" />
-            <p className="text-xs text-muted-foreground mt-1">
-              {metrics.statusDist.find(s => s.status === 'Concluído')?.count || 0} iniciativas
-            </p>
+            <div className="space-y-3">
+              {/* Linha: Concluídas */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                    <span className="font-medium">Concluídas</span>
+                  </div>
+                  <span className="text-muted-foreground">{completedCount} ({metrics.completed}%)</span>
+                </div>
+                <Progress value={metrics.completed} className="h-1.5" />
+              </div>
+
+              {/* Linha: Atrasadas */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
+                    <span className="font-medium">Atrasadas</span>
+                  </div>
+                  <span className="text-muted-foreground">{metrics.overdue.count} ({metrics.overdue.percentage}%)</span>
+                </div>
+                <Progress value={metrics.overdue.percentage} className="h-1.5" />
+              </div>
+
+              {/* Linha: Em Dia */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-3.5 w-3.5 text-blue-500" />
+                    <span className="font-medium">Em Dia</span>
+                  </div>
+                  <span className="text-muted-foreground">{metrics.onTime}%</span>
+                </div>
+                <Progress value={metrics.onTime} className="h-1.5" />
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Card: Atrasadas */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Atrasadas</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{metrics.overdue}%</div>
-            <Progress value={metrics.overdue} className="mt-2 h-2" />
-            <p className="text-xs text-muted-foreground mt-1">
-              Requerem atenção
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Card: Em Dia */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Em Dia</CardTitle>
-            <Clock className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{metrics.onTime}%</div>
-            <Progress value={metrics.onTime} className="mt-2 h-2" />
-            <p className="text-xs text-muted-foreground mt-1">
-              No prazo
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ========== CARDS DE MÉTRICAS SECUNDÁRIAS ========== */}
-      <div className="grid gap-4 md:grid-cols-2">
         {/* Card: Progresso Médio */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -412,7 +430,7 @@ export function InitiativesDashboard({ initiatives }: InitiativesDashboardProps)
         </Card>
       </div>
 
-      {/* ========== DISTRIBUIÇÕES DETALHADAS ========== */}
+      {/* ========== LINHA 2: DISTRIBUIÇÕES DETALHADAS (3 colunas) ========== */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Card: Distribuição por Status */}
         <Card>
@@ -518,6 +536,15 @@ export function InitiativesDashboard({ initiatives }: InitiativesDashboardProps)
           </CardContent>
         </Card>
       </div>
+
+      {/* ========== CONTEXTUALIZAÇÃO GERAL DA ÁREA ========== */}
+      {selectedAreaId && onUpdateArea && (
+        <AreaContextEditor
+          initialValue={selectedAreaGeneralContext || undefined}
+          onSave={(text) => onUpdateArea(selectedAreaId, text)}
+          areaName={selectedAreaName || undefined}
+        />
+      )}
     </div>
   );
 }

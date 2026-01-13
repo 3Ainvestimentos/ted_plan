@@ -138,7 +138,7 @@ function getEffectiveAreaId(
 export default function InitiativesPage() {
   const { initiatives, isLoading, updateInitiativeStatus, updateSubItem, updateItem, archiveInitiative, unarchiveInitiative } = useInitiatives();
   const { user, getUserArea } = useAuth();
-  const { businessAreas } = useStrategicPanel();
+  const { businessAreas, updateBusinessArea } = useStrategicPanel();
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -342,6 +342,18 @@ export default function InitiativesPage() {
 
   const activeInitiatives = filteredInitiatives;
 
+  /**
+   * Handler para atualizar a contextualização geral da área
+   */
+  const handleUpdateAreaContext = async (areaId: string, generalContext: string) => {
+    try {
+      await updateBusinessArea(areaId, { generalContext });
+    } catch (error) {
+      console.error('Erro ao atualizar contextualização da área:', error);
+      throw error; // Re-throw para o componente tratar
+    }
+  };
+
   // Remover filtro de área
   const clearAreaFilter = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -457,7 +469,13 @@ export default function InitiativesPage() {
            * - Métricas secundárias (progresso médio, checklists, responsáveis)
            * - Distribuições (status, prioridade, responsáveis)
            */
-          <InitiativesDashboard initiatives={activeInitiatives} />
+          <InitiativesDashboard 
+            initiatives={activeInitiatives}
+            selectedAreaId={effectiveAreaId}
+            selectedAreaName={selectedArea?.name}
+            selectedAreaGeneralContext={selectedArea?.generalContext}
+            onUpdateArea={handleUpdateAreaContext}
+          />
         ) : viewMode === 'table-gantt' ? (
           /**
            * Tabela/Gantt - Visualização combinada
