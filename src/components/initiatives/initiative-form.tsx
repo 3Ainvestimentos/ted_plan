@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -137,7 +137,7 @@ const initiativeSchema = z.object({
   endDate: dateSchema, // Obrigatório
   priority: z.enum(['Baixa', 'Média', 'Alta']),
   areaId: z.string().min(1, "A área é obrigatória."),
-  items: z.array(itemSchema).min(1, "É necessário pelo menos um item."),
+  items: z.array(itemSchema).min(1, "É necessário adicionar pelo menos um item antes de criar a iniciativa."),
 }).refine((data) => {
   // Validar que endDate >= startDate
   if (data.startDate && data.endDate) {
@@ -204,7 +204,8 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
       endDate: undefined as any,
       items: [],
     },
-    mode: 'onChange' // Para validação em tempo real
+    mode: 'onChange', // Para validação em tempo real
+    reValidateMode: 'onSubmit' // Revalidar no submit para garantir que erros sejam exibidos
   });
 
   const { fields: itemFields, append: appendItem, remove: removeItem } = useFieldArray({
@@ -215,6 +216,89 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
   const watchItems = watch("items");
   const watchAreaId = watch("areaId");
   const hasItems = watchItems && watchItems.length > 0;
+  
+  // Estado para controlar mensagens de erro temporárias (desaparecem após 20s ou quando status muda)
+  const [tempErrorMessages, setTempErrorMessages] = useState<Set<string>>(new Set());
+  
+  // Função para adicionar mensagem de erro temporária (desaparece após 20 segundos)
+  const addTempErrorMessage = useCallback((key: string) => {
+    setTempErrorMessages(prev => new Set(prev).add(key));
+    // Remover após 20 segundos
+    const timeoutId = setTimeout(() => {
+      setTempErrorMessages(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(key);
+        return newSet;
+      });
+    }, 20000);
+    
+    // Retornar função de cleanup (será usado se necessário limpar manualmente)
+    return () => clearTimeout(timeoutId);
+  }, []);
+  
+  // Limpar mensagens quando status mudar (useEffect para watch do status)
+  const watchStatus = watch("status");
+  useEffect(() => {
+    // Limpar mensagem de erro da iniciativa quando status mudar
+    if (tempErrorMessages.has('initiative-status')) {
+      setTempErrorMessages(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('initiative-status');
+        return newSet;
+      });
+    }
+  }, [watchStatus, tempErrorMessages]);
+  
+  // Limpar mensagens de erro dos itens quando seus status mudarem
+  // Criar string de dependência baseada nos status dos itens
+  const itemsStatusString = watchItems 
+    ? watchItems.map((item: any, index: number) => `${index}:${item.status || ''}`).join(',')
+    : '';
+  
+  useEffect(() => {
+    if (watchItems && watchItems.length > 0) {
+      watchItems.forEach((item: any, index: number) => {
+        const errorKey = `item-${index}-status`;
+        if (tempErrorMessages.has(errorKey)) {
+          setTempErrorMessages(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(errorKey);
+            return newSet;
+          });
+        }
+      });
+    }
+  }, [itemsStatusString, tempErrorMessages, watchItems]);
+  
+  // Limpar mensagens de erro dos subitens quando seus status mudarem
+  // Criar string de dependência baseada nos status dos subitens
+  const subItemsStatusString = watchItems 
+    ? watchItems.map((item: any, itemIndex: number) => {
+        const subItemsStatus = item.subItems 
+          ? item.subItems.map((subItem: any, subItemIndex: number) => `${itemIndex}-${subItemIndex}:${subItem.status || ''}`).join(',')
+          : '';
+        return `${itemIndex}:${subItemsStatus}`;
+      }).join('|')
+    : '';
+  
+  useEffect(() => {
+    if (watchItems && watchItems.length > 0) {
+      watchItems.forEach((item: any, itemIndex: number) => {
+        if (item.subItems && item.subItems.length > 0) {
+          item.subItems.forEach((subItem: any, subItemIndex: number) => {
+            const errorKey = `subitem-${itemIndex}-${subItemIndex}-status`;
+            if (tempErrorMessages.has(errorKey)) {
+              setTempErrorMessages(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(errorKey);
+                return newSet;
+              });
+            }
+          });
+        }
+      });
+    }
+  }, [subItemsStatusString, tempErrorMessages, watchItems]);
 
   // Quando a área do projeto mudar, atualizar todas as items
   useEffect(() => {
@@ -366,6 +450,15 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
     }
     
     console.error("Erros de validação:", errors);
+    
+    // Se houver erro de items (array vazio), rolar para a seção de items
+    if (errors.items && typeof errors.items === 'object' && !Array.isArray(errors.items) && 'message' in errors.items) {
+      const itemsSection = document.querySelector('[data-items-section]');
+      if (itemsSection) {
+        itemsSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+    }
     
     // Função recursiva para encontrar o primeiro campo com erro
     const findFirstErrorField = (errorObj: any, path: string = ''): string | null => {
@@ -528,14 +621,33 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       ? watchItems.every((item: any) => item.status === 'Concluído')
                       : false;
                     
-                    // Status disponíveis - remover "Concluído" se nem todas items estão concluídas
-                    let availableStatuses = ['Pendente', 'Em execução', 'Concluído', 'Suspenso'] as const;
-                    if (!allItemsCompleted && watchItems && watchItems.length > 0) {
-                      availableStatuses = availableStatuses.filter(s => s !== 'Concluído') as any;
-                    }
+                    // Status disponíveis - manter todos os status, validação será feita no onValueChange
+                    const availableStatuses = ['Pendente', 'Em execução', 'Concluído', 'Suspenso'] as const;
                     
                     return (
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!canEditStatus}>
+                      <Select 
+                        onValueChange={(newStatus: InitiativeStatus) => {
+                          // Verificar se está tentando concluir sem todas as items concluídas
+                          if (newStatus === 'Concluído' && !allItemsCompleted && watchItems && watchItems.length > 0) {
+                            // Adicionar mensagem de erro temporária
+                            addTempErrorMessage('initiative-status');
+                            // Não alterar o status, manter o atual
+                            return;
+                          }
+                          // Limpar mensagem de erro se mudou para outro status
+                          if (tempErrorMessages.has('initiative-status')) {
+                            setTempErrorMessages(prev => {
+                              const newSet = new Set(prev);
+                              newSet.delete('initiative-status');
+                              return newSet;
+                            });
+                          }
+                          // Permitir mudança de status
+                          field.onChange(newStatus);
+                        }} 
+                        value={field.value} 
+                        disabled={!canEditStatus}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione o status inicial" />
                         </SelectTrigger>
@@ -553,7 +665,8 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                   ? watchItems.every((item: any) => item.status === 'Concluído')
                   : false;
                 
-                if (!allItemsCompleted && watchItems && watchItems.length > 0) {
+                // Mostrar mensagem de erro apenas se estiver no conjunto de mensagens temporárias
+                if (!allItemsCompleted && watchItems && watchItems.length > 0 && tempErrorMessages.has('initiative-status')) {
                   return (
                     <p className="text-sm text-destructive">
                       Não é possível concluir: todas as items devem estar concluídas
@@ -592,7 +705,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
         {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
       </div>
       
-       <div className="space-y-4 rounded-lg border p-4">
+       <div className="space-y-4 rounded-lg border p-4" data-items-section>
         <div className="flex justify-between items-center">
             <Label>Items (Obrigatório - mínimo 1)</Label>
             <Button
@@ -619,6 +732,14 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
               <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Item
             </Button>
         </div>
+        {/* Exibir erro de items obrigatórios no topo da seção quando tentar submeter sem itens */}
+        {errors.items && typeof errors.items === 'object' && !Array.isArray(errors.items) && 'message' in errors.items && (
+          <div className="p-3 border-2 border-destructive rounded-md bg-destructive/20">
+            <p className="text-sm font-semibold text-destructive">
+              ⚠️ {String(errors.items.message)}
+            </p>
+          </div>
+        )}
          {hasItems ? (
           <div className="space-y-4">
             {itemFields.map((field, index) => (
@@ -816,13 +937,33 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                           ? getAvailableStatuses(true)
                           : ['Pendente', 'Em execução', 'Concluído', 'Suspenso'] as const;
                         
-                        // Se não está atrasado mas tenta concluir sem todos subitens concluídos, remover "Concluído"
-                        if (!itemIsOverdue && !allSubItemsCompleted && itemSubItems.length > 0) {
-                          availableStatuses = availableStatuses.filter(s => s !== 'Concluído') as any;
-                        }
+                        // Chave única para mensagem de erro deste item
+                        const errorKey = `item-${index}-status`;
                         
                         return (
-                          <Select onValueChange={field.onChange} value={field.value} disabled={!canEditStatus}>
+                          <Select 
+                            onValueChange={(newStatus: InitiativeStatus) => {
+                              // Verificar se está tentando concluir sem todos os subitens concluídos
+                              if (newStatus === 'Concluído' && !allSubItemsCompleted && itemSubItems.length > 0) {
+                                // Adicionar mensagem de erro temporária
+                                addTempErrorMessage(errorKey);
+                                // Não alterar o status, manter o atual
+                                return;
+                              }
+                              // Limpar mensagem de erro se mudou para outro status
+                              if (tempErrorMessages.has(errorKey)) {
+                                setTempErrorMessages(prev => {
+                                  const newSet = new Set(prev);
+                                  newSet.delete(errorKey);
+                                  return newSet;
+                                });
+                              }
+                              // Permitir mudança de status
+                              field.onChange(newStatus);
+                            }} 
+                            value={field.value} 
+                            disabled={!canEditStatus}
+                          >
                             <SelectTrigger>
                               <SelectValue placeholder="Status" />
                             </SelectTrigger>
@@ -852,7 +993,8 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                         );
                       }
                       
-                      if (!allSubItemsCompleted && itemSubItems.length > 0) {
+                      // Mostrar mensagem de erro apenas se estiver no conjunto de mensagens temporárias
+                      if (!allSubItemsCompleted && itemSubItems.length > 0 && tempErrorMessages.has(`item-${index}-status`)) {
                         return (
                           <p className="text-xs text-destructive">
                             Não é possível concluir: todos os subitens devem estar concluídos
@@ -1099,8 +1241,26 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                     ? getAvailableStatuses(true)
                                     : ['Pendente', 'Em execução', 'Concluído', 'Suspenso'] as const;
                                   
+                                  // Chave única para mensagem de erro deste subitem
+                                  const errorKey = `subitem-${index}-${subItemIndex}-status`;
+                                  
                                   return (
-                                    <Select onValueChange={field.onChange} value={field.value} disabled={!canEditStatus}>
+                                    <Select 
+                                      onValueChange={(newStatus: InitiativeStatus) => {
+                                        // Limpar mensagem de erro se mudou para outro status
+                                        if (tempErrorMessages.has(errorKey)) {
+                                          setTempErrorMessages(prev => {
+                                            const newSet = new Set(prev);
+                                            newSet.delete(errorKey);
+                                            return newSet;
+                                          });
+                                        }
+                                        // Permitir mudança de status (subitens não têm filhos, podem ser concluídos livremente)
+                                        field.onChange(newStatus);
+                                      }} 
+                                      value={field.value} 
+                                      disabled={!canEditStatus}
+                                    >
                                       <SelectTrigger className="h-8 text-sm">
                                         <SelectValue placeholder="Status" />
                                       </SelectTrigger>
@@ -1170,7 +1330,8 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                 </div>
               </div>
             ))}
-            {errors.items && (
+            {/* Exibir erros de itens individuais apenas quando há itens e erros específicos */}
+            {errors.items && Array.isArray(errors.items) && errors.items.length > 0 && (
               <div className="text-sm text-destructive space-y-1 p-3 border border-destructive rounded-md bg-destructive/10">
                 <p className="font-semibold">Erros encontrados nas items:</p>
                 {Array.isArray(errors.items) && errors.items.map((itemError: any, idx: number) => {
@@ -1208,10 +1369,6 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                     </div>
                   );
                 })}
-                {/* Exibir erro de items quando há erro no array inteiro (validação pai-filho) */}
-                {typeof errors.items === 'object' && !Array.isArray(errors.items) && 'message' in errors.items && (
-                  <p className="mt-2 font-semibold">{String(errors.items.message)}</p>
-                )}
               </div>
             )}
           </div>

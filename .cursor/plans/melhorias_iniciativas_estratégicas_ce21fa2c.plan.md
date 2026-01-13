@@ -350,8 +350,6 @@ Implementar melhorias na gestão de Iniciativas Estratégicas com foco em difere
  */
 ```
 
-
-
 ## Cronograma de Implementação
 
 ### Fase 1: Fundação e Validações (Base para tudo)

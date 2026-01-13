@@ -702,17 +702,17 @@ export function TableGanttView({
     return { tasks: ganttTasks, dateHeaders, monthHeaders, cellWidth: dynamicCellWidth };
   }, [filteredInitiatives]);
 
-  // Função para adicionar mensagem de erro temporária (desaparece após 10 segundos)
+  // Função para adicionar mensagem de erro temporária (desaparece após 20 segundos)
   const addTempErrorMessage = useCallback((key: string) => {
     setTempErrorMessages(prev => new Set(prev).add(key));
-    // Remover após 10 segundos
+    // Remover após 20 segundos
     setTimeout(() => {
       setTempErrorMessages(prev => {
         const newSet = new Set(prev);
         newSet.delete(key);
         return newSet;
       });
-    }, 10000);
+    }, 20000);
   }, []);
 
   // Calcula IDs de iniciativas que têm itens (para expandir todas)
