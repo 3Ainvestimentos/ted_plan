@@ -192,6 +192,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
     watch,
     setValue,
     getValues,
+    clearErrors,
     formState: { errors },
   } = useForm<InitiativeFormData>({
     resolver: zodResolver(initiativeSchema),
@@ -205,7 +206,8 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
       items: [],
     },
     mode: 'onChange', // Para validação em tempo real
-    reValidateMode: 'onSubmit' // Revalidar no submit para garantir que erros sejam exibidos
+    reValidateMode: 'onChange', // Revalidar ao mudar para limpar erros automaticamente
+    shouldUnregister: false, // Manter valores mesmo quando campos são removidos
   });
 
   const { fields: itemFields, append: appendItem, remove: removeItem } = useFieldArray({
@@ -318,6 +320,61 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
       timeoutsRef.current.clear();
     };
   }, []);
+  
+  /**
+   * Verifica se todos os itens e subitens estão concluídos e atualiza status da iniciativa automaticamente
+   * 
+   * REGRAS:
+   * - Iniciativa só pode ser "Concluído" quando TODOS os itens estiverem "Concluído"
+   * - Item só é considerado concluído se:
+   *   - Tem subitens: todos os subitens E o item devem estar "Concluído"
+   *   - Não tem subitens: apenas o item deve estar "Concluído"
+   * - Se nem todos os itens estão concluídos mas iniciativa está concluída, reverter para "Em execução"
+   */
+  const checkAndUpdateInitiativeStatus = useCallback(() => {
+    if (!watchItems || watchItems.length === 0) {
+      return;
+    }
+    
+    // Verificar se todos os itens estão concluídos
+    const allItemsCompleted = watchItems.every((item: any) => {
+      // Se item tem subitens, verificar se todos estão concluídos E o item também
+      if (item.subItems && item.subItems.length > 0) {
+        const allSubItemsCompleted = item.subItems.every((subItem: any) => subItem.status === 'Concluído');
+        // Item só está concluído se todos os subitens estiverem concluídos E o item também
+        return allSubItemsCompleted && item.status === 'Concluído';
+      }
+      // Se não tem subitens, verificar apenas o status do item
+      return item.status === 'Concluído';
+    });
+    
+    const currentStatus = getValues('status');
+    
+    // Se todos os itens estão concluídos e iniciativa não está concluída, atualizar
+    if (allItemsCompleted && currentStatus !== 'Concluído') {
+      setValue('status', 'Concluído', { shouldValidate: false });
+    }
+    
+    // Se nem todos os itens estão concluídos mas iniciativa está concluída, reverter
+    if (!allItemsCompleted && currentStatus === 'Concluído') {
+      setValue('status', 'Em execução', { shouldValidate: false });
+    }
+  }, [watchItems, getValues, setValue]);
+  
+  // Observar mudanças nos status dos itens e subitens para atualizar status da iniciativa automaticamente
+  useEffect(() => {
+    checkAndUpdateInitiativeStatus();
+  }, [
+    // Criar string de dependência baseada nos status de todos os itens e subitens
+    watchItems?.map((item: any, idx: number) => {
+      const itemStatus = item.status || '';
+      const subItemsStatus = item.subItems 
+        ? item.subItems.map((si: any) => si.status || '').join(',')
+        : '';
+      return `${idx}:${itemStatus}:${subItemsStatus}`;
+    }).join('|'),
+    checkAndUpdateInitiativeStatus
+  ]);
 
   // Quando a área do projeto mudar, atualizar todas as items
   useEffect(() => {
@@ -758,6 +815,8 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                   responsible: "", // Obrigatório
                   subItems: [] as any[]
                 });
+                // Limpar erro de "sem itens" quando um item é adicionado
+                clearErrors('items');
               }}
               disabled={isLimitedMode}
             >
