@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -215,90 +215,109 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
 
   const watchItems = watch("items");
   const watchAreaId = watch("areaId");
+  const watchStatus = watch("status");
   const hasItems = watchItems && watchItems.length > 0;
   
   // Estado para controlar mensagens de erro temporárias (desaparecem após 20s ou quando status muda)
   const [tempErrorMessages, setTempErrorMessages] = useState<Set<string>>(new Set());
   
-  // Função para adicionar mensagem de erro temporária (desaparece após 20 segundos)
+  // Ref para armazenar timeouts e permitir cleanup adequado
+  const timeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  
+  /**
+   * Adiciona uma mensagem de erro temporária que desaparece após 20 segundos
+   * ou quando o status correspondente mudar
+   */
   const addTempErrorMessage = useCallback((key: string) => {
+    // Limpar timeout anterior se existir
+    const existingTimeout = timeoutsRef.current.get(key);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+    
+    // Adicionar mensagem ao estado
     setTempErrorMessages(prev => new Set(prev).add(key));
-    // Remover após 20 segundos
+    
+    // Criar novo timeout
     const timeoutId = setTimeout(() => {
       setTempErrorMessages(prev => {
         const newSet = new Set(prev);
         newSet.delete(key);
         return newSet;
       });
+      timeoutsRef.current.delete(key);
     }, 20000);
     
-    // Retornar função de cleanup (será usado se necessário limpar manualmente)
-    return () => clearTimeout(timeoutId);
+    // Armazenar timeout para cleanup
+    timeoutsRef.current.set(key, timeoutId);
   }, []);
   
-  // Limpar mensagens quando status mudar (useEffect para watch do status)
-  const watchStatus = watch("status");
+  /**
+   * Remove uma mensagem de erro temporária manualmente
+   */
+  const removeTempErrorMessage = useCallback((key: string) => {
+    // Limpar timeout se existir
+    const timeout = timeoutsRef.current.get(key);
+    if (timeout) {
+      clearTimeout(timeout);
+      timeoutsRef.current.delete(key);
+    }
+    
+    // Remover do estado
+    setTempErrorMessages(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(key);
+      return newSet;
+    });
+  }, []);
+  
+  /**
+   * Limpa todas as mensagens de erro temporárias
+   */
+  const clearAllTempErrorMessages = useCallback(() => {
+    // Limpar todos os timeouts
+    timeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+    timeoutsRef.current.clear();
+    
+    // Limpar estado
+    setTempErrorMessages(new Set());
+  }, []);
+  
+  // Limpar mensagens quando status mudar (consolidado em um único useEffect)
   useEffect(() => {
     // Limpar mensagem de erro da iniciativa quando status mudar
     if (tempErrorMessages.has('initiative-status')) {
-      setTempErrorMessages(prev => {
-        const newSet = new Set(prev);
-        newSet.delete('initiative-status');
-        return newSet;
-      });
+      removeTempErrorMessage('initiative-status');
     }
-  }, [watchStatus, tempErrorMessages]);
-  
-  // Limpar mensagens de erro dos itens quando seus status mudarem
-  // Criar string de dependência baseada nos status dos itens
-  const itemsStatusString = watchItems 
-    ? watchItems.map((item: any, index: number) => `${index}:${item.status || ''}`).join(',')
-    : '';
-  
-  useEffect(() => {
+    
+    // Limpar mensagens de erro dos itens quando seus status mudarem
     if (watchItems && watchItems.length > 0) {
       watchItems.forEach((item: any, index: number) => {
         const errorKey = `item-${index}-status`;
         if (tempErrorMessages.has(errorKey)) {
-          setTempErrorMessages(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(errorKey);
-            return newSet;
-          });
+          removeTempErrorMessage(errorKey);
         }
-      });
-    }
-  }, [itemsStatusString, tempErrorMessages, watchItems]);
-  
-  // Limpar mensagens de erro dos subitens quando seus status mudarem
-  // Criar string de dependência baseada nos status dos subitens
-  const subItemsStatusString = watchItems 
-    ? watchItems.map((item: any, itemIndex: number) => {
-        const subItemsStatus = item.subItems 
-          ? item.subItems.map((subItem: any, subItemIndex: number) => `${itemIndex}-${subItemIndex}:${subItem.status || ''}`).join(',')
-          : '';
-        return `${itemIndex}:${subItemsStatus}`;
-      }).join('|')
-    : '';
-  
-  useEffect(() => {
-    if (watchItems && watchItems.length > 0) {
-      watchItems.forEach((item: any, itemIndex: number) => {
+        
+        // Limpar mensagens de erro dos subitens quando seus status mudarem
         if (item.subItems && item.subItems.length > 0) {
           item.subItems.forEach((subItem: any, subItemIndex: number) => {
-            const errorKey = `subitem-${itemIndex}-${subItemIndex}-status`;
-            if (tempErrorMessages.has(errorKey)) {
-              setTempErrorMessages(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(errorKey);
-                return newSet;
-              });
+            const subItemErrorKey = `subitem-${index}-${subItemIndex}-status`;
+            if (tempErrorMessages.has(subItemErrorKey)) {
+              removeTempErrorMessage(subItemErrorKey);
             }
           });
         }
       });
     }
-  }, [subItemsStatusString, tempErrorMessages, watchItems]);
+  }, [watchStatus, watchItems, tempErrorMessages, removeTempErrorMessage]);
+  
+  // Cleanup: limpar todos os timeouts quando o componente desmontar
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+      timeoutsRef.current.clear();
+    };
+  }, []);
 
   // Quando a área do projeto mudar, atualizar todas as items
   useEffect(() => {
@@ -437,6 +456,19 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
     
     return false;
   };
+  
+  /**
+   * Verifica se há erro de items obrigatórios (array vazio)
+   * 
+   * @param itemsErrors - Objeto de erros de items
+   * @returns true se houver erro de mínimo de items
+   */
+  const hasItemsMinError = (itemsErrors: any): boolean => {
+    return !!itemsErrors && 
+           typeof itemsErrors === 'object' && 
+           !Array.isArray(itemsErrors) && 
+           'message' in itemsErrors;
+  };
 
   /**
    * Handler de erros de validação do formulário
@@ -452,7 +484,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
     console.error("Erros de validação:", errors);
     
     // Se houver erro de items (array vazio), rolar para a seção de items
-    if (errors.items && typeof errors.items === 'object' && !Array.isArray(errors.items) && 'message' in errors.items) {
+    if (hasItemsMinError(errors.items)) {
       const itemsSection = document.querySelector('[data-items-section]');
       if (itemsSection) {
         itemsSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -733,10 +765,10 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
             </Button>
         </div>
         {/* Exibir erro de items obrigatórios no topo da seção quando tentar submeter sem itens */}
-        {errors.items && typeof errors.items === 'object' && !Array.isArray(errors.items) && 'message' in errors.items && (
+        {hasItemsMinError(errors.items) && (
           <div className="p-3 border-2 border-destructive rounded-md bg-destructive/20">
             <p className="text-sm font-semibold text-destructive">
-              ⚠️ {String(errors.items.message)}
+              ⚠️ {String(errors.items?.message || 'É necessário adicionar pelo menos um item antes de criar a iniciativa.')}
             </p>
           </div>
         )}
