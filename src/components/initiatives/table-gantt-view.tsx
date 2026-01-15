@@ -1193,9 +1193,9 @@ export function TableGanttView({
                       
                       return (
                         <React.Fragment key={item.id}>
-                          <TableRow className={cn("bg-secondary/50 hover:bg-secondary/70", itemIsOverdue && "bg-red-50")}>
-                            <TableCell className="sticky left-0 bg-secondary/50 z-10"></TableCell>
-                            <TableCell className="sticky left-16 bg-secondary/50 z-10">
+                          <TableRow className={cn("bg-gray-100 hover:bg-gray-200", itemIsOverdue && "bg-red-50")}>
+                            <TableCell className="sticky left-0 bg-gray-100 z-10"></TableCell>
+                            <TableCell className="sticky left-16 bg-gray-100 z-10">
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -1213,7 +1213,7 @@ export function TableGanttView({
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </TableCell>
-                            <TableCell className="pl-12 sticky left-28 bg-secondary/50 z-10">
+                            <TableCell className="pl-12 sticky left-28 bg-gray-100 z-10">
                               <div className="flex items-center gap-2">
                                 <CornerDownRight className="h-4 w-4 text-muted-foreground" />
                                 {hasSubItems && (
@@ -1231,17 +1231,17 @@ export function TableGanttView({
                             </TableCell>
                             
                             {/* Coluna Responsável */}
-                            <TableCell className="text-sm bg-secondary/50">
+                            <TableCell className="text-sm bg-gray-100">
                               {item.responsible || '-'}
                             </TableCell>
                             
                             {/* Coluna Editar - vazia para items */}
                             {onEditInitiative && (
-                              <TableCell className="bg-secondary/50"></TableCell>
+                              <TableCell className="bg-gray-100"></TableCell>
                             )}
                             
                             {/* Coluna Status */}
-                            <TableCell className="bg-secondary/50">
+                            <TableCell className="bg-gray-100">
                               {onItemStatusChange ? (
                                 <div className="space-y-1">
                                   <Select 
@@ -1334,7 +1334,7 @@ export function TableGanttView({
                             </TableCell>
                             
                             {/* Coluna Prioridade */}
-                            <TableCell className="bg-secondary/50">
+                            <TableCell className="bg-gray-100">
                               <Badge 
                                 variant="outline"
                                 className={cn(
@@ -1349,7 +1349,7 @@ export function TableGanttView({
                             </TableCell>
                             
                             {/* Coluna Progresso */}
-                            <TableCell className="bg-secondary/50">
+                            <TableCell className="bg-gray-100">
                               <div className="flex items-center gap-2">
                                 <ProgressWithColor 
                                   value={itemGanttTask?.progress || 0} 
@@ -1429,7 +1429,7 @@ export function TableGanttView({
                                   <TableCell 
                                     key={dayIndex} 
                                     className={cn(
-                                      "relative p-0 overflow-visible bg-secondary/50",
+                                      "relative p-0 overflow-visible bg-gray-100",
                                       isWeekend && "bg-muted/30 border-r border-border/50",
                                       isTodayMarker && "bg-red-100/50 dark:bg-red-900/20"
                                     )}
@@ -1486,9 +1486,9 @@ export function TableGanttView({
                             const SubItemStatusIcon = STATUS_ICONS[subItem.status];
                             
                             return (
-                              <TableRow key={subItem.id} className={cn("bg-secondary hover:bg-secondary/80", subItemIsOverdue && "bg-red-50")}>
-                                <TableCell className="sticky left-0 bg-secondary z-10"></TableCell>
-                                <TableCell className="sticky left-16 bg-secondary z-10">
+                              <TableRow key={subItem.id} className={cn("bg-gray-200 hover:bg-gray-300", subItemIsOverdue && "bg-red-50")}>
+                                <TableCell className="sticky left-0 bg-gray-200 z-10"></TableCell>
+                                <TableCell className="sticky left-16 bg-gray-200 z-10">
                                   <Button
                                     variant="ghost"
                                     size="icon"
@@ -1505,7 +1505,7 @@ export function TableGanttView({
                                     <MoreHorizontal className="h-4 w-4" />
                                   </Button>
                                 </TableCell>
-                                <TableCell className="pl-20 sticky left-28 bg-secondary z-10">
+                                <TableCell className="pl-20 sticky left-28 bg-gray-200 z-10">
                                   <div className="flex items-center gap-2">
                                     <CornerDownRight className="h-4 w-4 text-muted-foreground" />
                                     <span className={cn("text-sm", subItem.status === 'Concluído' && "line-through text-muted-foreground")}>
@@ -1515,17 +1515,17 @@ export function TableGanttView({
                                 </TableCell>
                                 
                                 {/* Coluna Responsável */}
-                                <TableCell className="text-sm bg-secondary">
+                                <TableCell className="text-sm bg-gray-200">
                                   {subItem.responsible || '-'}
                                 </TableCell>
                                 
                                 {/* Coluna Editar - vazia para subitens */}
                                 {onEditInitiative && (
-                                  <TableCell className="bg-secondary"></TableCell>
+                                  <TableCell className="bg-gray-200"></TableCell>
                                 )}
                                 
                                 {/* Coluna Status */}
-                                <TableCell className="bg-secondary">
+                                <TableCell className="bg-gray-200">
                                   {onSubItemStatusChange ? (
                                     <div className="space-y-1">
                                       <Select 
@@ -1577,7 +1577,7 @@ export function TableGanttView({
                                 </TableCell>
                                 
                                 {/* Coluna Prioridade */}
-                                <TableCell className="bg-secondary">
+                                <TableCell className="bg-gray-200">
                                   <Badge 
                                     variant="outline"
                                     className={cn(
@@ -1592,7 +1592,7 @@ export function TableGanttView({
                                 </TableCell>
                                 
                                 {/* Coluna Progresso */}
-                                <TableCell className="bg-secondary">
+                                <TableCell className="bg-gray-200">
                                   <div className="flex items-center gap-2">
                                     <ProgressWithColor 
                                       value={subItemGanttTask?.progress || 0} 
@@ -1614,8 +1614,8 @@ export function TableGanttView({
                                         <TableCell 
                                           key={dayIndex} 
                                           className={cn(
-                                            "relative p-0 bg-secondary",
-                                            isWeekend && "bg-muted/30 border-r border-border/50",
+                                            "relative p-0 bg-gray-200",
+                                            isWeekend && "bg-gray-200 border-r border-border/50",
                                             isToday(day) && "bg-red-100/50 dark:bg-red-900/20"
                                           )}
                                           style={{ 
@@ -1672,8 +1672,8 @@ export function TableGanttView({
                                       <TableCell 
                                         key={dayIndex} 
                                         className={cn(
-                                          "relative p-0 overflow-visible bg-secondary",
-                                          isWeekend && "bg-muted/30 border-r border-border/50",
+                                          "relative p-0 overflow-visible bg-gray-200",
+                                          isWeekend && "bg-gray-200 border-r border-border/50",
                                           isTodayMarker && "bg-red-100/50 dark:bg-red-900/20"
                                         )}
                                         style={{ 

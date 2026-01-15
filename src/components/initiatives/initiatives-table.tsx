@@ -282,7 +282,7 @@ export function InitiativesTable({
                    
                    return (
                      <React.Fragment key={item.id}>
-                       <TableRow className="bg-secondary/50 hover:bg-secondary/70">
+                       <TableRow className="bg-muted/20 hover:bg-muted/30">
                          <TableCell></TableCell>
                          <TableCell colSpan={hasAuc ? 5 : 4} className="pl-12">
                            <div className="flex items-center gap-2">
@@ -305,7 +305,7 @@ export function InitiativesTable({
                        
                        {/* Subitens expandidos */}
                        {isItemExpanded && hasSubItems && item.subItems.map(subItem => (
-                         <TableRow key={subItem.id} className="bg-secondary hover:bg-secondary/80">
+                         <TableRow key={subItem.id} className="bg-muted/30 hover:bg-muted/40">
                            <TableCell></TableCell>
                            <TableCell colSpan={hasAuc ? 5 : 4} className="pl-20">
                              <div className="flex items-center gap-2">
