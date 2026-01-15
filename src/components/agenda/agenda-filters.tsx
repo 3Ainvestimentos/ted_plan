@@ -104,7 +104,6 @@ export function AgendaFilters({
           <SelectItem value="Em execução">Em execução</SelectItem>
           <SelectItem value="Concluído">Concluído</SelectItem>
           <SelectItem value="Suspenso">Suspenso</SelectItem>
-          <SelectItem value="Atrasado">Atrasado</SelectItem>
         </SelectContent>
       </Select>
     </div>

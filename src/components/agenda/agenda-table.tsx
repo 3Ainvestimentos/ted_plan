@@ -9,7 +9,7 @@ import { ptBR } from "date-fns/locale";
 import type { InitiativeStatus } from "@/types";
 import type { AgendaItem } from "@/lib/agenda-helpers";
 import { getHierarchyPath, formatDaysRemaining } from "@/lib/agenda-helpers";
-import { getAvailableStatuses } from "@/lib/initiatives-helpers";
+import { KANBAN_COLUMNS_ORDER } from "@/lib/constants";
 
 interface AgendaTableProps {
   items: AgendaItem[];
@@ -88,7 +88,11 @@ export function AgendaTable({ items, onItemStatusChange, onSubItemStatusChange }
               ? getHierarchyPath(item.initiativeTitle, item.title)
               : getHierarchyPath(item.initiativeTitle, item.itemTitle || '', item.title);
             
-            const availableStatuses = getAvailableStatuses(item.isOverdue);
+            // Para itens não vencidos: apenas os 4 status padrão
+            // Para itens vencidos: apenas "Concluído" e "Atrasado"
+            const availableStatuses = item.isOverdue
+              ? ['Concluído', 'Atrasado'] as InitiativeStatus[]
+              : KANBAN_COLUMNS_ORDER;
             const daysRemainingText = formatDaysRemaining(item.daysRemaining);
 
             return (
