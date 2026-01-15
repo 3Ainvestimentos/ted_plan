@@ -28,9 +28,6 @@ export const PAGE_KEYS = {
   DASHBOARD: '', // Página inicial (/)
   STRATEGIC_INITIATIVES: 'strategic-initiatives',
   AGENDA: 'agenda',
-  MEETING_AGENDA: 'meeting-agenda',
-  TASKS: 'tasks',
-  NOTES: 'notes',
   SETTINGS: 'settings',
 } as const;
 
@@ -56,9 +53,6 @@ export const DEFAULT_PERMISSIONS_BY_ROLE: Record<UserType, string[]> = {
     PAGE_KEYS.DASHBOARD,
     PAGE_KEYS.STRATEGIC_INITIATIVES,
     PAGE_KEYS.AGENDA,
-    PAGE_KEYS.MEETING_AGENDA,
-    PAGE_KEYS.TASKS,
-    PAGE_KEYS.NOTES,
     PAGE_KEYS.SETTINGS,
   ],
 
@@ -70,9 +64,6 @@ export const DEFAULT_PERMISSIONS_BY_ROLE: Record<UserType, string[]> = {
     PAGE_KEYS.DASHBOARD,
     PAGE_KEYS.STRATEGIC_INITIATIVES,
     PAGE_KEYS.AGENDA,
-    PAGE_KEYS.MEETING_AGENDA,
-    PAGE_KEYS.TASKS,
-    PAGE_KEYS.NOTES,
   ],
 
   /**

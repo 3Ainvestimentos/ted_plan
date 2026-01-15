@@ -142,42 +142,6 @@ export interface NavItem {
   onClick?: () => void;
 }
 
-export interface Participant {
-    id?: string;
-    name: string;
-    email: string;
-}
-
-export interface AgendaItem {
-  id: string;
-  title: string;
-  completed: boolean;
-  action?: string;
-  owner?: string;
-  deadline?: string;
-  observations?: string;
-}
-
-export interface MeetingOccurrence {
-    executedDate: string; // 'YYYY-MM-DD'
-    agenda: AgendaItem[];
-}
-
-export interface RecurringMeeting {
-  id: string;
-  name: string;
-  recurrence: {
-    unit: 'dias' | 'semanas' | 'meses';
-    value: number;
-  };
-  participants: Participant[];
-  agenda: Omit<AgendaItem, 'completed'>[]; // Template da pauta
-  lastOccurrence: string; // ISO date string 'YYYY-MM-DD'
-  scheduledDate: string | null; // ISO date string 'YYYY-MM-DD', for the current cycle
-  currentOccurrenceAgenda: AgendaItem[];
-  occurrenceHistory?: MeetingOccurrence[];
-}
-
 export interface KpiSeriesData {
     month: string; 
     Realizado: number | null;
@@ -247,22 +211,3 @@ export interface MaintenanceSettings {
     adminEmails: string[];
 }
 
-// Type for Notes
-export interface Note {
-    userId: string;
-    content: string;
-    lastUpdated: any; // Firestore Timestamp
-}
-
-// Type for Tasks
-export type TaskStatus = 'Pendente' | 'Prioridade' | 'Concluído';
-
-export interface Task {
-    id: string;
-    userId: string;
-    title: string;
-    completed: boolean;
-    archived: boolean;
-    createdAt: any; // Firestore Timestamp
-    priority: boolean;
-}
