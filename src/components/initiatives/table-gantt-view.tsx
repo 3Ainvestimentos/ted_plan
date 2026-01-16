@@ -414,6 +414,75 @@ function calculateDateRange(): { start: Date; end: Date } {
 }
 
 /**
+ * Encontra o índice do último dia da barra do Gantt
+ * 
+ * Esta função corrige o problema onde barras terminavam incorretamente
+ * quando não havia um dia posterior disponível no array dateHeaders.
+ * 
+ * Lógica:
+ * 1. Busca o dia exato (dayTime === taskTime)
+ * 2. Se não encontrar, busca o primeiro dia posterior e retorna o anterior
+ * 3. Se não encontrar posterior, busca o último dia <= taskTime
+ * 4. Fallback para o primeiro dia se a tarefa começa antes do período
+ * 
+ * @param dateHeaders Array de datas do Gantt
+ * @param taskEnd Data de fim da tarefa (já normalizada com startOfDay)
+ * @returns Índice do último dia da barra (inclusive)
+ */
+function findBarEndIndex(dateHeaders: Date[], taskEnd: Date): number {
+  // Normaliza taskEnd para garantir comparação correta
+  const taskTime = startOfDay(taskEnd).getTime();
+  
+  // #region agent log
+  fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'table-gantt-view.tsx:432',message:'findBarEndIndex entry',data:{taskEndISO:taskEnd.toISOString(),taskTime,dateHeadersLength:dateHeaders.length,firstHeaderISO:dateHeaders[0]?.toISOString(),lastHeaderISO:dateHeaders[dateHeaders.length-1]?.toISOString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D'})}).catch(()=>{});
+  // #endregion
+  
+  // 1. Primeiro, tenta encontrar o dia EXATO do fim da tarefa
+  for (let i = 0; i < dateHeaders.length; i++) {
+    const dayTime = startOfDay(dateHeaders[i]).getTime();
+    if (dayTime === taskTime) {
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'table-gantt-view.tsx:440',message:'found exact day match',data:{index:i,dayTime,taskTime,dayISO:dateHeaders[i].toISOString(),taskEndISO:taskEnd.toISOString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      return i;
+    }
+  }
+  
+  // 2. Se não encontrou o dia exato, tenta encontrar o primeiro dia APÓS o fim
+  // Se encontrou, o fim da barra é o dia anterior (que deve existir)
+  for (let i = 0; i < dateHeaders.length; i++) {
+    const dayTime = startOfDay(dateHeaders[i]).getTime();
+    if (dayTime > taskTime) {
+      const result = i > 0 ? i - 1 : 0;
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'table-gantt-view.tsx:450',message:'found next day, returning previous',data:{result,nextDayIndex:i,nextDayTime:dayTime,taskTime,nextDayISO:dateHeaders[i].toISOString(),prevDayISO:i>0?dateHeaders[i-1].toISOString():'N/A',taskEndISO:taskEnd.toISOString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
+      // #endregion
+      return result;
+    }
+  }
+  
+  // 3. Se não encontrou dia posterior, busca o último dia <= taskEnd
+  // Procura de trás para frente para pegar o último dia válido
+  for (let i = dateHeaders.length - 1; i >= 0; i--) {
+    const dayTime = startOfDay(dateHeaders[i]).getTime();
+    if (dayTime <= taskTime) {
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'table-gantt-view.tsx:461',message:'found last day <= taskEnd',data:{result:i,dayTime,taskTime,dayISO:dateHeaders[i].toISOString(),taskEndISO:taskEnd.toISOString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C'})}).catch(()=>{});
+      // #endregion
+      return i;
+    }
+  }
+  
+  // 4. Fallback: se tarefa termina antes do período, usa último dia do array
+  // (a barra vai até o limite do período visível)
+  const fallbackResult = dateHeaders.length - 1;
+  // #region agent log
+  fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'table-gantt-view.tsx:465',message:'using fallback (last day)',data:{result:fallbackResult,taskTime,lastDayISO:dateHeaders[fallbackResult]?.toISOString(),taskEndISO:taskEnd.toISOString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+  // #endregion
+  return fallbackResult;
+}
+
+/**
  * Gera cabeçalhos de meses para o Gantt
  */
 function generateMonthHeaders(dateHeaders: Date[]): { name: string; colSpan: number }[] {
@@ -444,10 +513,14 @@ function generateMonthHeaders(dateHeaders: Date[]): { name: string; colSpan: num
  * @returns GanttTask ou null se não tiver endDate válido
  */
 function transformInitiativeToGanttTask(initiative: Initiative): GanttTask | null {
-  const endDate = extractInitiativeDeadline(initiative);
-  if (!endDate) return null;
+  const endDateRaw = extractInitiativeDeadline(initiative);
+  if (!endDateRaw) return null;
   
-  const startDate = extractInitiativeStartDate(initiative, endDate);
+  // Normaliza datas para garantir consistência entre níveis
+  const endDate = startOfDay(endDateRaw);
+  const startDateRaw = extractInitiativeStartDate(initiative, endDate);
+  const startDate = startOfDay(startDateRaw);
+  
   const isOverdue = isBefore(endDate, startOfDay(new Date())) && 
                     initiative.status !== 'Concluído';
 
@@ -477,8 +550,17 @@ function transformInitiativeToGanttTask(initiative: Initiative): GanttTask | nul
  * @returns GanttTask ou null se não tiver endDate válido
  */
 function transformItemToGanttTask(item: InitiativeItem, initiative: Initiative, allItems?: InitiativeItem[]): GanttTask | null {
-  const endDate = parseFlexibleDate(item.endDate);
-  if (!endDate) return null;
+  const endDateRaw = parseFlexibleDate(item.endDate);
+  // #region agent log
+  fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'table-gantt-view.tsx:536',message:'transformItemToGanttTask parse',data:{itemId:item.id,itemTitle:item.title,rawEndDateInput:item.endDate,parsedEndDateRawISO:endDateRaw?.toISOString(),parsedEndDateRawTime:endDateRaw?.getTime()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
+  if (!endDateRaw) return null;
+  
+  // Normaliza endDate para garantir consistência entre níveis
+  const endDate = startOfDay(endDateRaw);
+  // #region agent log
+  fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'table-gantt-view.tsx:541',message:'transformItemToGanttTask normalized',data:{itemId:item.id,normalizedEndDateISO:endDate.toISOString(),normalizedEndDateTime:endDate.getTime()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
   
   let startDate: Date;
   
@@ -488,27 +570,35 @@ function transformItemToGanttTask(item: InitiativeItem, initiative: Initiative, 
     if (currentIndex > 0) {
       // Item anterior existe
       const previousItem = allItems[currentIndex - 1];
-      const previousEndDate = parseFlexibleDate(previousItem.endDate);
-      if (previousEndDate) {
-        startDate = previousEndDate;
+      const previousEndDateRaw = parseFlexibleDate(previousItem.endDate);
+      if (previousEndDateRaw) {
+        startDate = startOfDay(previousEndDateRaw);
       } else {
         // Fallback: se item anterior não tem endDate, usa startDate do item atual ou fallback
-        const itemStartDate = parseFlexibleDate(item.startDate);
-        startDate = itemStartDate || subDays(endDate, 30);
+        const itemStartDateRaw = parseFlexibleDate(item.startDate);
+        startDate = itemStartDateRaw ? startOfDay(itemStartDateRaw) : subDays(endDate, 30);
       }
     } else {
       // É o primeiro item, não pode estar vinculado (mas se estiver, usa fallback)
-      const itemStartDate = parseFlexibleDate(item.startDate);
-      startDate = itemStartDate || subDays(endDate, 30);
+      const itemStartDateRaw = parseFlexibleDate(item.startDate);
+      startDate = itemStartDateRaw ? startOfDay(itemStartDateRaw) : subDays(endDate, 30);
     }
   } else {
     // Não está vinculado, usa startDate explícito ou fallback
-    const itemStartDate = parseFlexibleDate(item.startDate);
-    const initiativeEndDate = parseFlexibleDate(initiative.endDate);
-    startDate = itemStartDate || (initiativeEndDate 
-      ? (isBefore(initiativeEndDate, endDate) ? initiativeEndDate : subDays(endDate, 30))
-      : subDays(endDate, 30));
+    const itemStartDateRaw = parseFlexibleDate(item.startDate);
+    const initiativeEndDateRaw = parseFlexibleDate(initiative.endDate);
+    if (itemStartDateRaw) {
+      startDate = startOfDay(itemStartDateRaw);
+    } else if (initiativeEndDateRaw) {
+      const initiativeEndDate = startOfDay(initiativeEndDateRaw);
+      startDate = isBefore(initiativeEndDate, endDate) ? initiativeEndDate : subDays(endDate, 30);
+    } else {
+      startDate = subDays(endDate, 30);
+    }
   }
+  
+  // Garante que startDate está normalizado
+  startDate = startOfDay(startDate);
   
   const isOverdue = isBefore(endDate, startOfDay(new Date())) && 
                     item.status !== 'Concluído';
@@ -546,8 +636,17 @@ function transformItemToGanttTask(item: InitiativeItem, initiative: Initiative, 
  * @returns GanttTask ou null se não tiver endDate válido
  */
 function transformSubItemToGanttTask(subItem: SubItem, item: InitiativeItem, initiative: Initiative, allSubItems?: SubItem[]): GanttTask | null {
-  const endDate = parseFlexibleDate(subItem.endDate);
-  if (!endDate) return null;
+  const endDateRaw = parseFlexibleDate(subItem.endDate);
+  // #region agent log
+  fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'table-gantt-view.tsx:620',message:'transformSubItemToGanttTask parse',data:{subItemId:subItem.id,subItemTitle:subItem.title,rawEndDateInput:subItem.endDate,parsedEndDateRawISO:endDateRaw?.toISOString(),parsedEndDateRawTime:endDateRaw?.getTime()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
+  if (!endDateRaw) return null;
+  
+  // Normaliza endDate para garantir consistência entre níveis
+  const endDate = startOfDay(endDateRaw);
+  // #region agent log
+  fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'table-gantt-view.tsx:625',message:'transformSubItemToGanttTask normalized',data:{subItemId:subItem.id,normalizedEndDateISO:endDate.toISOString(),normalizedEndDateTime:endDate.getTime()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
   
   let startDate: Date;
   
@@ -557,33 +656,51 @@ function transformSubItemToGanttTask(subItem: SubItem, item: InitiativeItem, ini
     if (currentIndex > 0) {
       // Subitem anterior existe
       const previousSubItem = allSubItems[currentIndex - 1];
-      const previousEndDate = parseFlexibleDate(previousSubItem.endDate);
-      if (previousEndDate) {
-        startDate = previousEndDate;
+      const previousEndDateRaw = parseFlexibleDate(previousSubItem.endDate);
+      if (previousEndDateRaw) {
+        startDate = startOfDay(previousEndDateRaw);
       } else {
         // Fallback: se subitem anterior não tem endDate, usa startDate do subitem atual ou fallback
-        const subItemStartDate = parseFlexibleDate(subItem.startDate);
-        const itemEndDate = parseFlexibleDate(item.endDate);
-        startDate = subItemStartDate || (itemEndDate 
-          ? (isBefore(itemEndDate, endDate) ? itemEndDate : subDays(endDate, 7))
-          : subDays(endDate, 7));
+        const subItemStartDateRaw = parseFlexibleDate(subItem.startDate);
+        const itemEndDateRaw = parseFlexibleDate(item.endDate);
+        if (subItemStartDateRaw) {
+          startDate = startOfDay(subItemStartDateRaw);
+        } else if (itemEndDateRaw) {
+          const itemEndDate = startOfDay(itemEndDateRaw);
+          startDate = isBefore(itemEndDate, endDate) ? itemEndDate : subDays(endDate, 7);
+        } else {
+          startDate = subDays(endDate, 7);
+        }
       }
     } else {
       // É o primeiro subitem, não pode estar vinculado (mas se estiver, usa fallback)
-      const subItemStartDate = parseFlexibleDate(subItem.startDate);
-      const itemEndDate = parseFlexibleDate(item.endDate);
-      startDate = subItemStartDate || (itemEndDate 
-        ? (isBefore(itemEndDate, endDate) ? itemEndDate : subDays(endDate, 7))
-        : subDays(endDate, 7));
+      const subItemStartDateRaw = parseFlexibleDate(subItem.startDate);
+      const itemEndDateRaw = parseFlexibleDate(item.endDate);
+      if (subItemStartDateRaw) {
+        startDate = startOfDay(subItemStartDateRaw);
+      } else if (itemEndDateRaw) {
+        const itemEndDate = startOfDay(itemEndDateRaw);
+        startDate = isBefore(itemEndDate, endDate) ? itemEndDate : subDays(endDate, 7);
+      } else {
+        startDate = subDays(endDate, 7);
+      }
     }
   } else {
     // Não está vinculado, usa startDate explícito ou fallback
-    const subItemStartDate = parseFlexibleDate(subItem.startDate);
-    const itemEndDate = parseFlexibleDate(item.endDate);
-    startDate = subItemStartDate || (itemEndDate 
-      ? (isBefore(itemEndDate, endDate) ? itemEndDate : subDays(endDate, 7))
-      : subDays(endDate, 7));
+    const subItemStartDateRaw = parseFlexibleDate(subItem.startDate);
+    const itemEndDateRaw = parseFlexibleDate(item.endDate);
+    if (subItemStartDateRaw) {
+      startDate = startOfDay(subItemStartDateRaw);
+    } else if (itemEndDateRaw) {
+      const itemEndDate = startOfDay(itemEndDateRaw);
+      startDate = isBefore(itemEndDate, endDate) ? itemEndDate : subDays(endDate, 7);
+    } else {
+      startDate = subDays(endDate, 7);
+    }
   }
+  
+  // Garante que startDate está normalizado
+  startDate = startOfDay(startDate);
   
   const isOverdue = isBefore(endDate, startOfDay(new Date())) && 
                     subItem.status !== 'Concluído';
@@ -680,6 +797,10 @@ export function TableGanttView({
       start: dateRange.start, 
       end: dateRange.end 
     });
+
+    // #region agent log
+    (()=>{const firstDt=dateHeaders[0]?startOfDay(dateHeaders[0]).getTime():null;const lastDt=dateHeaders.length>0?startOfDay(dateHeaders[dateHeaders.length-1]).getTime():null;fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'table-gantt-view.tsx:787',message:'dateHeaders created',data:{dateHeadersLength:dateHeaders.length,firstDateISO:dateHeaders[0]?.toISOString(),lastDateISO:dateHeaders[dateHeaders.length-1]?.toISOString(),firstDateTime:firstDt,lastDateTime:lastDt,dateRangeStartISO:dateRange.start.toISOString(),dateRangeEndISO:dateRange.end.toISOString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});})();
+    // #endregion
 
     const ganttTasks: GanttTask[] = [];
     filteredInitiatives.forEach(initiative => {
@@ -1081,6 +1202,10 @@ export function TableGanttView({
                           const taskStart = startOfDay(ganttTask.startDate);
                           const taskEnd = startOfDay(ganttTask.endDate);
                           
+                          // #region agent log
+                          fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'table-gantt-view.tsx:1173',message:'INITIATIVE bar calc',data:{type:'initiative',taskId:ganttTask.id,taskName:ganttTask.name,taskStartISO:taskStart.toISOString(),taskEndISO:taskEnd.toISOString(),taskStartTime:taskStart.getTime(),taskEndTime:taskEnd.getTime(),rawStartDateISO:ganttTask.startDate.toISOString(),rawEndDateISO:ganttTask.endDate.toISOString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D'})}).catch(()=>{});
+                          // #endregion
+                          
                           // Encontra o índice da primeira célula que corresponde ou é posterior à data de início
                           // Usa comparação de timestamp para garantir precisão
                           barStartIndex = dateHeaders.findIndex(day => {
@@ -1090,21 +1215,12 @@ export function TableGanttView({
                             return dayTime >= taskTime;
                           });
                           
-                          // Encontra o índice da primeira célula que é posterior à data de fim
-                          // Inclui a última célula do intervalo (endDate inclusivo)
-                          barEndIndex = dateHeaders.findIndex(day => {
-                            const dayStart = startOfDay(day);
-                            const dayTime = dayStart.getTime();
-                            const taskTime = taskEnd.getTime();
-                            return dayTime > taskTime;
-                          });
+                          // Encontra o índice do último dia da barra usando função helper corrigida
+                          barEndIndex = findBarEndIndex(dateHeaders, taskEnd);
                           
-                          // Se não encontrou uma célula posterior, usa a última célula
-                          if (barEndIndex < 0) {
-                            barEndIndex = dateHeaders.length;
-                          }
-                          // Ajusta para incluir a última célula do intervalo
-                          barEndIndex = barEndIndex - 1;
+                          // #region agent log
+                          fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'table-gantt-view.tsx:1189',message:'INITIATIVE bar indices',data:{type:'initiative',taskId:ganttTask.id,barStartIndex,barEndIndex,span:barEndIndex-barStartIndex+1},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+                          // #endregion
                           
                           // Se não encontrou início, usa a primeira célula
                           if (barStartIndex < 0) {
@@ -1151,10 +1267,17 @@ export function TableGanttView({
                               {/* Barra do Gantt - renderiza apenas na primeira célula do intervalo */}
                               {isBarStart && ganttTask && barStartIndex >= 0 && barEndIndex >= barStartIndex && (() => {
                                 const span = barEndIndex - barStartIndex + 1;
-                                const barWidth = Math.max(40, span * cellWidth);
+                                // Calcula largura baseada no span exato, sem mínimo artificial que quebra proporcionalidade
+                                const barWidth = span * cellWidth;
+                                // #region agent log
+                                fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'table-gantt-view.tsx:1271',message:'INITIATIVE bar render',data:{type:'initiative',taskId:ganttTask.id,barStartIndex,barEndIndex,span,cellWidth,barWidth},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+                                // #endregion
+                                // Captura valores dentro do closure para evitar problema de referência
+                                const tooltipStartDate = ganttTask.startDate;
+                                const tooltipEndDate = ganttTask.endDate;
                                 
                                 return (
-                                  <Tooltip>
+                                  <Tooltip key={`initiative-tooltip-${ganttTask.id}-${dayIndex}`}>
                                     <TooltipTrigger asChild>
                                       <div 
                                         className={cn(
@@ -1165,14 +1288,14 @@ export function TableGanttView({
                                           left: '0px',
                                           width: `${barWidth}px`,
                                           height: '24px',
-                                          minWidth: '40px',
+                                          minWidth: `${Math.max(2, barWidth)}px`,
                                           pointerEvents: 'auto',
                                         }}
                                       />
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                      <p className="text-xs">Início: {format(ganttTask.startDate, 'dd/MM/yyyy')}</p>
-                                      <p className="text-xs">Fim: {format(ganttTask.endDate, 'dd/MM/yyyy')}</p>
+                                      <p className="text-xs">Início: {format(tooltipStartDate, 'dd/MM/yyyy')}</p>
+                                      <p className="text-xs">Fim: {format(tooltipEndDate, 'dd/MM/yyyy')}</p>
                                     </TooltipContent>
                                   </Tooltip>
                                 );
@@ -1389,6 +1512,10 @@ export function TableGanttView({
                               const taskStart = startOfDay(itemGanttTask.startDate);
                               const taskEnd = startOfDay(itemGanttTask.endDate);
                               
+                              // #region agent log
+                              fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'table-gantt-view.tsx:1467',message:'ITEM bar calc',data:{type:'item',taskId:itemGanttTask.id,taskName:itemGanttTask.name,taskStartISO:taskStart.toISOString(),taskEndISO:taskEnd.toISOString(),taskStartTime:taskStart.getTime(),taskEndTime:taskEnd.getTime(),rawStartDateISO:itemGanttTask.startDate.toISOString(),rawEndDateISO:itemGanttTask.endDate.toISOString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D'})}).catch(()=>{});
+                              // #endregion
+                              
                               let barStartIndex = dateHeaders.findIndex(day => {
                                 const dayStart = startOfDay(day);
                                 const dayTime = dayStart.getTime();
@@ -1396,17 +1523,12 @@ export function TableGanttView({
                                 return dayTime >= taskTime;
                               });
                               
-                              let barEndIndex = dateHeaders.findIndex(day => {
-                                const dayStart = startOfDay(day);
-                                const dayTime = dayStart.getTime();
-                                const taskTime = taskEnd.getTime();
-                                return dayTime > taskTime;
-                              });
+                              // Encontra o índice do último dia da barra usando função helper corrigida
+                              let barEndIndex = findBarEndIndex(dateHeaders, taskEnd);
                               
-                              if (barEndIndex < 0) {
-                                barEndIndex = dateHeaders.length;
-                              }
-                              barEndIndex = barEndIndex - 1;
+                              // #region agent log
+                              fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'table-gantt-view.tsx:1482',message:'ITEM bar indices',data:{type:'item',taskId:itemGanttTask.id,barStartIndex,barEndIndex,span:barEndIndex-barStartIndex+1},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+                              // #endregion
                               
                               if (barStartIndex < 0) {
                                 barStartIndex = 0;
@@ -1447,10 +1569,17 @@ export function TableGanttView({
                                     
                                     {isBarStart && itemGanttTask && barStartIndex >= 0 && barEndIndex >= barStartIndex && (() => {
                                       const span = barEndIndex - barStartIndex + 1;
-                                      const barWidth = Math.max(40, span * cellWidth);
+                                      // Calcula largura baseada no span exato, sem mínimo artificial que quebra proporcionalidade
+                                      const barWidth = span * cellWidth;
+                                      // #region agent log
+                                      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'table-gantt-view.tsx:1569',message:'ITEM bar render',data:{type:'item',taskId:itemGanttTask.id,barStartIndex,barEndIndex,span,cellWidth,barWidth},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+                                      // #endregion
+                                      // Captura valores dentro do closure para evitar problema de referência
+                                      const tooltipStartDate = itemGanttTask.startDate;
+                                      const tooltipEndDate = itemGanttTask.endDate;
                                       
                                       return (
-                                        <Tooltip>
+                                        <Tooltip key={`item-tooltip-${item.id}-${dayIndex}`}>
                                           <TooltipTrigger asChild>
                                             <div 
                                               className={cn(
@@ -1461,14 +1590,14 @@ export function TableGanttView({
                                                 left: '0px',
                                                 width: `${barWidth}px`,
                                                 height: '20px',
-                                                minWidth: '40px',
+                                                minWidth: `${Math.max(2, barWidth)}px`,
                                                 pointerEvents: 'auto',
                                               }}
                                             />
                                           </TooltipTrigger>
                                           <TooltipContent>
-                                            <p className="text-xs">Início: {format(itemGanttTask.startDate, 'dd/MM/yyyy')}</p>
-                                            <p className="text-xs">Fim: {format(itemGanttTask.endDate, 'dd/MM/yyyy')}</p>
+                                            <p className="text-xs">Início: {format(tooltipStartDate, 'dd/MM/yyyy')}</p>
+                                            <p className="text-xs">Fim: {format(tooltipEndDate, 'dd/MM/yyyy')}</p>
                                           </TooltipContent>
                                         </Tooltip>
                                       );
@@ -1632,6 +1761,10 @@ export function TableGanttView({
                                   const taskStart = startOfDay(subItemGanttTask.startDate);
                                   const taskEnd = startOfDay(subItemGanttTask.endDate);
                                   
+                                  // #region agent log
+                                  fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'table-gantt-view.tsx:1702',message:'SUBITEM bar calc',data:{type:'subitem',taskId:subItemGanttTask.id,taskName:subItemGanttTask.name,taskStartISO:taskStart.toISOString(),taskEndISO:taskEnd.toISOString(),taskStartTime:taskStart.getTime(),taskEndTime:taskEnd.getTime(),rawStartDateISO:subItemGanttTask.startDate.toISOString(),rawEndDateISO:subItemGanttTask.endDate.toISOString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D'})}).catch(()=>{});
+                                  // #endregion
+                                  
                                   let barStartIndex = dateHeaders.findIndex(day => {
                                     const dayStart = startOfDay(day);
                                     const dayTime = dayStart.getTime();
@@ -1639,17 +1772,12 @@ export function TableGanttView({
                                     return dayTime >= taskTime;
                                   });
                                   
-                                  let barEndIndex = dateHeaders.findIndex(day => {
-                                    const dayStart = startOfDay(day);
-                                    const dayTime = dayStart.getTime();
-                                    const taskTime = taskEnd.getTime();
-                                    return dayTime > taskTime;
-                                  });
+                                  // Encontra o índice do último dia da barra usando função helper corrigida
+                                  let barEndIndex = findBarEndIndex(dateHeaders, taskEnd);
                                   
-                                  if (barEndIndex < 0) {
-                                    barEndIndex = dateHeaders.length;
-                                  }
-                                  barEndIndex = barEndIndex - 1;
+                                  // #region agent log
+                                  fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'table-gantt-view.tsx:1716',message:'SUBITEM bar indices',data:{type:'subitem',taskId:subItemGanttTask.id,barStartIndex,barEndIndex,span:barEndIndex-barStartIndex+1},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+                                  // #endregion
                                   
                                   if (barStartIndex < 0) {
                                     barStartIndex = 0;
@@ -1690,10 +1818,17 @@ export function TableGanttView({
                                         
                                         {isBarStart && subItemGanttTask && barStartIndex >= 0 && barEndIndex >= barStartIndex && (() => {
                                           const span = barEndIndex - barStartIndex + 1;
-                                          const barWidth = Math.max(40, span * cellWidth);
+                                          // Calcula largura baseada no span exato, sem mínimo artificial que quebra proporcionalidade
+                                          const barWidth = span * cellWidth;
+                                          // #region agent log
+                                          fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'table-gantt-view.tsx:1814',message:'SUBITEM bar render',data:{type:'subitem',taskId:subItemGanttTask.id,barStartIndex,barEndIndex,span,cellWidth,barWidth},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+                                          // #endregion
+                                          // Captura valores dentro do closure para evitar problema de referência
+                                          const tooltipStartDate = subItemGanttTask.startDate;
+                                          const tooltipEndDate = subItemGanttTask.endDate;
                                           
                                           return (
-                                            <Tooltip>
+                                            <Tooltip key={`subitem-tooltip-${subItem.id}-${dayIndex}`}>
                                               <TooltipTrigger asChild>
                                                 <div 
                                                   className={cn(
@@ -1704,14 +1839,14 @@ export function TableGanttView({
                                                     left: '0px',
                                                     width: `${barWidth}px`,
                                                     height: '16px',
-                                                    minWidth: '40px',
+                                                    minWidth: `${Math.max(2, barWidth)}px`,
                                                     pointerEvents: 'auto',
                                                   }}
                                                 />
                                               </TooltipTrigger>
                                               <TooltipContent>
-                                                <p className="text-xs">Início: {format(subItemGanttTask.startDate, 'dd/MM/yyyy')}</p>
-                                                <p className="text-xs">Fim: {format(subItemGanttTask.endDate, 'dd/MM/yyyy')}</p>
+                                                <p className="text-xs">Início: {format(tooltipStartDate, 'dd/MM/yyyy')}</p>
+                                                <p className="text-xs">Fim: {format(tooltipEndDate, 'dd/MM/yyyy')}</p>
                                               </TooltipContent>
                                             </Tooltip>
                                           );
