@@ -1261,31 +1261,6 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
        <div className="space-y-4 rounded-lg border p-4" data-items-section>
         <div className="flex justify-between items-center">
             <Label>Items (Obrigatório - mínimo 1)</Label>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const currentAreaId = getValues('areaId') || '';
-                appendItem({ 
-                  title: "", 
-                  startDate: undefined as any, // Obrigatório se não vinculado, calculado se vinculado
-                  endDate: undefined as any, // Obrigatório, usuário deve preencher antes de salvar
-                  linkedToPrevious: false,
-                  status: 'Pendente',
-                  areaId: currentAreaId, // Usar a área do projeto
-                  priority: 'Baixa',
-                  description: '',
-                  responsible: "", // Obrigatório
-                  subItems: [] as any[]
-                });
-                // Limpar erro de "sem itens" quando um item é adicionado
-                clearErrors('items');
-              }}
-              disabled={isLimitedMode}
-            >
-              <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Item
-            </Button>
         </div>
         {/* Exibir erro de items obrigatórios no topo da seção apenas quando tentar submeter sem itens */}
         {(isSubmitted && hasItemsMinError(errors.items)) || (isSubmitted && errors.items && typeof errors.items === 'object' && !Array.isArray(errors.items) && 'message' in errors.items) ? (
@@ -1621,15 +1596,6 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                 <div className="space-y-3 rounded-lg border p-3 bg-muted/30">
                   <div className="flex justify-between items-center">
                     <Label className="text-sm font-medium">Subitens (Opcional)</Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => appendSubItem(index)}
-                      disabled={isLimitedMode}
-                    >
-                      <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Subitem
-                    </Button>
                   </div>
                   
                   {watchItems?.[index]?.subItems && watchItems[index].subItems.length > 0 ? (
@@ -1917,11 +1883,37 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                           </div>
                         </div>
                       ))}
+                      {/* Botão para adicionar novo subitem - posicionado após o último subitem */}
+                      <div className="mt-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => appendSubItem(index)}
+                          disabled={isLimitedMode}
+                        >
+                          <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Subitem
+                        </Button>
+                      </div>
                     </div>
                   ) : (
-                    <p className="text-xs text-muted-foreground text-center py-1">
-                      Nenhum subitem adicionado. Adicione subitens se necessário.
-                    </p>
+                    <div className="space-y-3">
+                      <p className="text-xs text-muted-foreground text-center py-1">
+                        Nenhum subitem adicionado. Adicione subitens se necessário.
+                      </p>
+                      {/* Botão para adicionar o primeiro subitem */}
+                      <div className="flex justify-center">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => appendSubItem(index)}
+                          disabled={isLimitedMode}
+                        >
+                          <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Subitem
+                        </Button>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1974,11 +1966,69 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                 })}
               </div>
             )}
+            {/* Botão para adicionar novo item - posicionado após o último item */}
+            <div className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const currentAreaId = getValues('areaId') || '';
+                  appendItem({ 
+                    title: "", 
+                    startDate: undefined as any, // Obrigatório se não vinculado, calculado se vinculado
+                    endDate: undefined as any, // Obrigatório, usuário deve preencher antes de salvar
+                    linkedToPrevious: false,
+                    status: 'Pendente',
+                    areaId: currentAreaId, // Usar a área do projeto
+                    priority: 'Baixa',
+                    description: '',
+                    responsible: "", // Obrigatório
+                    subItems: [] as any[]
+                  });
+                  // Limpar erro de "sem itens" quando um item é adicionado
+                  clearErrors('items');
+                }}
+                disabled={isLimitedMode}
+              >
+                <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Item
+              </Button>
+            </div>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground text-center py-2">
-            Nenhuma item adicionada. Adicione pelo menos uma item.
-          </p>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground text-center py-2">
+              Nenhuma item adicionada. Adicione pelo menos uma item.
+            </p>
+            {/* Botão para adicionar o primeiro item */}
+            <div className="flex justify-center">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const currentAreaId = getValues('areaId') || '';
+                  appendItem({ 
+                    title: "", 
+                    startDate: undefined as any, // Obrigatório se não vinculado, calculado se vinculado
+                    endDate: undefined as any, // Obrigatório, usuário deve preencher antes de salvar
+                    linkedToPrevious: false,
+                    status: 'Pendente',
+                    areaId: currentAreaId, // Usar a área do projeto
+                    priority: 'Baixa',
+                    description: '',
+                    responsible: "", // Obrigatório
+                    subItems: [] as any[]
+                  });
+                  // Limpar erro de "sem itens" quando um item é adicionado
+                  clearErrors('items');
+                }}
+                disabled={isLimitedMode}
+              >
+                <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Item
+              </Button>
+            </div>
+          </div>
         )}
       </div>
 
