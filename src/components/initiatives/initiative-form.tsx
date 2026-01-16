@@ -238,8 +238,8 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
       endDate: undefined as any,
       items: [],
     },
-    mode: 'onChange', // Para validação em tempo real
-    reValidateMode: 'onChange', // Revalidar ao mudar para limpar erros automaticamente
+    mode: 'onSubmit', // Validar apenas ao submeter
+    reValidateMode: 'onChange', // Revalidar ao mudar para limpar erros automaticamente (após primeiro submit)
     shouldUnregister: false, // Manter valores mesmo quando campos são removidos
   });
 
@@ -435,10 +435,6 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
 
   // Calcular startDate automaticamente quando item está vinculado ao anterior
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:437',message:'useEffect: calculating automatic startDate',data:{itemsCount:watchItems?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
-    // #endregion
-    
     if (watchItems && watchItems.length > 0) {
       watchItems.forEach((item, index) => {
         // Se não é o primeiro item e está vinculado
@@ -449,10 +445,6 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
             const currentStartDate = getValues(`items.${index}.startDate`);
             const previousEndDate = previousItem.endDate;
             
-            // #region agent log
-            fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:452',message:'Calculating item startDate from previous',data:{itemIndex:index,previousEndDate:previousEndDate?.toString(),currentStartDate:currentStartDate?.toString(),willUpdate:currentStartDate!==previousEndDate},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
-            // #endregion
-            
             // Só atualizar se for diferente para evitar loops infinitos
             if (currentStartDate !== previousEndDate) {
               setValue(`items.${index}.startDate`, previousEndDate, { shouldValidate: true });
@@ -460,9 +452,6 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
               // Verificar imediatamente se endDate < startDate calculado e revalidar
               const currentEndDate = getValues(`items.${index}.endDate`);
               if (currentEndDate && previousEndDate && currentEndDate < previousEndDate) {
-                // #region agent log
-                fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:460',message:'Item endDate conflict detected after auto-calculation',data:{itemIndex:index,calculatedStartDate:previousEndDate?.toString(),currentEndDate:currentEndDate?.toString(),hasConflict:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
-                // #endregion
                 // Limpar e revalidar para exibir erro imediatamente
                 clearErrors(`items.${index}.endDate`);
                 // Revalidar após pequeno delay para garantir que o startDate foi atualizado
@@ -488,10 +477,6 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                 const currentStartDate = getValues(`items.${index}.subItems.${subItemIndex}.startDate`);
                 const previousEndDate = previousSubItem.endDate;
                 
-                // #region agent log
-                fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:481',message:'Calculating subItem startDate from previous',data:{itemIndex:index,subItemIndex,previousEndDate:previousEndDate?.toString(),currentStartDate:currentStartDate?.toString(),willUpdate:currentStartDate!==previousEndDate},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
-                // #endregion
-                
                 // Só atualizar se for diferente para evitar loops infinitos
                 if (currentStartDate !== previousEndDate) {
                   setValue(`items.${index}.subItems.${subItemIndex}.startDate`, previousEndDate, { shouldValidate: true });
@@ -499,9 +484,6 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                   // Verificar imediatamente se endDate < startDate calculado e revalidar
                   const currentEndDate = getValues(`items.${index}.subItems.${subItemIndex}.endDate`);
                   if (currentEndDate && previousEndDate && currentEndDate < previousEndDate) {
-                    // #region agent log
-                    fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:489',message:'SubItem endDate conflict detected after auto-calculation',data:{itemIndex:index,subItemIndex,calculatedStartDate:previousEndDate?.toString(),currentEndDate:currentEndDate?.toString(),hasConflict:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
-                    // #endregion
                     // Limpar e revalidar para exibir erro imediatamente
                     clearErrors(`items.${index}.subItems.${subItemIndex}.endDate`);
                     clearErrors(`items.${index}.subItems`);
@@ -743,41 +725,22 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
    * @param errors - Objeto de erros do react-hook-form
    */
   const onError = (errors: any) => {
-    // Serializar erros uma vez no início para usar em todos os logs
-    const errorsSafe = serializeErrorsForLog(errors);
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:669',message:'onError called',data:{errorsSafe,isEmpty:!errors||Object.keys(errors||{}).length===0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-    
     // Verificar se errors existe e não está vazio
     if (!errors || typeof errors !== 'object') {
-      // #region agent log
-      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:675',message:'onError early return: invalid errors',data:{errorsSafe},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       return;
     }
     
     // Verificar se é um objeto vazio (sem propriedades próprias)
     const errorKeys = Object.keys(errors);
     if (errorKeys.length === 0) {
-      // #region agent log
-      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:682',message:'onError early return: empty errors object',data:{errorsSafe},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       // Objeto vazio: não há erros reais, permitir submissão
       return;
     }
     
     const hasRealErrors = hasRealErrorMessage(errors);
-    // #region agent log
-    fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:693',message:'onError: checking real errors',data:{errorsSafe,errorKeys,hasRealErrors},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     
     // Ignorar completamente se não houver erros reais
     if (!hasRealErrors) {
-      // #region agent log
-      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:699',message:'onError early return: no real error messages',data:{errorsSafe},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       // Objeto com propriedades mas sem mensagens de erro reais, permitir submissão
       return;
     }
@@ -800,137 +763,208 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
         behavior: 'smooth'
       });
     };
-    
-    // Tratar erro de items (array vazio)
-    if (hasItemsMinError(errors.items)) {
-      const itemsSection = document.querySelector('[data-items-section]');
-      if (itemsSection) {
-        setTimeout(() => {
-          scrollToElementWithOffset(itemsSection, 100);
-        }, 100);
-        return;
-      }
-    }
-    
-    // Tratar erros de subItems.root (data de fim do subitem > data de fim do item)
-    if (errors.items && Array.isArray(errors.items)) {
-      for (let itemIndex = 0; itemIndex < errors.items.length; itemIndex++) {
-        const itemError = errors.items[itemIndex];
-        if (itemError?.subItems?.root?.message) {
-          // Para este tipo de erro, rolar para o endDate do item (não do subitem)
-          // Encontrar o botão de data do item e fazer scroll
-          setTimeout(() => {
-            let targetElement: Element | null = null;
-            
-            // Encontrar todos os labels "Data de Fim" dentro da seção de items
-            const itemsSection = document.querySelector('[data-items-section]');
-            if (itemsSection) {
-              const allLabels = Array.from(itemsSection.querySelectorAll('label'));
-              const endDateLabels = allLabels.filter(label => 
-                label.textContent?.trim().startsWith('Data de Fim') || 
-                label.textContent?.includes('Data de Fim')
-              );
-              
-              // Pegar o label correspondente ao índice do item (considerando que cada item tem um label "Data de Fim")
-              if (endDateLabels[itemIndex]) {
-                const label = endDateLabels[itemIndex];
-                // Procurar o botão mais próximo ao label (pode estar no mesmo parent ou próximo)
-                const labelParent = label.parentElement;
-                if (labelParent) {
-                  // Procurar botão no mesmo container
-                  targetElement = labelParent.querySelector('button[class*="border"]') || 
-                                 labelParent.querySelector('button');
-                  
-                  // Se não encontrou no parent direto, procurar nos irmãos
-                  if (!targetElement && labelParent.parentElement) {
-                    targetElement = labelParent.parentElement.querySelector('button');
-                  }
+
+    /**
+     * Encontra o elemento DOM correspondente a um path de erro
+     * Tenta múltiplas estratégias de busca para garantir que sempre encontra o elemento
+     */
+    const findElementByErrorPath = (errorPath: string): Element | null => {
+      // 1. Tentar data-attribute específico (mais confiável)
+      let element = document.querySelector(`[data-field-path="${errorPath}"]`);
+      if (element) return element;
+
+      // 2. Tentar name attribute (para inputs diretos)
+      element = document.querySelector(`[name="${errorPath}"]`);
+      if (element) return element;
+
+      // 3. Extrair partes do path para estratégias específicas
+      const parts = errorPath.split('.');
+      const fieldName = parts[parts.length - 1];
+      const isInItems = errorPath.startsWith('items.');
+      const isInSubItems = errorPath.includes('.subItems.');
+
+      // 4. Para campos de data (startDate/endDate), buscar botão PopoverTrigger
+      if (fieldName === 'startDate' || fieldName === 'endDate') {
+        // Tentar encontrar botão dentro do contexto específico
+        if (isInSubItems) {
+          // Extrair índices: items.X.subItems.Y.endDate
+          const match = errorPath.match(/items\.(\d+)\.subItems\.(\d+)\.(startDate|endDate)/);
+          if (match) {
+            const [, itemIdx, subItemIdx] = match;
+            // Buscar por data-field-path específico ou por contexto
+            element = document.querySelector(`[data-field-path="items.${itemIdx}.subItems.${subItemIdx}.${fieldName}"]`) ||
+                     document.querySelector(`[name="items.${itemIdx}.subItems.${subItemIdx}.${fieldName}"]`);
+            // Se não encontrou, buscar botão próximo a label "Data de Fim" no contexto do subitem
+            if (!element) {
+              const itemsSection = document.querySelector('[data-items-section]');
+              if (itemsSection) {
+                const allLabels = Array.from(itemsSection.querySelectorAll('label'));
+                // Contar labels de data do subitem correspondente
+                let subItemLabelIndex = 0;
+                for (let i = 0; i < parseInt(itemIdx || '0'); i++) {
+                  const itemLabels = allLabels.filter((l, idx) => {
+                    const parent = l.closest('[data-item-index]');
+                    return parent?.getAttribute('data-item-index') === String(i);
+                  });
+                  subItemLabelIndex += itemLabels.filter(l => 
+                    l.textContent?.includes('Data de') || l.textContent?.includes('Data de')
+                  ).length;
+                }
+                const subItemLabels = allLabels.filter((l, idx) => {
+                  const parent = l.closest('[data-subitem-index]');
+                  return parent?.getAttribute('data-subitem-index') === `${itemIdx}-${subItemIdx}`;
+                });
+                const dateLabels = subItemLabels.filter(l => 
+                  l.textContent?.includes('Data de Fim') || l.textContent?.includes('Data de Início')
+                );
+                if (dateLabels[fieldName === 'endDate' ? 1 : 0]) {
+                  const label = dateLabels[fieldName === 'endDate' ? 1 : 0];
+                  element = label.parentElement?.querySelector('button') || null;
                 }
               }
             }
-            
-            // Fallback: Se não encontrou, rolar para a seção de items ou área de erros
-            if (targetElement) {
-              scrollToElementWithOffset(targetElement, 120);
-            } else {
-              // Rolar para a seção de items
+          }
+        } else if (isInItems) {
+          // Extrair índice: items.X.endDate
+          const match = errorPath.match(/items\.(\d+)\.(startDate|endDate)/);
+          if (match) {
+            const [, itemIdx] = match;
+            // Buscar por data-field-path específico
+            element = document.querySelector(`[data-field-path="items.${itemIdx}.${fieldName}"]`) ||
+                     document.querySelector(`[name="items.${itemIdx}.${fieldName}"]`);
+            // Se não encontrou, buscar botão próximo a label "Data de Fim" no contexto do item
+            if (!element) {
               const itemsSection = document.querySelector('[data-items-section]');
               if (itemsSection) {
-                scrollToElementWithOffset(itemsSection, 100);
+                const allLabels = Array.from(itemsSection.querySelectorAll('label'));
+                const itemLabels = allLabels.filter((l, idx) => {
+                  const parent = l.closest('[data-item-index]');
+                  return parent?.getAttribute('data-item-index') === itemIdx;
+                });
+                const dateLabels = itemLabels.filter(l => 
+                  l.textContent?.includes('Data de Fim') || l.textContent?.includes('Data de Início')
+                );
+                if (dateLabels[fieldName === 'endDate' ? 1 : 0]) {
+                  const label = dateLabels[fieldName === 'endDate' ? 1 : 0];
+                  element = label.parentElement?.querySelector('button') || null;
+                }
               }
             }
-          }, 200);
-          return;
-        }
-      }
-    }
-    
-    // Para outros erros, usar a primeira mensagem encontrada
-    if (firstErrorMessage && firstErrorMessage.path) {
-      const errorPath = firstErrorMessage.path;
-      
-      // Fazer scroll para o campo com erro
-      setTimeout(() => {
-        const fieldName = errorPath.split('.').pop();
-        // Tentar várias estratégias para encontrar o elemento
-        let element = document.querySelector(`[name="${errorPath}"]`) ||
-                     document.querySelector(`[name="${fieldName}"]`) ||
-                     document.querySelector(`#${fieldName}`);
-        
-        // Se for um campo de data (Controller), o input pode estar dentro de um PopoverTrigger button
-        if (!element && errorPath.includes('endDate')) {
+          }
+        } else {
+          // Iniciativa: buscar botão de data no topo do form
           const button = Array.from(document.querySelectorAll('button')).find(btn => 
-            btn.getAttribute('aria-label')?.includes('endDate') ||
-            btn.textContent?.includes('Selecione') ||
-            btn.querySelector('[name*="endDate"]')
+            btn.textContent?.includes('Selecione') || 
+            btn.getAttribute('name')?.includes(fieldName) ||
+            btn.closest('div')?.querySelector(`[name="${fieldName}"]`)
           );
           if (button) element = button;
         }
-        
-        if (element) {
-          scrollToElementWithOffset(element, 100);
+        if (element) return element;
+      }
+
+      // 5. Para Select (areaId, status, priority), buscar SelectTrigger
+      if (fieldName === 'areaId' || fieldName === 'status' || fieldName === 'priority') {
+        if (isInSubItems) {
+          const match = errorPath.match(/items\.(\d+)\.subItems\.(\d+)\.(status|priority)/);
+          if (match) {
+            const [, itemIdx, subItemIdx, field] = match;
+            element = document.querySelector(`[data-field-path="items.${itemIdx}.subItems.${subItemIdx}.${field}"]`) ||
+                     document.querySelector(`button[aria-label*="${field}"]`);
+          }
+        } else if (isInItems) {
+          const match = errorPath.match(/items\.(\d+)\.(status|priority)/);
+          if (match) {
+            const [, itemIdx, field] = match;
+            element = document.querySelector(`[data-field-path="items.${itemIdx}.${field}"]`) ||
+                     document.querySelector(`button[aria-label*="${field}"]`);
+          }
         } else {
-          // Fallback: rolar para a seção de items
-          const itemsSection = document.querySelector('[data-items-section]');
-          if (itemsSection) {
-            scrollToElementWithOffset(itemsSection, 100);
+          element = document.querySelector(`[data-field-path="${fieldName}"]`) ||
+                   document.querySelector(`button[aria-label*="${fieldName}"]`) ||
+                   document.querySelector(`#${fieldName}`);
+        }
+        if (element) return element;
+      }
+
+      // 6. Fallback: buscar pelo fieldName genérico ou pelo último segmento do path
+      element = document.querySelector(`#${fieldName}`) || 
+                document.querySelector(`[name="${fieldName}"]`) ||
+                document.querySelector(`input[id*="${fieldName}"]`) ||
+                document.querySelector(`textarea[id*="${fieldName}"]`);
+
+      return element;
+    };
+    
+    // Usar requestAnimationFrame para garantir que o DOM está atualizado
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        let targetElement: Element | null = null;
+
+        // Prioridade 1: Erro no nível de items (array vazio OU item.endDate > initiative.endDate)
+        if (hasItemsMinError(errors.items) || (errors.items && typeof errors.items === 'object' && !Array.isArray(errors.items) && 'message' in errors.items)) {
+          targetElement = document.querySelector('[data-items-section]');
+          if (targetElement) {
+            scrollToElementWithOffset(targetElement, 100);
+            return;
           }
         }
-      }, 150);
-    }
+
+        // Prioridade 2: Erro de subItems.root (data de fim do subitem > data de fim do item)
+        if (errors.items && Array.isArray(errors.items)) {
+          for (let itemIndex = 0; itemIndex < errors.items.length; itemIndex++) {
+            const itemError = errors.items[itemIndex];
+            if (itemError?.subItems?.root?.message) {
+              // Para este erro específico, rolar para o endDate do item pai
+              targetElement = findElementByErrorPath(`items.${itemIndex}.endDate`);
+              if (targetElement) {
+                scrollToElementWithOffset(targetElement, 120);
+                return;
+              }
+              // Fallback: rolar para seção de items
+              targetElement = document.querySelector('[data-items-section]');
+              if (targetElement) {
+                scrollToElementWithOffset(targetElement, 100);
+                return;
+              }
+            }
+          }
+        }
+
+        // Prioridade 3: Usar o primeiro erro encontrado e buscar seu elemento
+        if (firstErrorMessage && firstErrorMessage.path) {
+          const errorPath = firstErrorMessage.path;
+          targetElement = findElementByErrorPath(errorPath);
+
+          if (targetElement) {
+            scrollToElementWithOffset(targetElement, 100);
+            return;
+          }
+        }
+
+        // Fallback final: rolar para a seção de items se houver erros lá
+        if (errors.items) {
+          targetElement = document.querySelector('[data-items-section]');
+          if (targetElement) {
+            scrollToElementWithOffset(targetElement, 100);
+            return;
+          }
+        }
+
+        // Último fallback: rolar para o topo do formulário
+        const formElement = document.querySelector('form');
+        if (formElement) {
+          scrollToElementWithOffset(formElement, 100);
+        }
+      }, 200);
+    });
   };
 
   // Wrapper para rastrear quando onSubmit é chamado
   const handleFormSubmit = (data: InitiativeFormData) => {
-    // #region agent log
-    const itemsWithSubItems = data.items?.map((item, idx) => ({
-      index: idx,
-      title: item.title,
-      subItemsCount: item.subItems?.length || 0,
-      subItems: item.subItems?.map((si, siIdx) => ({
-        index: siIdx,
-        title: si.title,
-        hasStartDate: !!si.startDate,
-        hasEndDate: !!si.endDate,
-        linkedToPrevious: si.linkedToPrevious,
-        hasResponsible: !!si.responsible,
-        startDate: si.startDate?.toString(),
-        endDate: si.endDate?.toString(),
-      })) || []
-    })) || [];
-    
-    fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:634',message:'Form onSubmit called with subitems data',data:{hasTitle:!!data.title,itemsCount:data.items?.length||0,hasStartDate:!!data.startDate,hasEndDate:!!data.endDate,itemsWithSubItems},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
-    
     try {
       onSubmit(data);
-      // #region agent log
-      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:650',message:'onSubmit completed successfully',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
     } catch (error) {
-      // #region agent log
-      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:653',message:'onSubmit threw error',data:{error:error instanceof Error?error.message:String(error),stack:error instanceof Error?error.stack:undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
       throw error;
     }
   };
@@ -972,18 +1006,8 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
         });
       }
       
-      // #region agent log
-      const errorsSafe = serializeErrorsForLog(errors);
-      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:918',message:'handleSubmit validation failed with subitem errors',data:{errorsSafe,subItemErrors,hasRealErrors:hasRealErrorMessage(errors)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
-      
       // Verificar se realmente há erros reais
       if (!hasRealErrorMessage(errors)) {
-        // #region agent log
-        const errorsSafe = serializeErrorsForLog(errors);
-        fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:932',message:'No real errors, clearing and re-submitting',data:{errorsSafe},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
-        
         // Limpar erros falsos e tentar submeter novamente
         clearErrors();
         // Usar setTimeout para permitir que o estado seja atualizado
@@ -1002,7 +1026,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
     <form onSubmit={wrappedHandleSubmit} className="space-y-6 pt-4">
       <div className="space-y-2">
         <Label htmlFor="title">Título da Iniciativa</Label>
-        <Input id="title" {...register("title")} placeholder="Ex: Otimizar o Funil de Vendas" disabled={isLimitedMode} />
+        <Input id="title" {...register("title")} placeholder="Ex: Otimizar o Funil de Vendas" disabled={isLimitedMode} data-field-path="title" />
         {isSubmitted && errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
       </div>
 
@@ -1019,6 +1043,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                           variant={"outline"}
                           className={cn("w-full justify-start text-left font-normal", errors.startDate && "border-destructive")}
                           disabled={!canEditDeadline || isLimitedMode}
+                          data-field-path="startDate"
                       >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione uma data</span>}
@@ -1063,6 +1088,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                           variant={"outline"}
                           className={cn("w-full justify-start text-left font-normal", errors.endDate && "border-destructive")}
                           disabled={!canEditDeadline || isLimitedMode}
+                          data-field-path="endDate"
                       >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione uma data</span>}
@@ -1105,7 +1131,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                   control={control}
                   render={({ field }) => (
                       <Select onValueChange={field.onChange} value={field.value} disabled={isLimitedMode || !!finalPreselectedAreaId}>
-                          <SelectTrigger>
+                          <SelectTrigger data-field-path="areaId">
                               <SelectValue placeholder="Selecione a área" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1133,6 +1159,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                   placeholder="Ex: João da Silva" 
                   className={cn(errors.owner && "border-destructive")}
                   disabled={isLimitedMode}
+                  data-field-path="owner"
               />
               {isSubmitted && errors.owner && <p className="text-sm text-destructive">{errors.owner.message}</p>}
           </div>
@@ -1174,7 +1201,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                         value={field.value} 
                         disabled={!canEditStatus}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger data-field-path="status">
                           <SelectValue placeholder="Selecione o status inicial" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1210,7 +1237,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                   control={control}
                   render={({ field }) => (
                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLimitedMode}>
-                          <SelectTrigger>
+                          <SelectTrigger data-field-path="priority">
                               <SelectValue placeholder="Selecione a prioridade" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1227,7 +1254,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
 
       <div className="space-y-2">
         <Label htmlFor="description">Observações (Descrição)</Label>
-        <Textarea id="description" {...register("description")} placeholder="Descreva o objetivo principal, escopo e os resultados esperados desta iniciativa." rows={5} disabled={isLimitedMode} />
+        <Textarea id="description" {...register("description")} placeholder="Descreva o objetivo principal, escopo e os resultados esperados desta iniciativa." rows={5} disabled={isLimitedMode} data-field-path="description" />
         {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
       </div>
       
@@ -1261,17 +1288,17 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
             </Button>
         </div>
         {/* Exibir erro de items obrigatórios no topo da seção apenas quando tentar submeter sem itens */}
-        {isSubmitted && hasItemsMinError(errors.items) && (
+        {(isSubmitted && hasItemsMinError(errors.items)) || (isSubmitted && errors.items && typeof errors.items === 'object' && !Array.isArray(errors.items) && 'message' in errors.items) ? (
           <div className="p-3 border-2 border-destructive rounded-md bg-destructive/20">
             <p className="text-sm font-semibold text-destructive">
               ⚠️ {String(errors.items?.message || 'É necessário adicionar pelo menos um item antes de criar a iniciativa.')}
             </p>
           </div>
-        )}
+        ) : null}
          {hasItems ? (
           <div className="space-y-4">
             {itemFields.map((field, index) => (
-              <div key={field.id} className="space-y-3 p-3 border rounded-lg">
+              <div key={field.id} className="space-y-3 p-3 border rounded-lg" data-item-index={index}>
                 <div className="flex items-center justify-between">
                   <Label className="text-base font-semibold">Item {index + 1}</Label>
                   <Button
@@ -1333,6 +1360,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       placeholder="Ex: Planejamento"
                       className={cn(errors.items?.[index]?.title && "border-destructive")}
                       disabled={isLimitedMode}
+                      data-field-path={`items.${index}.title`}
                     />
                     {isSubmitted && errors.items?.[index]?.title && (
                       <p className="text-sm text-destructive">{errors.items[index]?.title?.message}</p>
@@ -1347,6 +1375,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       placeholder="Ex: Maria Silva"
                       className={cn(errors.items?.[index]?.responsible && "border-destructive")}
                       disabled={isLimitedMode}
+                      data-field-path={`items.${index}.responsible`}
                     />
                     {isSubmitted && errors.items?.[index]?.responsible && (
                       <p className="text-sm text-destructive">{errors.items[index]?.responsible?.message}</p>
@@ -1372,6 +1401,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                 variant="outline" 
                                 className={cn("w-full justify-start text-left font-normal", errors.items?.[index]?.startDate && "border-destructive")} 
                                 disabled={!canEditDeadline || isLimitedMode || isLinked}
+                                data-field-path={`items.${index}.startDate`}
                               >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {displayValue ? format(displayValue, "dd/MM/yyyy") : <span>Selecione</span>}
@@ -1424,6 +1454,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                 (errors.items?.[index]?.endDate || errors.items?.[index]?.subItems?.root) && "border-destructive border-2"
                               )}
                               disabled={!canEditDeadline || isLimitedMode}
+                              data-field-path={`items.${index}.endDate`}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
                               {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
@@ -1509,7 +1540,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                             value={field.value} 
                             disabled={!canEditStatus}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger data-field-path={`items.${index}.status`}>
                               <SelectValue placeholder="Status" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1557,7 +1588,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       control={control}
                       render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value} disabled={isLimitedMode}>
-                          <SelectTrigger>
+                          <SelectTrigger data-field-path={`items.${index}.priority`}>
                             <SelectValue placeholder="Prioridade" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1579,6 +1610,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                     rows={2}
                     className={cn(errors.items?.[index]?.description && "border-destructive")}
                     disabled={isLimitedMode}
+                    data-field-path={`items.${index}.description`}
                   />
                   {errors.items?.[index]?.description && (
                     <p className="text-sm text-destructive">{errors.items[index]?.description?.message}</p>
@@ -1603,7 +1635,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                   {watchItems?.[index]?.subItems && watchItems[index].subItems.length > 0 ? (
                     <div className="space-y-3">
                       {watchItems[index].subItems.map((subItem: any, subItemIndex: number) => (
-                        <div key={subItemIndex} className="space-y-2 p-2 border rounded bg-background">
+                        <div key={subItemIndex} className="space-y-2 p-2 border rounded bg-background" data-subitem-index={`${index}-${subItemIndex}`}>
                           <div className="flex items-center justify-between">
                             <Label className="text-xs font-medium">Subitem {subItemIndex + 1}</Label>
                             <Button
@@ -1664,6 +1696,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                 placeholder="Título do subitem"
                                 className="h-8 text-sm"
                                 disabled={isLimitedMode}
+                                data-field-path={`items.${index}.subItems.${subItemIndex}.title`}
                               />
                               {isSubmitted && errors.items?.[index]?.subItems?.[subItemIndex]?.title && (
                                 <p className="text-xs text-destructive">{errors.items[index]?.subItems?.[subItemIndex]?.title?.message}</p>
@@ -1677,6 +1710,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                 placeholder="Responsável"
                                 className="h-8 text-sm"
                                 disabled={isLimitedMode}
+                                data-field-path={`items.${index}.subItems.${subItemIndex}.responsible`}
                               />
                               {isSubmitted && errors.items?.[index]?.subItems?.[subItemIndex]?.responsible && (
                                 <p className="text-xs text-destructive">{errors.items[index]?.subItems?.[subItemIndex]?.responsible?.message}</p>
@@ -1701,6 +1735,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                           variant="outline" 
                                           className={cn("w-full justify-start text-left font-normal h-8 text-sm", errors.items?.[index]?.subItems?.[subItemIndex]?.startDate && "border-destructive")} 
                                           disabled={!canEditDeadline || isLimitedMode || isLinked}
+                                          data-field-path={`items.${index}.subItems.${subItemIndex}.startDate`}
                                         >
                                           <CalendarIcon className="mr-2 h-3 w-3" />
                                           {displayValue ? format(displayValue, "dd/MM/yyyy") : <span>Selecione</span>}
@@ -1754,6 +1789,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                         variant="outline" 
                                         className={cn("w-full justify-start text-left font-normal h-8 text-sm", errors.items?.[index]?.subItems?.[subItemIndex]?.endDate && "border-destructive")} 
                                         disabled={!canEditDeadline || isLimitedMode}
+                                        data-field-path={`items.${index}.subItems.${subItemIndex}.endDate`}
                                       >
                                         <CalendarIcon className="mr-2 h-3 w-3" />
                                         {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
@@ -1821,7 +1857,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                       value={field.value} 
                                       disabled={!canEditStatus}
                                     >
-                                      <SelectTrigger className="h-8 text-sm">
+                                      <SelectTrigger className="h-8 text-sm" data-field-path={`items.${index}.subItems.${subItemIndex}.status`}>
                                         <SelectValue placeholder="Status" />
                                       </SelectTrigger>
                                       <SelectContent>
@@ -1852,7 +1888,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                 control={control}
                                 render={({ field }) => (
                                   <Select onValueChange={field.onChange} value={field.value} disabled={isLimitedMode}>
-                                    <SelectTrigger className="h-8 text-sm">
+                                    <SelectTrigger className="h-8 text-sm" data-field-path={`items.${index}.subItems.${subItemIndex}.priority`}>
                                       <SelectValue placeholder="Prioridade" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -1890,8 +1926,8 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                 </div>
               </div>
             ))}
-            {/* Exibir erros de itens individuais apenas quando há itens e erros específicos */}
-            {errors.items && Array.isArray(errors.items) && errors.items.length > 0 && (
+            {/* Exibir erros de itens individuais apenas quando há itens e erros específicos - APENAS APÓS SUBMIT */}
+            {isSubmitted && errors.items && Array.isArray(errors.items) && errors.items.length > 0 && (
               <div className="text-sm text-destructive space-y-1 p-3 border border-destructive rounded-md bg-destructive/10">
                 <p className="font-semibold">Erros encontrados nos itens:</p>
                 {Array.isArray(errors.items) && errors.items.map((itemError: any, idx: number) => {
