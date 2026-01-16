@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import type { Initiative } from "@/types";
 import { Button } from '@/components/ui/button';
 import { useAuth } from "@/contexts/auth-context";
-import { canEditInitiativeResponsible, canEditInitiativeStatus, canDeleteInitiative, canEditDeadline } from "@/lib/permissions-config";
+import { canEditInitiativeResponsible, canEditInitiativeStatus, canDeleteInitiative, canEditDeadline, canEditDescription, canEditPriority } from "@/lib/permissions-config";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +44,8 @@ export function EditInitiativeModal({ isOpen, onOpenChange, initiative }: EditIn
     const canEditStatus = canEditInitiativeStatus(userType, userArea, initiative.areaId);
     const canDelete = canDeleteInitiative(userType);
     const canEditDeadlineValue = canEditDeadline(userType);
+    const canEditDescriptionValue = canEditDescription(userType, userArea, initiative.areaId);
+    const canEditPriorityValue = canEditPriority(userType, userArea, initiative.areaId);
     const isLimitedMode = userType === 'head' && canEditResponsible; // Head da própria área em modo limitado
 
     const handleFormSubmit = async (data: InitiativeFormData) => {
@@ -162,6 +164,8 @@ export function EditInitiativeModal({ isOpen, onOpenChange, initiative }: EditIn
                     isLimitedMode={isLimitedMode}
                     canEditStatus={canEditStatus}
                     canEditDeadline={canEditDeadlineValue}
+                    canEditDescription={canEditDescriptionValue}
+                    canEditPriority={canEditPriorityValue}
                 />
                 {canDelete && (
                   <DialogFooter className="border-t pt-4 mt-4">

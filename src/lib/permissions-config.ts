@@ -299,6 +299,96 @@ export function canEditDeadline(userType: UserType): boolean {
 }
 
 /**
+ * Verifica se o usuário pode editar as observações (description) de iniciativas, itens ou subitens.
+ * 
+ * REGRAS:
+ * - Admin e PMO: Sempre podem editar observações
+ * - Head: Pode editar apenas se for da mesma área da iniciativa (userArea === initiativeAreaId)
+ * 
+ * @param userType - Tipo de usuário (admin, pmo, head)
+ * @param userArea - Área do usuário (ID da BusinessArea)
+ * @param initiativeAreaId - ID da área da iniciativa
+ * @returns true se o usuário pode editar as observações, false caso contrário
+ * 
+ * @example
+ * // PMO pode editar
+ * canEditDescription('pmo', undefined, 'area-123');
+ * // Retorna: true
+ * 
+ * @example
+ * // Head da própria área pode editar
+ * canEditDescription('head', 'area-123', 'area-123');
+ * // Retorna: true
+ * 
+ * @example
+ * // Head de outra área não pode editar
+ * canEditDescription('head', 'area-123', 'area-456');
+ * // Retorna: false
+ */
+export function canEditDescription(
+  userType: UserType,
+  userArea: string | undefined,
+  initiativeAreaId: string
+): boolean {
+  // Admin e PMO sempre podem editar
+  if (userType === 'admin' || userType === 'pmo') {
+    return true;
+  }
+  
+  // Head só pode editar da própria área (comparar IDs)
+  if (userType === 'head') {
+    return userArea === initiativeAreaId;
+  }
+  
+  return false;
+}
+
+/**
+ * Verifica se o usuário pode editar a prioridade (priority) de iniciativas, itens ou subitens.
+ * 
+ * REGRAS:
+ * - Admin e PMO: Sempre podem editar prioridade
+ * - Head: Pode editar apenas se for da mesma área da iniciativa (userArea === initiativeAreaId)
+ * 
+ * @param userType - Tipo de usuário (admin, pmo, head)
+ * @param userArea - Área do usuário (ID da BusinessArea)
+ * @param initiativeAreaId - ID da área da iniciativa
+ * @returns true se o usuário pode editar a prioridade, false caso contrário
+ * 
+ * @example
+ * // PMO pode editar
+ * canEditPriority('pmo', undefined, 'area-123');
+ * // Retorna: true
+ * 
+ * @example
+ * // Head da própria área pode editar
+ * canEditPriority('head', 'area-123', 'area-123');
+ * // Retorna: true
+ * 
+ * @example
+ * // Head de outra área não pode editar
+ * canEditPriority('head', 'area-123', 'area-456');
+ * // Retorna: false
+ */
+export function canEditPriority(
+  userType: UserType,
+  userArea: string | undefined,
+  initiativeAreaId: string
+): boolean {
+  // Admin e PMO sempre podem editar
+  if (userType === 'admin' || userType === 'pmo') {
+    return true;
+  }
+  
+  // Head só pode editar da própria área (comparar IDs)
+  if (userType === 'head') {
+    return userArea === initiativeAreaId;
+  }
+  
+  return false;
+}
+
+/**
  * Verifica se o usuário pode visualizar um modo específico de visualização.
  * 
  * Esta função verifica permissões baseadas na área efetiva (effectiveAreaId),

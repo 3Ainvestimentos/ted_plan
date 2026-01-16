@@ -201,13 +201,15 @@ interface InitiativeFormProps {
     onCancel: () => void;
     initialData?: Partial<InitiativeFormData>;
     isLoading?: boolean;
-    isLimitedMode?: boolean; // Modo limitado para heads (só pode editar responsible e status)
-    canEditStatus?: boolean; // Se pode editar status de execução
-    canEditDeadline?: boolean; // Se pode editar prazo (endDate) - PMO pode, Head não pode
+  isLimitedMode?: boolean; // Modo limitado para heads (só pode editar responsible e status)
+  canEditStatus?: boolean; // Se pode editar status de execução
+  canEditDeadline?: boolean; // Se pode editar prazo (endDate) - PMO pode, Head não pode
+  canEditDescription?: boolean; // Se pode editar observações (description) - Head pode se for da própria área
+  canEditPriority?: boolean; // Se pode editar prioridade (priority) - Head pode se for da própria área
     preselectedAreaId?: string | null; // Área pré-selecionada (quando há filtro explícito na URL)
 }
 
-export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isLimitedMode = false, canEditStatus = true, canEditDeadline = true, preselectedAreaId }: InitiativeFormProps) {
+export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isLimitedMode = false, canEditStatus = true, canEditDeadline = true, canEditDescription = true, canEditPriority = true, preselectedAreaId }: InitiativeFormProps) {
   const { businessAreas } = useStrategicPanel();
   
   // Validar se preselectedAreaId existe em businessAreas
@@ -1236,7 +1238,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                   name="priority"
                   control={control}
                   render={({ field }) => (
-                       <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLimitedMode}>
+                       <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!canEditPriority}>
                           <SelectTrigger data-field-path="priority">
                               <SelectValue placeholder="Selecione a prioridade" />
                           </SelectTrigger>
@@ -1254,7 +1256,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
 
       <div className="space-y-2">
         <Label htmlFor="description">Observações (Descrição)</Label>
-        <Textarea id="description" {...register("description")} placeholder="Descreva o objetivo principal, escopo e os resultados esperados desta iniciativa." rows={5} disabled={isLimitedMode} data-field-path="description" />
+        <Textarea id="description" {...register("description")} placeholder="Descreva o objetivo principal, escopo e os resultados esperados desta iniciativa." rows={5} disabled={!canEditDescription} data-field-path="description" />
         {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
       </div>
       
@@ -1562,7 +1564,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       name={`items.${index}.priority`}
                       control={control}
                       render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isLimitedMode}>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={!canEditPriority}>
                           <SelectTrigger data-field-path={`items.${index}.priority`}>
                             <SelectValue placeholder="Prioridade" />
                           </SelectTrigger>
@@ -1584,7 +1586,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                     placeholder="Descreva a item..."
                     rows={2}
                     className={cn(errors.items?.[index]?.description && "border-destructive")}
-                    disabled={isLimitedMode}
+                    disabled={!canEditDescription}
                     data-field-path={`items.${index}.description`}
                   />
                   {errors.items?.[index]?.description && (
@@ -1853,7 +1855,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                 name={`items.${index}.subItems.${subItemIndex}.priority`}
                                 control={control}
                                 render={({ field }) => (
-                                  <Select onValueChange={field.onChange} value={field.value} disabled={isLimitedMode}>
+                                  <Select onValueChange={field.onChange} value={field.value} disabled={!canEditPriority}>
                                     <SelectTrigger className="h-8 text-sm" data-field-path={`items.${index}.subItems.${subItemIndex}.priority`}>
                                       <SelectValue placeholder="Prioridade" />
                                     </SelectTrigger>
@@ -1875,7 +1877,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                               placeholder="Observações do subitem"
                               rows={2}
                               className="text-sm"
-                              disabled={isLimitedMode}
+                              disabled={!canEditDescription}
                             />
                             {errors.items?.[index]?.subItems?.[subItemIndex]?.description && (
                               <p className="text-xs text-destructive">{errors.items[index]?.subItems?.[subItemIndex]?.description?.message}</p>
