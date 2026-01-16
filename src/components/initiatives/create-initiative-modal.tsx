@@ -42,7 +42,14 @@ export function CreateInitiativeModal({ isOpen, onOpenChange, preselectedAreaId 
     }, [isOpen, canCreate, onOpenChange, toast]);
 
     const handleFormSubmit = async (data: InitiativeFormData) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'create-initiative-modal.tsx:44',message:'handleFormSubmit called',data:{canCreate,hasTitle:!!data.title,itemsCount:data.items?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        
         if (!canCreate) {
+            // #region agent log
+            fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'create-initiative-modal.tsx:47',message:'handleFormSubmit: permission denied',data:{canCreate},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+            // #endregion
             toast({
                 variant: 'destructive',
                 title: "Acesso Negado",
@@ -52,7 +59,13 @@ export function CreateInitiativeModal({ isOpen, onOpenChange, preselectedAreaId 
         }
 
         setIsLoading(true);
+        // #region agent log
+        fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'create-initiative-modal.tsx:56',message:'Calling addInitiative',data:{title:data.title,itemsCount:data.items?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         await addInitiative(data);
+        // #region agent log
+        fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'create-initiative-modal.tsx:58',message:'addInitiative completed',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         setIsLoading(false);
 
         toast({

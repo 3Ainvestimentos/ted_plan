@@ -124,7 +124,7 @@ const itemSchema = z.object({
   }
   return true;
 }, {
-  message: "A data de fim do subitem não pode ser maior que a data de fim do item.",
+  message: "A data de fim do item deve ser maior que a data de fim do subitem.",
   path: ["subItems"],
 });
 
@@ -193,6 +193,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
     setValue,
     getValues,
     clearErrors,
+    trigger,
     formState: { errors },
   } = useForm<InitiativeFormData>({
     resolver: zodResolver(initiativeSchema),
@@ -499,13 +500,47 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
       return false;
     }
     
+    // Se for array, verificar se está vazio
+    if (Array.isArray(errorObj)) {
+      return errorObj.length > 0 && errorObj.some(item => hasRealErrorMessage(item));
+    }
+    
+    // Verificar se o objeto está vazio (sem propriedades próprias)
+    const ownKeys = Object.keys(errorObj);
+    if (ownKeys.length === 0) {
+      return false; // Objeto vazio não tem erros
+    }
+    
     // Verificar se tem mensagem direta
     if (errorObj.message && typeof errorObj.message === 'string' && errorObj.message.trim().length > 0) {
       return true;
     }
     
-    // Verificar recursivamente em todas as propriedades
+    // Verificar se há um objeto 'root' com mensagem (erro de validação customizado do Zod)
+    if (errorObj.root && typeof errorObj.root === 'object') {
+      if (errorObj.root.message && typeof errorObj.root.message === 'string' && errorObj.root.message.trim().length > 0) {
+        return true;
+      }
+      // Verificar recursivamente dentro de root também
+      if (hasRealErrorMessage(errorObj.root)) {
+        return true;
+      }
+    }
+    
+    // Ignorar propriedades especiais do react-hook-form que não são erros reais (mas já verificamos root acima)
+    const ignoredKeys = ['_errors', 'type', 'ref'];
+    
+    // Verificar recursivamente em todas as propriedades (exceto as ignoradas)
     for (const key in errorObj) {
+      if (ignoredKeys.includes(key)) {
+        continue;
+      }
+      
+      // Não verificar 'root' novamente, já verificamos acima
+      if (key === 'root') {
+        continue;
+      }
+      
       if (hasRealErrorMessage(errorObj[key])) {
         return true;
       }
@@ -528,60 +563,294 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
   };
 
   /**
+   * Extrai mensagens de erro de forma recursiva
+   */
+  const extractErrorMessages = (errorObj: any, path: string = ''): Array<{ path: string; message: string }> => {
+    const messages: Array<{ path: string; message: string }> = [];
+    
+    if (!errorObj || typeof errorObj !== 'object') {
+      return messages;
+    }
+    
+    // Verificar mensagem direta
+    if (errorObj.message && typeof errorObj.message === 'string' && errorObj.message.trim().length > 0) {
+      messages.push({ path, message: errorObj.message });
+    }
+    
+    // Verificar mensagem em root (validação customizada do Zod)
+    if (errorObj.root?.message && typeof errorObj.root.message === 'string' && errorObj.root.message.trim().length > 0) {
+      messages.push({ path: path || 'root', message: errorObj.root.message });
+    }
+    
+    // Verificar recursivamente
+    for (const key in errorObj) {
+      if (key === 'root' || key === 'message') continue;
+      const currentPath = path ? `${path}.${key}` : key;
+      const nestedMessages = extractErrorMessages(errorObj[key], currentPath);
+      messages.push(...nestedMessages);
+    }
+    
+    return messages;
+  };
+
+  /**
    * Handler de erros de validação do formulário
    * 
    * @param errors - Objeto de erros do react-hook-form
    */
   const onError = (errors: any) => {
-    // Ignorar completamente se não houver erros reais
-    if (!hasRealErrorMessage(errors)) {
-      return; // Objeto vazio ou sem mensagens de erro reais
+    // #region agent log
+    fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:569',message:'onError called',data:{errors,errorKeys:errors?Object.keys(errors):[],isEmpty:!errors||Object.keys(errors||{}).length===0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
+    // Verificar se errors existe e não está vazio
+    if (!errors || typeof errors !== 'object') {
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:572',message:'onError early return: invalid errors',data:{errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      return;
     }
     
-    console.error("Erros de validação:", errors);
+    // Verificar se é um objeto vazio (sem propriedades próprias)
+    const errorKeys = Object.keys(errors);
+    if (errorKeys.length === 0) {
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:578',message:'onError early return: empty errors object',data:{errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      // Objeto vazio: não há erros reais, permitir submissão
+      return;
+    }
     
-    // Se houver erro de items (array vazio), rolar para a seção de items
+    const hasRealErrors = hasRealErrorMessage(errors);
+    // #region agent log
+    fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:584',message:'onError: checking real errors',data:{errors,errorKeys,hasRealErrors},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
+    // Ignorar completamente se não houver erros reais
+    if (!hasRealErrors) {
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:590',message:'onError early return: no real error messages',data:{errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      // Objeto com propriedades mas sem mensagens de erro reais, permitir submissão
+      return;
+    }
+    
+    // Log apenas quando houver erros reais
+    if (hasRealErrors) {
+      console.error("Erros de validação:", errors);
+    }
+    
+    // Extrair todas as mensagens de erro
+    const errorMessages = extractErrorMessages(errors);
+    const firstErrorMessage = errorMessages[0];
+    
+    // Função auxiliar para fazer scroll com offset (campo não fica no extremo norte)
+    const scrollToElementWithOffset = (element: Element, offset: number = 80) => {
+      const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
+      const offsetPosition = elementPosition - offset;
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
+    };
+    
+    // Tratar erro de items (array vazio)
     if (hasItemsMinError(errors.items)) {
       const itemsSection = document.querySelector('[data-items-section]');
       if (itemsSection) {
-        itemsSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => {
+          scrollToElementWithOffset(itemsSection, 100);
+        }, 100);
         return;
       }
     }
     
-    // Função recursiva para encontrar o primeiro campo com erro
-    const findFirstErrorField = (errorObj: any, path: string = ''): string | null => {
-      for (const key in errorObj) {
-        const currentPath = path ? `${path}.${key}` : key;
-        
-        if (errorObj[key]?.message) {
-          return currentPath;
-        }
-        
-        if (typeof errorObj[key] === 'object' && errorObj[key] !== null) {
-          const nestedError = findFirstErrorField(errorObj[key], currentPath);
-          if (nestedError) return nestedError;
+    // Tratar erros de subItems.root (data de fim do subitem > data de fim do item)
+    if (errors.items && Array.isArray(errors.items)) {
+      for (let itemIndex = 0; itemIndex < errors.items.length; itemIndex++) {
+        const itemError = errors.items[itemIndex];
+        if (itemError?.subItems?.root?.message) {
+          // Para este tipo de erro, rolar para o endDate do item (não do subitem)
+          // Encontrar o botão de data do item e fazer scroll
+          setTimeout(() => {
+            let targetElement: Element | null = null;
+            
+            // Encontrar todos os labels "Data de Fim" dentro da seção de items
+            const itemsSection = document.querySelector('[data-items-section]');
+            if (itemsSection) {
+              const allLabels = Array.from(itemsSection.querySelectorAll('label'));
+              const endDateLabels = allLabels.filter(label => 
+                label.textContent?.trim().startsWith('Data de Fim') || 
+                label.textContent?.includes('Data de Fim')
+              );
+              
+              // Pegar o label correspondente ao índice do item (considerando que cada item tem um label "Data de Fim")
+              if (endDateLabels[itemIndex]) {
+                const label = endDateLabels[itemIndex];
+                // Procurar o botão mais próximo ao label (pode estar no mesmo parent ou próximo)
+                const labelParent = label.parentElement;
+                if (labelParent) {
+                  // Procurar botão no mesmo container
+                  targetElement = labelParent.querySelector('button[class*="border"]') || 
+                                 labelParent.querySelector('button');
+                  
+                  // Se não encontrou no parent direto, procurar nos irmãos
+                  if (!targetElement && labelParent.parentElement) {
+                    targetElement = labelParent.parentElement.querySelector('button');
+                  }
+                }
+              }
+            }
+            
+            // Fallback: Se não encontrou, rolar para a seção de items ou área de erros
+            if (targetElement) {
+              scrollToElementWithOffset(targetElement, 120);
+            } else {
+              // Rolar para a seção de items
+              const itemsSection = document.querySelector('[data-items-section]');
+              if (itemsSection) {
+                scrollToElementWithOffset(itemsSection, 100);
+              }
+            }
+          }, 200);
+          return;
         }
       }
-      return null;
-    };
+    }
     
-    const firstErrorField = findFirstErrorField(errors);
-    if (firstErrorField) {
-      // Tentar encontrar o elemento pelo name ou id
-      const fieldName = firstErrorField.split('.').pop();
-      const element = document.querySelector(`[name="${firstErrorField}"]`) || 
+    // Para outros erros, usar a primeira mensagem encontrada
+    if (firstErrorMessage && firstErrorMessage.path) {
+      const errorPath = firstErrorMessage.path;
+      
+      // Fazer scroll para o campo com erro
+      setTimeout(() => {
+        const fieldName = errorPath.split('.').pop();
+        // Tentar várias estratégias para encontrar o elemento
+        let element = document.querySelector(`[name="${errorPath}"]`) ||
                      document.querySelector(`[name="${fieldName}"]`) ||
                      document.querySelector(`#${fieldName}`);
-      
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+        
+        // Se for um campo de data (Controller), o input pode estar dentro de um PopoverTrigger button
+        if (!element && errorPath.includes('endDate')) {
+          const button = Array.from(document.querySelectorAll('button')).find(btn => 
+            btn.getAttribute('aria-label')?.includes('endDate') ||
+            btn.textContent?.includes('Selecione') ||
+            btn.querySelector('[name*="endDate"]')
+          );
+          if (button) element = button;
+        }
+        
+        if (element) {
+          scrollToElementWithOffset(element, 100);
+        } else {
+          // Fallback: rolar para a seção de items
+          const itemsSection = document.querySelector('[data-items-section]');
+          if (itemsSection) {
+            scrollToElementWithOffset(itemsSection, 100);
+          }
+        }
+      }, 150);
     }
   };
 
+  // Wrapper para rastrear quando onSubmit é chamado
+  const handleFormSubmit = (data: InitiativeFormData) => {
+    // #region agent log
+    const itemsWithSubItems = data.items?.map((item, idx) => ({
+      index: idx,
+      title: item.title,
+      subItemsCount: item.subItems?.length || 0,
+      subItems: item.subItems?.map((si, siIdx) => ({
+        index: siIdx,
+        title: si.title,
+        hasStartDate: !!si.startDate,
+        hasEndDate: !!si.endDate,
+        linkedToPrevious: si.linkedToPrevious,
+        hasResponsible: !!si.responsible,
+        startDate: si.startDate?.toString(),
+        endDate: si.endDate?.toString(),
+      })) || []
+    })) || [];
+    
+    fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:634',message:'Form onSubmit called with subitems data',data:{hasTitle:!!data.title,itemsCount:data.items?.length||0,hasStartDate:!!data.startDate,hasEndDate:!!data.endDate,itemsWithSubItems},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
+    
+    try {
+      onSubmit(data);
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:650',message:'onSubmit completed successfully',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+    } catch (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:653',message:'onSubmit threw error',data:{error:error instanceof Error?error.message:String(error),stack:error instanceof Error?error.stack:undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+      throw error;
+    }
+  };
+
+  // Wrapper para handleSubmit que loga o estado de erros
+  const wrappedHandleSubmit = handleSubmit(
+    handleFormSubmit,
+    (errors) => {
+      // Extrair erros detalhados dos subitens
+      const subItemErrors: any[] = [];
+      if (errors.items && Array.isArray(errors.items)) {
+        errors.items.forEach((itemError: any, itemIdx: number) => {
+          if (itemError?.subItems) {
+            if (Array.isArray(itemError.subItems)) {
+              itemError.subItems.forEach((subItemError: any, subItemIdx: number) => {
+                if (subItemError) {
+                  subItemErrors.push({
+                    itemIndex: itemIdx,
+                    subItemIndex: subItemIdx,
+                    errors: {
+                      title: subItemError.title?.message,
+                      startDate: subItemError.startDate?.message,
+                      endDate: subItemError.endDate?.message,
+                      responsible: subItemError.responsible?.message,
+                    }
+                  });
+                }
+              });
+            } else if (typeof itemError.subItems === 'object' && 'message' in itemError.subItems) {
+              subItemErrors.push({
+                itemIndex: itemIdx,
+                subItemIndex: -1,
+                errors: {
+                  subItems: itemError.subItems.message
+                }
+              });
+            }
+          }
+        });
+      }
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:644',message:'handleSubmit validation failed with subitem errors',data:{errors,errorsKeys:errors?Object.keys(errors):[],subItemErrors,hasRealErrors:hasRealErrorMessage(errors)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+      // #endregion
+      
+      // Verificar se realmente há erros reais
+      if (!hasRealErrorMessage(errors)) {
+        // #region agent log
+        fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:662',message:'No real errors, clearing and re-submitting',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+        
+        // Limpar erros falsos e tentar submeter novamente
+        clearErrors();
+        // Usar setTimeout para permitir que o estado seja atualizado
+        setTimeout(() => {
+          handleSubmit(handleFormSubmit)();
+        }, 0);
+        return;
+      }
+      
+      // Se houver erros reais, chamar onError normalmente
+      onError(errors);
+    }
+  );
+
   return (
-    <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-6 pt-4">
+    <form onSubmit={wrappedHandleSubmit} className="space-y-6 pt-4">
       <div className="space-y-2">
         <Label htmlFor="title">Título da Iniciativa</Label>
         <Input id="title" {...register("title")} placeholder="Ex: Otimizar o Funil de Vendas" disabled={isLimitedMode} />
@@ -974,9 +1243,12 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       render={({ field }) => (
                         <Popover>
                           <PopoverTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              className={cn("w-full justify-start text-left font-normal", errors.items?.[index]?.endDate && "border-destructive")} 
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal", 
+                                (errors.items?.[index]?.endDate || errors.items?.[index]?.subItems?.root) && "border-destructive border-2"
+                              )}
                               disabled={!canEditDeadline || isLimitedMode}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -987,7 +1259,13 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                             <Calendar
                               mode="single"
                               selected={field.value || undefined}
-                              onSelect={field.onChange}
+                              onSelect={(date) => {
+                                field.onChange(date);
+                                // Limpar erro de subItems.root quando a data mudar
+                                clearErrors(`items.${index}.subItems`);
+                                // Revalidar o item para atualizar erros
+                                trigger(`items.${index}.endDate`);
+                              }}
                               initialFocus
                               disabled={!canEditDeadline || isLimitedMode}
                             />
@@ -1000,8 +1278,10 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                         Você não tem permissão para editar as datas. Apenas PMO pode alterar datas.
                       </p>
                     )}
-                    {errors.items?.[index]?.endDate && (
-                      <p className="text-sm text-destructive">{errors.items[index]?.endDate?.message}</p>
+                    {(errors.items?.[index]?.endDate || errors.items?.[index]?.subItems?.root) && (
+                      <p className="text-sm text-destructive">
+                        {errors.items[index]?.endDate?.message || errors.items[index]?.subItems?.root?.message}
+                      </p>
                     )}
                   </div>
                   
@@ -1300,7 +1580,13 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                       <Calendar
                                         mode="single"
                                         selected={field.value || undefined}
-                                        onSelect={field.onChange}
+                                        onSelect={(date) => {
+                                          field.onChange(date);
+                                          // Limpar erro de subItems.root quando a data do subitem mudar
+                                          clearErrors(`items.${index}.subItems`);
+                                          // Revalidar o item para atualizar erros
+                                          trigger(`items.${index}.endDate`);
+                                        }}
                                         initialFocus
                                         disabled={!canEditDeadline || isLimitedMode}
                                       />
@@ -1424,7 +1710,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
             {/* Exibir erros de itens individuais apenas quando há itens e erros específicos */}
             {errors.items && Array.isArray(errors.items) && errors.items.length > 0 && (
               <div className="text-sm text-destructive space-y-1 p-3 border border-destructive rounded-md bg-destructive/10">
-                <p className="font-semibold">Erros encontrados nas items:</p>
+                <p className="font-semibold">Erros encontrados nos itens:</p>
                 {Array.isArray(errors.items) && errors.items.map((itemError: any, idx: number) => {
                   if (!itemError) return null;
                   return (
@@ -1453,8 +1739,15 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                           );
                         })}
                         {/* Exibir erro de subItems quando há erro no array inteiro (validação pai-filho) */}
-                        {itemError.subItems && typeof itemError.subItems === 'object' && !Array.isArray(itemError.subItems) && 'message' in itemError.subItems && (
-                          <li className="font-semibold text-destructive">{String(itemError.subItems.message)}</li>
+                        {itemError.subItems && typeof itemError.subItems === 'object' && !Array.isArray(itemError.subItems) && (
+                          <>
+                            {itemError.subItems.message && (
+                              <li className="font-semibold text-destructive">{String(itemError.subItems.message)}</li>
+                            )}
+                            {itemError.subItems.root?.message && (
+                              <li className="font-semibold text-destructive">{String(itemError.subItems.root.message)}</li>
+                            )}
+                          </>
                         )}
                       </ul>
                     </div>
