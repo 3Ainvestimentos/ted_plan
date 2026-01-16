@@ -440,6 +440,10 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addInitiative = useCallback(async (initiativeData: InitiativeFormData) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiatives-context.tsx:442',message:'addInitiative called',data:{hasTitle:!!initiativeData.title,hasOwner:!!initiativeData.owner,itemsCount:initiativeData.items?.length||0,hasStartDate:!!initiativeData.startDate,hasEndDate:!!initiativeData.endDate,hasAreaId:!!initiativeData.areaId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+    // #endregion
+    
     const nextTopicNumber = getNextMainTopicNumber(initiatives).toString();
     
     const newInitiative = {
@@ -484,11 +488,32 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
     };
 
     try {
+        // #region agent log
+        fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiatives-context.tsx:488',message:'Preparing to save initiative',data:{title:newInitiative.title,topicNumber:nextTopicNumber,itemsCount:newInitiative.items?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+        // #endregion
+        
         // Remover campos undefined antes de salvar
         const cleanedInitiative = removeUndefinedFields(newInitiative);
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiatives-context.tsx:493',message:'Calling addDoc to save initiative',data:{title:cleanedInitiative.title,topicNumber:cleanedInitiative.topicNumber},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+        // #endregion
+        
         await addDoc(initiativesCollectionRef, cleanedInitiative);
-        fetchInitiatives(); 
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiatives-context.tsx:497',message:'addDoc completed successfully',data:{title:cleanedInitiative.title},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+        // #endregion
+        
+        fetchInitiatives();
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiatives-context.tsx:501',message:'fetchInitiatives called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+        // #endregion
     } catch (error) {
+        // #region agent log
+        fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiatives-context.tsx:505',message:'addDoc failed with error',data:{error:error instanceof Error?error.message:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+        // #endregion
         console.error("Error adding initiative: ", error);
     }
   }, [initiatives, fetchInitiatives, initiativesCollectionRef]);

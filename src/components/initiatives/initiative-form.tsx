@@ -74,6 +74,9 @@ const subItemSchema = z.object({
   path: ["startDate"],
 }).refine((data) => {
   // Validar que endDate >= startDate (se ambos existirem)
+  // Nota: Quando linkedToPrevious é true, o startDate é calculado automaticamente
+  // e pode não estar no objeto no momento desta validação. A validação completa
+  // será feita no itemSchema.superRefine que tem acesso ao array completo de subitens.
   if (data.startDate && data.endDate) {
     return data.endDate >= data.startDate;
   }
@@ -126,6 +129,35 @@ const itemSchema = z.object({
 }, {
   message: "A data de fim do item deve ser maior que a data de fim do subitem.",
   path: ["subItems"],
+}).superRefine((data, ctx) => {
+  // Validação adicional: verificar endDate >= startDate para subitens vinculados
+  // Quando linkedToPrevious é true, o startDate é o endDate do subitem anterior
+  if (data.subItems && data.subItems.length > 0) {
+    data.subItems.forEach((subItem, index) => {
+      // Se está vinculado e não tem startDate definido, usar endDate do subitem anterior
+      if (subItem.linkedToPrevious && index > 0) {
+        const previousSubItem = data.subItems?.[index - 1];
+        const actualStartDate = previousSubItem?.endDate;
+        
+        // Validar que endDate >= startDate calculado
+        if (actualStartDate && subItem.endDate && subItem.endDate < actualStartDate) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "A data de fim deve ser maior ou igual à data de início.",
+            path: ["subItems", index, "endDate"],
+          });
+        }
+      }
+      // Se não está vinculado mas tem startDate e endDate, validar (validação dupla de segurança)
+      if (!subItem.linkedToPrevious && subItem.startDate && subItem.endDate && subItem.endDate < subItem.startDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "A data de fim deve ser maior ou igual à data de início.",
+          path: ["subItems", index, "endDate"],
+        });
+      }
+    });
+  }
 });
 
 const initiativeSchema = z.object({
@@ -194,7 +226,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
     getValues,
     clearErrors,
     trigger,
-    formState: { errors },
+    formState: { errors, isSubmitted },
   } = useForm<InitiativeFormData>({
     resolver: zodResolver(initiativeSchema),
     defaultValues: initialData || {
@@ -403,6 +435,10 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
 
   // Calcular startDate automaticamente quando item está vinculado ao anterior
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:437',message:'useEffect: calculating automatic startDate',data:{itemsCount:watchItems?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+    // #endregion
+    
     if (watchItems && watchItems.length > 0) {
       watchItems.forEach((item, index) => {
         // Se não é o primeiro item e está vinculado
@@ -413,9 +449,30 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
             const currentStartDate = getValues(`items.${index}.startDate`);
             const previousEndDate = previousItem.endDate;
             
+            // #region agent log
+            fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:452',message:'Calculating item startDate from previous',data:{itemIndex:index,previousEndDate:previousEndDate?.toString(),currentStartDate:currentStartDate?.toString(),willUpdate:currentStartDate!==previousEndDate},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+            // #endregion
+            
             // Só atualizar se for diferente para evitar loops infinitos
             if (currentStartDate !== previousEndDate) {
               setValue(`items.${index}.startDate`, previousEndDate, { shouldValidate: true });
+              
+              // Verificar imediatamente se endDate < startDate calculado e revalidar
+              const currentEndDate = getValues(`items.${index}.endDate`);
+              if (currentEndDate && previousEndDate && currentEndDate < previousEndDate) {
+                // #region agent log
+                fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:460',message:'Item endDate conflict detected after auto-calculation',data:{itemIndex:index,calculatedStartDate:previousEndDate?.toString(),currentEndDate:currentEndDate?.toString(),hasConflict:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+                // #endregion
+                // Limpar e revalidar para exibir erro imediatamente
+                clearErrors(`items.${index}.endDate`);
+                // Revalidar após pequeno delay para garantir que o startDate foi atualizado
+                setTimeout(() => {
+                  trigger(`items.${index}.endDate`);
+                }, 50);
+              } else {
+                // Se não há conflito, limpar erros relacionados
+                clearErrors(`items.${index}.endDate`);
+              }
             }
           }
         }
@@ -431,9 +488,33 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                 const currentStartDate = getValues(`items.${index}.subItems.${subItemIndex}.startDate`);
                 const previousEndDate = previousSubItem.endDate;
                 
+                // #region agent log
+                fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:481',message:'Calculating subItem startDate from previous',data:{itemIndex:index,subItemIndex,previousEndDate:previousEndDate?.toString(),currentStartDate:currentStartDate?.toString(),willUpdate:currentStartDate!==previousEndDate},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+                // #endregion
+                
                 // Só atualizar se for diferente para evitar loops infinitos
                 if (currentStartDate !== previousEndDate) {
                   setValue(`items.${index}.subItems.${subItemIndex}.startDate`, previousEndDate, { shouldValidate: true });
+                  
+                  // Verificar imediatamente se endDate < startDate calculado e revalidar
+                  const currentEndDate = getValues(`items.${index}.subItems.${subItemIndex}.endDate`);
+                  if (currentEndDate && previousEndDate && currentEndDate < previousEndDate) {
+                    // #region agent log
+                    fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:489',message:'SubItem endDate conflict detected after auto-calculation',data:{itemIndex:index,subItemIndex,calculatedStartDate:previousEndDate?.toString(),currentEndDate:currentEndDate?.toString(),hasConflict:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+                    // #endregion
+                    // Limpar e revalidar para exibir erro imediatamente
+                    clearErrors(`items.${index}.subItems.${subItemIndex}.endDate`);
+                    clearErrors(`items.${index}.subItems`);
+                    // Revalidar após pequeno delay para garantir que o startDate foi atualizado
+                    setTimeout(() => {
+                      trigger(`items.${index}.subItems.${subItemIndex}.endDate`);
+                      trigger(`items.${index}.subItems`);
+                    }, 50);
+                  } else {
+                    // Se não há conflito, limpar erros relacionados
+                    clearErrors(`items.${index}.subItems.${subItemIndex}.endDate`);
+                    clearErrors(`items.${index}.subItems`);
+                  }
                 }
               }
             }
@@ -500,9 +581,16 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
       return false;
     }
     
-    // Se for array, verificar se está vazio
+    // Se for array, verificar se está vazio ou só tem null/undefined/vazios
     if (Array.isArray(errorObj)) {
-      return errorObj.length > 0 && errorObj.some(item => hasRealErrorMessage(item));
+      // Se array só tem null/undefined/objetos vazios, não há erros
+      const hasNonEmptyItems = errorObj.some(item => {
+        if (item === null || item === undefined) return false;
+        if (typeof item === 'object' && Object.keys(item).length === 0) return false;
+        return true;
+      });
+      if (!hasNonEmptyItems) return false;
+      return errorObj.some(item => hasRealErrorMessage(item));
     }
     
     // Verificar se o objeto está vazio (sem propriedades próprias)
@@ -564,12 +652,32 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
 
   /**
    * Extrai mensagens de erro de forma recursiva
+   * Protegido contra recursão infinita com Set de objetos visitados
    */
-  const extractErrorMessages = (errorObj: any, path: string = ''): Array<{ path: string; message: string }> => {
+  const extractErrorMessages = (
+    errorObj: any, 
+    path: string = '', 
+    visited: WeakSet<any> = new WeakSet(),
+    depth: number = 0,
+    maxDepth: number = 10
+  ): Array<{ path: string; message: string }> => {
     const messages: Array<{ path: string; message: string }> = [];
+    
+    // Limite de profundidade para evitar recursão excessiva
+    if (depth > maxDepth) {
+      return messages;
+    }
     
     if (!errorObj || typeof errorObj !== 'object') {
       return messages;
+    }
+    
+    // Proteção contra referências circulares: objetos e arrays
+    if (typeof errorObj === 'object' && !Array.isArray(errorObj)) {
+      if (visited.has(errorObj)) {
+        return messages; // Objeto já visitado, evitar recursão infinita
+      }
+      visited.add(errorObj);
     }
     
     // Verificar mensagem direta
@@ -582,15 +690,51 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
       messages.push({ path: path || 'root', message: errorObj.root.message });
     }
     
-    // Verificar recursivamente
+    // Verificar recursivamente apenas propriedades serializáveis
+    const ignoredKeys = ['ref', 'nativeEvent', 'target', 'currentTarget', 'root', 'message'];
+    
     for (const key in errorObj) {
-      if (key === 'root' || key === 'message') continue;
+      // Ignorar chaves que podem causar problemas ou já foram verificadas
+      if (ignoredKeys.includes(key)) continue;
+      
+      // Ignorar funções e símbolos
+      if (typeof errorObj[key] === 'function' || typeof key === 'symbol') continue;
+      
       const currentPath = path ? `${path}.${key}` : key;
-      const nestedMessages = extractErrorMessages(errorObj[key], currentPath);
+      const nestedMessages = extractErrorMessages(errorObj[key], currentPath, visited, depth + 1, maxDepth);
       messages.push(...nestedMessages);
     }
     
     return messages;
+  };
+
+  /**
+   * Serializa erros de forma segura removendo referências circulares
+   * Extrai apenas dados serializáveis para logs
+   */
+  const serializeErrorsForLog = (errors: any): any => {
+    if (!errors || typeof errors !== 'object') {
+      return { errorCount: 0, errorMessages: [] };
+    }
+    
+    // Usar extractErrorMessages para extrair apenas mensagens
+    const errorMessages = extractErrorMessages(errors);
+    const errorKeys = errors ? Object.keys(errors).filter(key => 
+      !key.startsWith('_') && 
+      !key.includes('Fiber') && 
+      !key.includes('react') &&
+      key !== 'ref' &&
+      key !== 'nativeEvent' &&
+      key !== 'target' &&
+      key !== 'currentTarget'
+    ) : [];
+    
+    return {
+      errorKeys,
+      errorMessages,
+      errorCount: errorMessages.length,
+      // Não serializar o objeto errors completo para evitar referências circulares
+    };
   };
 
   /**
@@ -599,14 +743,17 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
    * @param errors - Objeto de erros do react-hook-form
    */
   const onError = (errors: any) => {
+    // Serializar erros uma vez no início para usar em todos os logs
+    const errorsSafe = serializeErrorsForLog(errors);
+    
     // #region agent log
-    fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:569',message:'onError called',data:{errors,errorKeys:errors?Object.keys(errors):[],isEmpty:!errors||Object.keys(errors||{}).length===0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:669',message:'onError called',data:{errorsSafe,isEmpty:!errors||Object.keys(errors||{}).length===0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
     // #endregion
     
     // Verificar se errors existe e não está vazio
     if (!errors || typeof errors !== 'object') {
       // #region agent log
-      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:572',message:'onError early return: invalid errors',data:{errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:675',message:'onError early return: invalid errors',data:{errorsSafe},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
       return;
     }
@@ -615,7 +762,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
     const errorKeys = Object.keys(errors);
     if (errorKeys.length === 0) {
       // #region agent log
-      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:578',message:'onError early return: empty errors object',data:{errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:682',message:'onError early return: empty errors object',data:{errorsSafe},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
       // Objeto vazio: não há erros reais, permitir submissão
       return;
@@ -623,13 +770,13 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
     
     const hasRealErrors = hasRealErrorMessage(errors);
     // #region agent log
-    fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:584',message:'onError: checking real errors',data:{errors,errorKeys,hasRealErrors},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:693',message:'onError: checking real errors',data:{errorsSafe,errorKeys,hasRealErrors},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
     // #endregion
     
     // Ignorar completamente se não houver erros reais
     if (!hasRealErrors) {
       // #region agent log
-      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:590',message:'onError early return: no real error messages',data:{errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:699',message:'onError early return: no real error messages',data:{errorsSafe},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
       // Objeto com propriedades mas sem mensagens de erro reais, permitir submissão
       return;
@@ -826,13 +973,15 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
       }
       
       // #region agent log
-      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:644',message:'handleSubmit validation failed with subitem errors',data:{errors,errorsKeys:errors?Object.keys(errors):[],subItemErrors,hasRealErrors:hasRealErrorMessage(errors)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+      const errorsSafe = serializeErrorsForLog(errors);
+      fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:918',message:'handleSubmit validation failed with subitem errors',data:{errorsSafe,subItemErrors,hasRealErrors:hasRealErrorMessage(errors)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
       // #endregion
       
       // Verificar se realmente há erros reais
       if (!hasRealErrorMessage(errors)) {
         // #region agent log
-        fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:662',message:'No real errors, clearing and re-submitting',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        const errorsSafe = serializeErrorsForLog(errors);
+        fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiative-form.tsx:932',message:'No real errors, clearing and re-submitting',data:{errorsSafe},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
         // #endregion
         
         // Limpar erros falsos e tentar submeter novamente
@@ -854,7 +1003,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
       <div className="space-y-2">
         <Label htmlFor="title">Título da Iniciativa</Label>
         <Input id="title" {...register("title")} placeholder="Ex: Otimizar o Funil de Vendas" disabled={isLimitedMode} />
-        {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
+        {isSubmitted && errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -879,7 +1028,15 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                           <Calendar
                               mode="single"
                               selected={field.value || undefined}
-                              onSelect={field.onChange}
+                              onSelect={(date) => {
+                                field.onChange(date);
+                                // Limpar erro de startDate quando a data mudar
+                                clearErrors('startDate');
+                                // Limpar erro de endDate se houver (relacionado à validação endDate >= startDate)
+                                clearErrors('endDate');
+                                // Revalidar endDate para atualizar erros relacionados
+                                trigger('endDate');
+                              }}
                               initialFocus
                               disabled={!canEditDeadline || isLimitedMode}
                           />
@@ -888,11 +1045,11 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                   )}
               />
               {!canEditDeadline && (
-                <p className="text-xs text-muted-foreground">
-                  Você não tem permissão para editar as datas. Apenas PMO pode alterar datas.
-                </p>
+                  <p className="text-xs text-muted-foreground">
+                      Você não tem permissão para editar as datas. Apenas PMO pode alterar datas.
+                  </p>
               )}
-              {errors.startDate && <p className="text-sm text-destructive">{errors.startDate.message}</p>}
+              {isSubmitted && errors.startDate && <p className="text-sm text-destructive">{errors.startDate.message}</p>}
           </div>
           <div className="space-y-2">
               <Label>Data de Fim <span className="text-destructive">*</span></Label>
@@ -915,7 +1072,18 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                           <Calendar
                               mode="single"
                               selected={field.value || undefined}
-                              onSelect={field.onChange}
+                              onSelect={(date) => {
+                                field.onChange(date);
+                                // Limpar erro de endDate quando a data mudar
+                                clearErrors('endDate');
+                                // Limpar erro de startDate se houver (relacionado à validação endDate >= startDate)
+                                clearErrors('startDate');
+                                // Limpar erros de items se houver (relacionado à validação item.endDate <= initiative.endDate)
+                                clearErrors('items');
+                                // Revalidar campos relacionados
+                                trigger('startDate');
+                                trigger('items');
+                              }}
                               initialFocus
                               disabled={!canEditDeadline || isLimitedMode}
                           />
@@ -924,11 +1092,11 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                   )}
               />
               {!canEditDeadline && (
-                <p className="text-xs text-muted-foreground">
-                  Você não tem permissão para editar as datas. Apenas PMO pode alterar datas.
-                </p>
+                  <p className="text-xs text-muted-foreground">
+                      Você não tem permissão para editar as datas. Apenas PMO pode alterar datas.
+                  </p>
               )}
-              {errors.endDate && <p className="text-sm text-destructive">{errors.endDate.message}</p>}
+              {isSubmitted && errors.endDate && <p className="text-sm text-destructive">{errors.endDate.message}</p>}
           </div>
           <div className="space-y-2">
               <Label htmlFor="areaId">Área</Label>
@@ -955,7 +1123,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                   A área está bloqueada porque você está criando dentro de uma área específica.
                 </p>
               )}
-              {errors.areaId && <p className="text-sm text-destructive">{errors.areaId.message}</p>}
+              {isSubmitted && errors.areaId && <p className="text-sm text-destructive">{errors.areaId.message}</p>}
           </div>
           <div className="space-y-2">
               <Label htmlFor="owner">Responsável <span className="text-destructive">*</span></Label>
@@ -966,7 +1134,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                   className={cn(errors.owner && "border-destructive")}
                   disabled={isLimitedMode}
               />
-              {errors.owner && <p className="text-sm text-destructive">{errors.owner.message}</p>}
+              {isSubmitted && errors.owner && <p className="text-sm text-destructive">{errors.owner.message}</p>}
           </div>
           <div className="space-y-2">
               <Label htmlFor="status">Execução (Status)</Label>
@@ -1092,8 +1260,8 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
               <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Item
             </Button>
         </div>
-        {/* Exibir erro de items obrigatórios no topo da seção quando tentar submeter sem itens */}
-        {hasItemsMinError(errors.items) && (
+        {/* Exibir erro de items obrigatórios no topo da seção apenas quando tentar submeter sem itens */}
+        {isSubmitted && hasItemsMinError(errors.items) && (
           <div className="p-3 border-2 border-destructive rounded-md bg-destructive/20">
             <p className="text-sm font-semibold text-destructive">
               ⚠️ {String(errors.items?.message || 'É necessário adicionar pelo menos um item antes de criar a iniciativa.')}
@@ -1166,7 +1334,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       className={cn(errors.items?.[index]?.title && "border-destructive")}
                       disabled={isLimitedMode}
                     />
-                    {errors.items?.[index]?.title && (
+                    {isSubmitted && errors.items?.[index]?.title && (
                       <p className="text-sm text-destructive">{errors.items[index]?.title?.message}</p>
                     )}
                   </div>
@@ -1180,7 +1348,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       className={cn(errors.items?.[index]?.responsible && "border-destructive")}
                       disabled={isLimitedMode}
                     />
-                    {errors.items?.[index]?.responsible && (
+                    {isSubmitted && errors.items?.[index]?.responsible && (
                       <p className="text-sm text-destructive">{errors.items[index]?.responsible?.message}</p>
                     )}
                   </div>
@@ -1216,6 +1384,12 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                 onSelect={(date) => {
                                   if (!isLinked) {
                                     field.onChange(date);
+                                    // Limpar erro de startDate quando a data mudar
+                                    clearErrors(`items.${index}.startDate`);
+                                    // Limpar erro de endDate se houver (relacionado à validação endDate >= startDate)
+                                    clearErrors(`items.${index}.endDate`);
+                                    // Revalidar endDate para atualizar erros relacionados
+                                    trigger(`items.${index}.endDate`);
                                   }
                                 }}
                                 initialFocus
@@ -1231,7 +1405,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                         Data de início definida automaticamente pela data de fim do item anterior.
                       </p>
                     )}
-                    {errors.items?.[index]?.startDate && (
+                    {isSubmitted && errors.items?.[index]?.startDate && (
                       <p className="text-sm text-destructive">{errors.items[index]?.startDate?.message}</p>
                     )}
                   </div>
@@ -1278,7 +1452,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                         Você não tem permissão para editar as datas. Apenas PMO pode alterar datas.
                       </p>
                     )}
-                    {(errors.items?.[index]?.endDate || errors.items?.[index]?.subItems?.root) && (
+                    {isSubmitted && (errors.items?.[index]?.endDate || errors.items?.[index]?.subItems?.root) && (
                       <p className="text-sm text-destructive">
                         {errors.items[index]?.endDate?.message || errors.items[index]?.subItems?.root?.message}
                       </p>
@@ -1491,7 +1665,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                 className="h-8 text-sm"
                                 disabled={isLimitedMode}
                               />
-                              {errors.items?.[index]?.subItems?.[subItemIndex]?.title && (
+                              {isSubmitted && errors.items?.[index]?.subItems?.[subItemIndex]?.title && (
                                 <p className="text-xs text-destructive">{errors.items[index]?.subItems?.[subItemIndex]?.title?.message}</p>
                               )}
                             </div>
@@ -1504,7 +1678,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                 className="h-8 text-sm"
                                 disabled={isLimitedMode}
                               />
-                              {errors.items?.[index]?.subItems?.[subItemIndex]?.responsible && (
+                              {isSubmitted && errors.items?.[index]?.subItems?.[subItemIndex]?.responsible && (
                                 <p className="text-xs text-destructive">{errors.items[index]?.subItems?.[subItemIndex]?.responsible?.message}</p>
                               )}
                             </div>
@@ -1533,17 +1707,26 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                         </Button>
                                       </PopoverTrigger>
                                       <PopoverContent className="w-auto p-0">
-                                        <Calendar
-                                          mode="single"
-                                          selected={displayValue || undefined}
-                                          onSelect={(date) => {
-                                            if (!isLinked) {
-                                              field.onChange(date);
-                                            }
-                                          }}
-                                          initialFocus
-                                          disabled={!canEditDeadline || isLimitedMode || isLinked}
-                                        />
+                                      <Calendar
+                                        mode="single"
+                                        selected={displayValue || undefined}
+                                        onSelect={(date) => {
+                                          if (!isLinked) {
+                                            field.onChange(date);
+                                            // Limpar erro de startDate quando a data mudar
+                                            clearErrors(`items.${index}.subItems.${subItemIndex}.startDate`);
+                                            // Limpar erro de endDate se houver (relacionado à validação endDate >= startDate)
+                                            clearErrors(`items.${index}.subItems.${subItemIndex}.endDate`);
+                                            // Limpar erro de subItems.root se houver (validação de hierarquia)
+                                            clearErrors(`items.${index}.subItems`);
+                                            // Revalidar endDate e subItems para atualizar erros relacionados
+                                            trigger(`items.${index}.subItems.${subItemIndex}.endDate`);
+                                            trigger(`items.${index}.subItems`);
+                                          }
+                                        }}
+                                        initialFocus
+                                        disabled={!canEditDeadline || isLimitedMode || isLinked}
+                                      />
                                       </PopoverContent>
                                     </Popover>
                                   );
@@ -1554,7 +1737,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                   Data de início definida automaticamente pela data de fim do subitem anterior.
                                 </p>
                               )}
-                              {errors.items?.[index]?.subItems?.[subItemIndex]?.startDate && (
+                              {isSubmitted && errors.items?.[index]?.subItems?.[subItemIndex]?.startDate && (
                                 <p className="text-xs text-destructive">{errors.items[index]?.subItems?.[subItemIndex]?.startDate?.message}</p>
                               )}
                             </div>
@@ -1599,7 +1782,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                   Você não tem permissão para editar as datas. Apenas PMO pode alterar datas.
                                 </p>
                               )}
-                              {errors.items?.[index]?.subItems?.[subItemIndex]?.endDate && (
+                              {isSubmitted && errors.items?.[index]?.subItems?.[subItemIndex]?.endDate && (
                                 <p className="text-xs text-destructive">{errors.items[index]?.subItems?.[subItemIndex]?.endDate?.message}</p>
                               )}
                             </div>
