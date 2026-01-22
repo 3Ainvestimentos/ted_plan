@@ -240,8 +240,8 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
       endDate: undefined as any,
       items: [],
     },
-    mode: 'onSubmit', // Validar apenas ao submeter
-    reValidateMode: 'onChange', // Revalidar ao mudar para limpar erros automaticamente (após primeiro submit)
+    mode: 'onChange', // Validar em tempo real ao mudar campos
+    reValidateMode: 'onChange', // Revalidar ao mudar para limpar erros automaticamente
     shouldUnregister: false, // Manter valores mesmo quando campos são removidos
   });
 
@@ -567,6 +567,9 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
     
     // Se for array, verificar se está vazio ou só tem null/undefined/vazios
     if (Array.isArray(errorObj)) {
+      // Se array está vazio, não há erros
+      if (errorObj.length === 0) return false;
+      
       // Se array só tem null/undefined/objetos vazios, não há erros
       const hasNonEmptyItems = errorObj.some(item => {
         if (item === null || item === undefined) return false;
@@ -574,7 +577,12 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
         return true;
       });
       if (!hasNonEmptyItems) return false;
-      return errorObj.some(item => hasRealErrorMessage(item));
+      
+      // Verificar recursivamente apenas itens não vazios
+      return errorObj.some(item => {
+        if (item === null || item === undefined) return false;
+        return hasRealErrorMessage(item);
+      });
     }
     
     // Verificar se o objeto está vazio (sem propriedades próprias)
@@ -599,8 +607,8 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
       }
     }
     
-    // Ignorar propriedades especiais do react-hook-form que não são erros reais (mas já verificamos root acima)
-    const ignoredKeys = ['_errors', 'type', 'ref'];
+    // Ignorar propriedades especiais do react-hook-form que não são erros reais
+    const ignoredKeys = ['_errors', 'type', 'ref', 'nativeEvent', 'target', 'currentTarget'];
     
     // Verificar recursivamente em todas as propriedades (exceto as ignoradas)
     for (const key in errorObj) {
@@ -610,6 +618,11 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
       
       // Não verificar 'root' novamente, já verificamos acima
       if (key === 'root') {
+        continue;
+      }
+      
+      // Ignorar funções e símbolos
+      if (typeof errorObj[key] === 'function' || typeof key === 'symbol') {
         continue;
       }
       
@@ -747,9 +760,13 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
       return;
     }
     
-    // Log apenas quando houver erros reais
-    if (hasRealErrors) {
-      console.error("Erros de validação:", errors);
+    // Log apenas quando houver erros reais (e apenas em desenvolvimento para debug)
+    if (process.env.NODE_ENV === 'development') {
+      const errorMessages = extractErrorMessages(errors);
+      console.error("Erros de validação:", {
+        errorCount: errorMessages.length,
+        errors: errorMessages
+      });
     }
     
     // Extrair todas as mensagens de erro
@@ -1057,12 +1074,15 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                               selected={field.value || undefined}
                               onSelect={(date) => {
                                 field.onChange(date);
-                                // Limpar erro de startDate quando a data mudar
+                                // Limpar erros relacionados quando a data mudar
                                 clearErrors('startDate');
-                                // Limpar erro de endDate se houver (relacionado à validação endDate >= startDate)
                                 clearErrors('endDate');
-                                // Revalidar endDate para atualizar erros relacionados
-                                trigger('endDate');
+                                clearErrors('items');
+                                // Revalidar endDate e items para atualizar erros em tempo real
+                                setTimeout(() => {
+                                  trigger('endDate');
+                                  trigger('items');
+                                }, 0);
                               }}
                               initialFocus
                               disabled={!canEditDeadline || isLimitedMode}
@@ -1076,7 +1096,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       Você não tem permissão para editar as datas. Apenas PMO pode alterar datas.
                   </p>
               )}
-              {isSubmitted && errors.startDate && <p className="text-sm text-destructive">{errors.startDate.message}</p>}
+              {errors.startDate && <p className="text-sm text-destructive">{errors.startDate.message}</p>}
           </div>
           <div className="space-y-2">
               <Label>Data de Fim <span className="text-destructive">*</span></Label>
@@ -1110,6 +1130,12 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                 clearErrors('items');
                                 // Revalidar campos relacionados
                                 trigger('startDate');
+                                // Revalidar todos os items para verificar se as datas estão dentro do prazo da iniciativa
+                                if (watchItems && watchItems.length > 0) {
+                                  watchItems.forEach((_, idx) => {
+                                    trigger(`items.${idx}.endDate`);
+                                  });
+                                }
                                 trigger('items');
                               }}
                               initialFocus
@@ -1124,7 +1150,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                       Você não tem permissão para editar as datas. Apenas PMO pode alterar datas.
                   </p>
               )}
-              {isSubmitted && errors.endDate && <p className="text-sm text-destructive">{errors.endDate.message}</p>}
+              {errors.endDate && <p className="text-sm text-destructive">{errors.endDate.message}</p>}
           </div>
           <div className="space-y-2">
               <Label htmlFor="areaId">Área</Label>
@@ -1264,11 +1290,19 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
         <div className="flex justify-between items-center">
             <Label>Items (Obrigatório - mínimo 1)</Label>
         </div>
-        {/* Exibir erro de items obrigatórios no topo da seção apenas quando tentar submeter sem itens */}
-        {(isSubmitted && hasItemsMinError(errors.items)) || (isSubmitted && errors.items && typeof errors.items === 'object' && !Array.isArray(errors.items) && 'message' in errors.items) ? (
+        {/* Exibir erro de items obrigatórios apenas no submit */}
+        {isSubmitted && hasItemsMinError(errors.items) && errors.items?.message?.includes('adicionar pelo menos um item') ? (
           <div className="p-3 border-2 border-destructive rounded-md bg-destructive/20">
             <p className="text-sm font-semibold text-destructive">
               ⚠️ {String(errors.items?.message || 'É necessário adicionar pelo menos um item antes de criar a iniciativa.')}
+            </p>
+          </div>
+        ) : null}
+        {/* Exibir erro de validação de datas (data do item > data da iniciativa) em tempo real */}
+        {errors.items && typeof errors.items === 'object' && !Array.isArray(errors.items) && 'message' in errors.items && errors.items.message && !errors.items.message.includes('adicionar pelo menos um item') ? (
+          <div className="p-3 border-2 border-destructive rounded-md bg-destructive/20">
+            <p className="text-sm font-semibold text-destructive">
+              ⚠️ {String(errors.items.message)}
             </p>
           </div>
         ) : null}
@@ -1391,12 +1425,14 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                                 onSelect={(date) => {
                                   if (!isLinked) {
                                     field.onChange(date);
-                                    // Limpar erro de startDate quando a data mudar
+                                    // Limpar erros relacionados quando a data mudar
                                     clearErrors(`items.${index}.startDate`);
-                                    // Limpar erro de endDate se houver (relacionado à validação endDate >= startDate)
                                     clearErrors(`items.${index}.endDate`);
-                                    // Revalidar endDate para atualizar erros relacionados
-                                    trigger(`items.${index}.endDate`);
+                                    // Revalidar endDate e o item completo para atualizar erros relacionados
+                                    setTimeout(() => {
+                                      trigger(`items.${index}.endDate`);
+                                      trigger(`items.${index}`);
+                                    }, 0);
                                   }
                                 }}
                                 initialFocus
@@ -1412,7 +1448,7 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                         Data de início definida automaticamente pela data de fim do item anterior.
                       </p>
                     )}
-                    {isSubmitted && errors.items?.[index]?.startDate && (
+                    {errors.items?.[index]?.startDate && (
                       <p className="text-sm text-destructive">{errors.items[index]?.startDate?.message}</p>
                     )}
                   </div>
@@ -1421,50 +1457,82 @@ export function InitiativeForm({ onSubmit, onCancel, initialData, isLoading, isL
                     <Controller
                       name={`items.${index}.endDate`}
                       control={control}
-                      render={({ field }) => (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal", 
-                                (errors.items?.[index]?.endDate || errors.items?.[index]?.subItems?.root) && "border-destructive border-2"
-                              )}
-                              disabled={!canEditDeadline || isLimitedMode}
-                              data-field-path={`items.${index}.endDate`}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <Calendar
-                              mode="single"
-                              selected={field.value || undefined}
-                              onSelect={(date) => {
-                                field.onChange(date);
-                                // Limpar erro de subItems.root quando a data mudar
-                                clearErrors(`items.${index}.subItems`);
-                                // Revalidar o item para atualizar erros
-                                trigger(`items.${index}.endDate`);
-                              }}
-                              initialFocus
-                              disabled={!canEditDeadline || isLimitedMode}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      )}
+                      render={({ field }) => {
+                        // Verificar se há erro global de items (data do item > data da iniciativa)
+                        const hasGlobalItemsError = errors.items && typeof errors.items === 'object' && !Array.isArray(errors.items) && 'message' in errors.items;
+                        // Verificar se este item específico tem data maior que a iniciativa
+                        const itemEndDate = field.value;
+                        const initiativeEndDate = watch('endDate');
+                        const isItemDateGreaterThanInitiative = itemEndDate && initiativeEndDate && itemEndDate > initiativeEndDate;
+                        
+                        return (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full justify-start text-left font-normal", 
+                                  (errors.items?.[index]?.endDate || errors.items?.[index]?.subItems?.root || (hasGlobalItemsError && isItemDateGreaterThanInitiative)) && "border-destructive border-2"
+                                )}
+                                disabled={!canEditDeadline || isLimitedMode}
+                                data-field-path={`items.${index}.endDate`}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar
+                                mode="single"
+                                selected={field.value || undefined}
+                                onSelect={(date) => {
+                                  field.onChange(date);
+                                  // Limpar erros relacionados quando a data mudar
+                                  clearErrors(`items.${index}.endDate`);
+                                  clearErrors(`items.${index}.subItems`);
+                                  clearErrors('items');
+                                  // Revalidar o item e a iniciativa para atualizar erros em tempo real
+                                  setTimeout(() => {
+                                    trigger(`items.${index}.endDate`);
+                                    trigger(`items.${index}`);
+                                    trigger('items');
+                                  }, 0);
+                                }}
+                                initialFocus
+                                disabled={!canEditDeadline || isLimitedMode}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        );
+                      }}
                     />
                     {!canEditDeadline && (
                       <p className="text-xs text-muted-foreground">
                         Você não tem permissão para editar as datas. Apenas PMO pode alterar datas.
                       </p>
                     )}
-                    {isSubmitted && (errors.items?.[index]?.endDate || errors.items?.[index]?.subItems?.root) && (
+                    {(errors.items?.[index]?.endDate || errors.items?.[index]?.subItems?.root) && (
                       <p className="text-sm text-destructive">
                         {errors.items[index]?.endDate?.message || errors.items[index]?.subItems?.root?.message}
                       </p>
                     )}
+                    {/* Exibir erro global de items se este item específico tiver data maior que a iniciativa */}
+                    {(() => {
+                      const itemEndDate = watchItems?.[index]?.endDate;
+                      const initiativeEndDate = watch('endDate');
+                      const hasGlobalItemsError = errors.items && typeof errors.items === 'object' && !Array.isArray(errors.items) && 'message' in errors.items;
+                      const isItemDateGreaterThanInitiative = itemEndDate && initiativeEndDate && itemEndDate > initiativeEndDate;
+                      
+                      // Exibir erro se houver erro global E este item tiver data maior que a iniciativa
+                      if (hasGlobalItemsError && isItemDateGreaterThanInitiative && errors.items && 'message' in errors.items) {
+                        return (
+                          <p className="text-sm text-destructive">
+                            {String(errors.items.message)}
+                          </p>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                   
                   {/* Linha 3: Status | Prioridade */}
