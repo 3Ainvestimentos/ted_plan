@@ -44,7 +44,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "frame-ancestors 'self' https://www.3arivaconnect.com.br https://3arivaconnect.com.br;",
+            value: "frame-ancestors 'self' https://www.3arivaconnect.com.br https://3arivaconnect.com.br http://localhost:3000;",
           },
         ],
       },
