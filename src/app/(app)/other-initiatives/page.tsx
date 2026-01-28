@@ -120,6 +120,15 @@ export default function OtherInitiativesPage() {
     return canCreateInitiative(userType, PAGE_CONTEXT, userArea, effectiveAreaId || undefined);
   }, [userType, userArea, effectiveAreaId]);
   
+  // Para head em 'other-initiatives', sempre pré-selecionar a área do head
+  // Para PMO/Admin, usar selectedAreaId ou effectiveAreaId se disponível
+  const preselectedAreaForModal = useMemo(() => {
+    if (userType === 'head' && userArea) {
+      return userArea; // Head sempre usa sua própria área
+    }
+    return selectedAreaId || effectiveAreaId; // PMO/Admin usam área selecionada ou efetiva
+  }, [userType, userArea, selectedAreaId, effectiveAreaId]);
+  
   // Área selecionada para exibição (pode ser diferente da efetiva se não há filtro)
   const selectedArea = useMemo(() => {
     const areaIdToShow = selectedAreaId || effectiveAreaId;
@@ -322,7 +331,7 @@ export default function OtherInitiativesPage() {
       <CreateInitiativeModal 
         isOpen={isCreateModalOpen} 
         onOpenChange={setIsCreateModalOpen}
-        preselectedAreaId={selectedAreaId}
+        preselectedAreaId={preselectedAreaForModal}
         pageContext={PAGE_CONTEXT}
       />
       

@@ -7,7 +7,7 @@ import { useInitiatives } from "@/contexts/initiatives-context";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import type { InitiativeFormData } from "./initiative-form";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { canCreateInitiative, canEditDeadline } from "@/lib/permissions-config";
 import type { InitiativePageContext } from "@/lib/permissions-config";
@@ -29,12 +29,37 @@ export function CreateInitiativeModal({ isOpen, onOpenChange, preselectedAreaId,
     // Verificar permissão para criar (sem areaId ainda, será verificado no submit)
     const userType = user?.userType || 'head';
     const userArea = getUserArea();
-    // canCreate será verificado no handleFormSubmit com o areaId do form
-    // Aqui apenas verificamos se tem permissão básica (sem validação de área)
-    const canCreateBasic = canCreateInitiative(userType, pageContext, userArea, undefined);
-    // canEditDeadline também será verificado no submit com o areaId
-    // Por enquanto, passamos um valor padrão que será recalculado no form
-    const canEditDeadlineValue = canEditDeadline(userType, pageContext, userArea, undefined);
+    
+    // Verificação básica: para head em 'other-initiatives', permitir abrir o modal
+    // A validação completa de área será feita no handleFormSubmit
+    const canCreateBasic = useMemo(() => {
+      // Admin e PMO sempre podem criar
+      if (userType === 'admin' || userType === 'pmo') {
+        return true;
+      }
+      // Head pode abrir o modal apenas em 'other-initiatives'
+      // A validação de área será feita no submit
+      if (userType === 'head') {
+        return pageContext === 'other-initiatives';
+      }
+      return false;
+    }, [userType, pageContext]);
+    
+    // canEditDeadline: para head em 'other-initiatives', usar a área pré-selecionada
+    // Se não houver área pré-selecionada, usar undefined (será recalculado quando o usuário selecionar)
+    const canEditDeadlineValue = useMemo(() => {
+      // Se há área pré-selecionada, usar ela para calcular a permissão
+      if (preselectedAreaId) {
+        return canEditDeadline(userType, pageContext, userArea, preselectedAreaId);
+      }
+      // Se não há área pré-selecionada, para head em 'other-initiatives' assumir que pode editar
+      // (será validado quando o usuário selecionar a área)
+      if (userType === 'head' && pageContext === 'other-initiatives') {
+        return true; // Head em 'other-initiatives' pode editar prazo da própria área
+      }
+      // Para outros casos, calcular normalmente
+      return canEditDeadline(userType, pageContext, userArea, undefined);
+    }, [userType, pageContext, userArea, preselectedAreaId]);
 
     // Fechar modal se não tiver permissão básica
     useEffect(() => {
