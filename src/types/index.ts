@@ -53,6 +53,7 @@ export interface Initiative {
   areaId: string; // Área obrigatória (seletor com áreas de negócio)
   items: InitiativeItem[]; // Itens obrigatórios (mínimo 1)
   archived?: boolean;
+  initiativeType?: 'strategic' | 'other'; // Tipo de iniciativa: 'strategic' (padrão) ou 'other'
   cidade?: string;
   auc?: number;
   // Campo legado para migração - será removido após migração completa

@@ -11,6 +11,7 @@ import type { Initiative } from "@/types";
 import { Button } from '@/components/ui/button';
 import { useAuth } from "@/contexts/auth-context";
 import { canEditInitiativeResponsible, canEditInitiativeStatus, canDeleteInitiative, canEditDeadline, canEditDescription, canEditPriority } from "@/lib/permissions-config";
+import type { InitiativePageContext } from "@/lib/permissions-config";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,9 +28,10 @@ interface EditInitiativeModalProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
     initiative: Initiative;
+    pageContext?: InitiativePageContext;
 }
 
-export function EditInitiativeModal({ isOpen, onOpenChange, initiative }: EditInitiativeModalProps) {
+export function EditInitiativeModal({ isOpen, onOpenChange, initiative, pageContext }: EditInitiativeModalProps) {
     const { updateInitiative, deleteInitiative } = useInitiatives();
     const { toast } = useToast();
     const router = useRouter();
@@ -37,15 +39,15 @@ export function EditInitiativeModal({ isOpen, onOpenChange, initiative }: EditIn
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    // Verificar permissões
+    // Verificar permissões com pageContext
     const userType = user?.userType || 'head';
     const userArea = getUserArea();
-    const canEditResponsible = canEditInitiativeResponsible(userType, userArea, initiative.areaId);
-    const canEditStatus = canEditInitiativeStatus(userType, userArea, initiative.areaId);
-    const canDelete = canDeleteInitiative(userType);
-    const canEditDeadlineValue = canEditDeadline(userType);
-    const canEditDescriptionValue = canEditDescription(userType, userArea, initiative.areaId);
-    const canEditPriorityValue = canEditPriority(userType, userArea, initiative.areaId);
+    const canEditResponsible = canEditInitiativeResponsible(userType, userArea, initiative.areaId, pageContext);
+    const canEditStatus = canEditInitiativeStatus(userType, userArea, initiative.areaId, pageContext);
+    const canDelete = canDeleteInitiative(userType, pageContext, userArea, initiative.areaId);
+    const canEditDeadlineValue = canEditDeadline(userType, pageContext, userArea, initiative.areaId);
+    const canEditDescriptionValue = canEditDescription(userType, userArea, initiative.areaId, pageContext);
+    const canEditPriorityValue = canEditPriority(userType, userArea, initiative.areaId, pageContext);
     const isLimitedMode = userType === 'head' && canEditResponsible; // Head da própria área em modo limitado
 
     const handleFormSubmit = async (data: InitiativeFormData) => {

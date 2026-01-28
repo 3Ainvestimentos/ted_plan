@@ -27,7 +27,7 @@ import type { InitiativePageContext } from "@/lib/permissions-config";
 
 type ViewMode = "dashboard" | "table-gantt" | "kanban";
 
-const PAGE_CONTEXT: InitiativePageContext = 'strategic-initiatives';
+const PAGE_CONTEXT: InitiativePageContext = 'other-initiatives';
 
 /**
  * ============================================
@@ -38,64 +38,30 @@ const PAGE_CONTEXT: InitiativePageContext = 'strategic-initiatives';
 /**
  * Obtém a área padrão baseada no tipo de usuário quando não há filtro selecionado.
  * 
- * REGRAS:
- * - Head: Retorna a área do próprio usuário (userArea) para visualização completa
- * - PMO: Busca e retorna a área "Estratégia e IA" por nome
+ * REGRAS PARA OUTRAS INICIATIVAS:
+ * - Head: Retorna a área do próprio usuário (userArea) - SEMPRE sua própria área
+ * - PMO: Retorna null (pode ver todas as áreas)
  * - Admin: Retorna null (pode ver todas as áreas)
+ * 
+ * DIFERENÇA: Em "Outras Iniciativas", PMO e Admin não têm área padrão específica
+ * (não usam "Estratégia e IA" como padrão)
  * 
  * @param userType - Tipo de usuário (admin, pmo, head)
  * @param userArea - ID da área do usuário (apenas para Head)
  * @param businessAreas - Array de todas as áreas de negócio disponíveis
  * @returns ID da área padrão ou null se não houver padrão definido
- * 
- * @example
- * // Head sem filtro
- * const defaultArea = getDefaultAreaId('head', 'area-123', businessAreas);
- * // Retorna: 'area-123'
- * 
- * @example
- * // PMO sem filtro
- * const defaultArea = getDefaultAreaId('pmo', undefined, businessAreas);
- * // Retorna: ID da área "Estratégia e IA"
  */
 function getDefaultAreaId(
   userType: 'admin' | 'pmo' | 'head',
   userArea: string | undefined,
   businessAreas: Array<{ id: string; name: string }>
 ): string | null {
-  // Head: usa sua própria área como padrão
+  // Head: usa sua própria área como padrão (SEMPRE)
   if (userType === 'head' && userArea) {
     return userArea;
   }
   
-  // PMO: busca área "Estratégia e IA" primeiro por ID, depois por nome
-  if (userType === 'pmo' || userType === 'admin') {
-    // Primeiro: buscar pelo ID específico
-    const estrategiaAreaById = businessAreas.find(
-      area => area.id === 'Sg1SSSWI0WMy4U3Dgc3e'
-    );
-    if (estrategiaAreaById) {
-      return estrategiaAreaById.id;
-    }
-    
-    // Fallback: buscar por nome "Estratégia e IA"
-    const estrategiaArea = businessAreas.find(
-      area => area.name.toLowerCase().includes('estratégia') && 
-              (area.name.toLowerCase().includes('ia') || area.name.toLowerCase().includes('ai'))
-    );
-    
-    // Fallback adicional: busca apenas por "Estratégia" se não encontrar com IA
-    if (!estrategiaArea) {
-      const estrategiaFallback = businessAreas.find(
-        area => area.name.toLowerCase().includes('estratégia')
-      );
-      return estrategiaFallback?.id || null;
-    }
-    
-    return estrategiaArea.id || null;
-  }
-  
-  // Admin sem área específica: retorna null (pode ver todas)
+  // PMO e Admin: sem área padrão (podem ver todas)
   return null;
 }
 
@@ -112,16 +78,6 @@ function getDefaultAreaId(
  * @param userArea - ID da área do usuário (apenas para Head)
  * @param businessAreas - Array de todas as áreas de negócio disponíveis
  * @returns ID da área efetiva ou null se não houver área definida
- * 
- * @example
- * // Head com filtro selecionado
- * const effectiveArea = getEffectiveAreaId('area-456', 'head', 'area-123', businessAreas);
- * // Retorna: 'area-456'
- * 
- * @example
- * // Head sem filtro (usa padrão)
- * const effectiveArea = getEffectiveAreaId(null, 'head', 'area-123', businessAreas);
- * // Retorna: 'area-123' (sua própria área)
  */
 function getEffectiveAreaId(
   selectedAreaId: string | null,
@@ -138,7 +94,7 @@ function getEffectiveAreaId(
   return getDefaultAreaId(userType, userArea, businessAreas);
 }
 
-export default function InitiativesPage() {
+export default function OtherInitiativesPage() {
   const { initiatives, isLoading, updateInitiativeStatus, updateSubItem, updateItem, archiveInitiative, unarchiveInitiative } = useInitiatives();
   const { user, getUserArea } = useAuth();
   const { businessAreas, updateBusinessArea } = useStrategicPanel();
@@ -146,18 +102,23 @@ export default function InitiativesPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
+  // Obter área selecionada da URL
+  const selectedAreaId = searchParams.get('area') || null;
+  
   // Verificar permissões com pageContext
   const userType = user?.userType || 'head';
   const userArea = getUserArea();
-  const canCreate = canCreateInitiative(userType, PAGE_CONTEXT, userArea, undefined); // initiativeAreaId será verificado no modal
-  
-  // Obter área selecionada da URL
-  const selectedAreaId = searchParams.get('area') || null;
   
   // Calcular área efetiva (selecionada ou padrão)
   const effectiveAreaId = useMemo(() => {
     return getEffectiveAreaId(selectedAreaId, userType, userArea, businessAreas);
   }, [selectedAreaId, userType, userArea, businessAreas]);
+  
+  // Verificar permissão para criar usando a área efetiva
+  // Para head em 'other-initiatives', precisa que a área efetiva seja sua própria área
+  const canCreate = useMemo(() => {
+    return canCreateInitiative(userType, PAGE_CONTEXT, userArea, effectiveAreaId || undefined);
+  }, [userType, userArea, effectiveAreaId]);
   
   // Área selecionada para exibição (pode ser diferente da efetiva se não há filtro)
   const selectedArea = useMemo(() => {
@@ -231,12 +192,8 @@ export default function InitiativesPage() {
     }
 
     // Validação: não pode concluir iniciativa se nem todos os itens estão concluídos
-    // IMPORTANTE: Esta validação deve ser SEMPRE aplicada, mesmo se a iniciativa estiver em atraso
-    // IMPORTANTE: Itens sem status ou com status vazio são considerados não concluídos
     if (newStatus === 'Concluído') {
-      // Se não tem itens, pode concluir
       if (initiative.items && initiative.items.length > 0) {
-        // Verificar se todos os itens têm status definido e igual a 'Concluído'
         const allItemsCompleted = initiative.items.every(item => item.status === 'Concluído');
         if (!allItemsCompleted) {
           toast({
@@ -254,33 +211,28 @@ export default function InitiativesPage() {
 
   /**
    * Handler para atualizar status de item diretamente do Gantt
-   * 
-   * Quando o usuário muda o status de um item no dropdown, essa função é chamada
    */
   const handleItemStatusChange = (initiativeId: string, itemId: string, newStatus: InitiativeStatus) => {
     const initiative = initiatives.find(i => i.id === initiativeId);
     if (!initiative) return;
 
-    // Verificar permissão para editar status (mesma regra da iniciativa)
-    const canEdit = canEditInitiativeStatus(userType, userArea, initiative.areaId);
+    // Verificar permissão para editar status com pageContext
+    const canEdit = canEditInitiativeStatus(userType, userArea, initiative.areaId, PAGE_CONTEXT);
 
     if (!canEdit) {
       toast({
         variant: 'destructive',
         title: "Acesso Negado",
-                description: "Você não tem permissão para alterar o status deste item.",
+        description: "Você não tem permissão para alterar o status deste item.",
       });
       return;
     }
 
-    // Buscar o item
     const item = initiative.items?.find(p => p.id === itemId);
     if (!item) return;
 
     // Validação: não pode concluir item se nem todos os subitens estão concluídos
-    // IMPORTANTE: Esta validação deve ser SEMPRE aplicada, mesmo se o item estiver em atraso
     if (newStatus === 'Concluído') {
-      // Se não tem subitens, pode concluir
       if (item.subItems && item.subItems.length > 0) {
         const allSubItemsCompleted = item.subItems.every(subItem => subItem.status === 'Concluído');
         if (!allSubItemsCompleted) {
@@ -294,21 +246,18 @@ export default function InitiativesPage() {
       }
     }
 
-    // Atualizar item com novo status
     updateItem(initiativeId, itemId, { status: newStatus });
   }
 
   /**
    * Handler para atualizar status de subitem diretamente do Gantt
-   * 
-   * Quando o usuário muda o status de um subitem no dropdown, essa função é chamada
    */
   const handleSubItemStatusChange = (initiativeId: string, itemId: string, subItemId: string, newStatus: InitiativeStatus) => {
     const initiative = initiatives.find(i => i.id === initiativeId);
     if (!initiative) return;
 
-    // Verificar permissão para editar status (mesma regra da iniciativa)
-    const canEdit = canEditInitiativeStatus(userType, userArea, initiative.areaId);
+    // Verificar permissão para editar status com pageContext
+    const canEdit = canEditInitiativeStatus(userType, userArea, initiative.areaId, PAGE_CONTEXT);
 
     if (!canEdit) {
       toast({
@@ -319,7 +268,6 @@ export default function InitiativesPage() {
       return;
     }
 
-    // Buscar o item e o subitem
     const item = initiative.items?.find(p => p.id === itemId);
     if (!item || !item.subItems) return;
 
@@ -327,20 +275,18 @@ export default function InitiativesPage() {
     if (!subItem) return;
 
     // Atualizar subitem: sincronizar completed com status
-    // IMPORTANTE: "Concluído" = completed true, outros status = completed false
     const completed = newStatus === 'Concluído';
-    // Usar updateSubItem com o novo status diretamente para permitir qualquer status (Pendente, Suspenso, etc.)
     updateSubItem(initiativeId, itemId, subItemId, completed, newStatus);
   }
   
-  // Filtrar iniciativas por initiativeType === 'strategic' (ou undefined/null) E por área efetiva
+  // Filtrar iniciativas por initiativeType === 'other' E por área efetiva
   const filteredInitiatives = useMemo(() => {
     let filtered = initiatives.filter(i => {
-      // Filtrar por tipo: apenas 'strategic' ou undefined/null (tratado como 'strategic')
-      const isStrategic = i.initiativeType === 'strategic' || i.initiativeType === undefined || i.initiativeType === null;
+      // Filtrar por tipo: apenas 'other' (undefined/null tratado como 'strategic')
+      const isOther = i.initiativeType === 'other';
       // Filtrar não arquivadas
       const notArchived = !i.archived;
-      return isStrategic && notArchived;
+      return isOther && notArchived;
     });
     
     // Usar área efetiva para filtrar (considera área padrão quando não há filtro)
@@ -360,7 +306,7 @@ export default function InitiativesPage() {
       await updateBusinessArea(areaId, { generalContext });
     } catch (error) {
       console.error('Erro ao atualizar contextualização da área:', error);
-      throw error; // Re-throw para o componente tratar
+      throw error;
     }
   };
 
@@ -368,7 +314,7 @@ export default function InitiativesPage() {
   const clearAreaFilter = () => {
     const params = new URLSearchParams(searchParams.toString());
     params.delete('area');
-    router.push(`/strategic-initiatives${params.toString() ? `?${params.toString()}` : ''}`);
+    router.push(`/other-initiatives${params.toString() ? `?${params.toString()}` : ''}`);
   };
 
   return (
@@ -400,17 +346,16 @@ export default function InitiativesPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex-1">
             <PageHeader
-              title="Iniciativas Estratégicas"
+              title="Outras Iniciativas"
               description={selectedArea 
                 ? `Iniciativas da área: ${selectedArea.name}` 
-                : "Acompanhe, gerencie e organize todas as suas iniciativas em um só lugar."}
+                : "Gerencie iniciativas operacionais e projetos da sua área."}
             />
             {selectedArea && (
               <div className="mt-2 flex items-center gap-2">
                 <Badge variant="secondary" className="text-sm">
                   Área: {selectedArea.name}
                 </Badge>
-                {/* Mostrar botão "Remover filtro" apenas se há filtro explícito na URL */}
                 {selectedAreaId && (
                   <Button
                     variant="ghost"
@@ -427,7 +372,6 @@ export default function InitiativesPage() {
           </div>
           <div className="flex items-center gap-2 self-end sm:self-center flex-nowrap">
             <div className="p-1 bg-muted rounded-lg flex items-center flex-shrink-0">
-              {/* Botão Dashboard - Visualização inicial */}
               <Button 
                 variant={viewMode === 'dashboard' ? 'secondary' : 'ghost'} 
                 size="sm" 
@@ -473,14 +417,6 @@ export default function InitiativesPage() {
                 <Skeleton className="h-48 w-full" />
             </div>
         ) : viewMode === 'dashboard' ? (
-          /**
-           * Dashboard - Visualização inicial com métricas e resumos
-           * 
-           * Exibe:
-           * - Métricas principais (total, concluídas, atrasadas, em dia)
-           * - Métricas secundárias (progresso médio, checklists, responsáveis)
-           * - Distribuições (status, prioridade, responsáveis)
-           */
           <InitiativesDashboard 
             initiatives={activeInitiatives}
             selectedAreaId={effectiveAreaId}
@@ -489,14 +425,6 @@ export default function InitiativesPage() {
             onUpdateArea={handleUpdateAreaContext}
           />
         ) : viewMode === 'table-gantt' ? (
-          /**
-           * Tabela/Gantt - Visualização combinada
-           * 
-           * Exibe:
-           * - Tabela à esquerda com filtros e busca
-           * - Gantt à direita com timeline de 6 meses
-           * - Layout responsivo sem scroll horizontal
-           */
           <TableGanttView 
             initiatives={activeInitiatives} 
             onInitiativeClick={openDossier}

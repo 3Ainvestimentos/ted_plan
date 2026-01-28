@@ -4,6 +4,7 @@
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { canEditInitiativeStatus } from "@/lib/permissions-config";
+import type { InitiativePageContext } from "@/lib/permissions-config";
 import { isOverdue, getAvailableStatuses } from "@/lib/initiatives-helpers";
 
 /**
@@ -47,6 +48,7 @@ import { HierarchyItemInfoModal } from './hierarchy-item-info-modal';
 interface InitiativesKanbanProps {
     initiatives: Initiative[];
     onInitiativeClick?: (initiative: Initiative) => void; // Opcional - não usado mais (modal gerenciado internamente)
+    pageContext?: InitiativePageContext;
 }
 
 interface Column {
@@ -73,7 +75,7 @@ type KanbanLevel = 'initiatives' | 'items' | 'subitems';
 // COMPONENTE PRINCIPAL
 // ============================================
 
-export function InitiativesKanban({ initiatives, onInitiativeClick }: InitiativesKanbanProps) {
+export function InitiativesKanban({ initiatives, onInitiativeClick, pageContext }: InitiativesKanbanProps) {
     const { updateInitiativeStatus, updateItem, updateSubItem } = useInitiatives();
     const { user, getUserArea } = useAuth();
     const { toast } = useToast();
@@ -136,10 +138,10 @@ export function InitiativesKanban({ initiatives, onInitiativeClick }: Initiative
             return;
         }
 
-        // Verificar permissão para editar status
+        // Verificar permissão para editar status com pageContext
         const userType = user?.userType || 'head';
         const userArea = getUserArea();
-        const canEdit = canEditInitiativeStatus(userType, userArea, initiative.areaId);
+        const canEdit = canEditInitiativeStatus(userType, userArea, initiative.areaId, pageContext);
 
         if (!canEdit) {
             toast({

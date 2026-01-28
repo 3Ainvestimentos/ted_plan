@@ -399,6 +399,35 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
             }
         }
 
+        // Migração de initiativeType: adicionar 'strategic' para iniciativas existentes sem o campo
+        const needsInitiativeTypeMigration = migratedInitiatives.some(init => init.initiativeType === undefined);
+        
+        if (needsInitiativeTypeMigration) {
+            const initiativeTypeMigrationPromises: Promise<void>[] = [];
+            migratedInitiatives.forEach(init => {
+                // Se não tem initiativeType, adicionar 'strategic' como padrão
+                if (init.initiativeType === undefined) {
+                    const docRef = doc(db, 'initiatives', init.id);
+                    initiativeTypeMigrationPromises.push(
+                        updateDoc(docRef, {
+                            initiativeType: 'strategic'
+                        }).catch(err => {
+                            console.error(`Error migrating initiativeType for ${init.id}:`, err);
+                        })
+                    );
+                }
+            });
+            
+            if (initiativeTypeMigrationPromises.length > 0) {
+                try {
+                    await Promise.all(initiativeTypeMigrationPromises);
+                    console.log(`Migrated initiativeType for ${initiativeTypeMigrationPromises.length} initiatives`);
+                } catch (error) {
+                    console.error("Error saving initiativeType migration:", error);
+                }
+            }
+        }
+
         // First pass: calculate progress for items
         const initiativesWithProgress = migratedInitiatives.map(init => {
             let progress = init.progress || 0;
@@ -455,6 +484,7 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
         startDate: initiativeData.startDate ? (typeof initiativeData.startDate === 'string' ? initiativeData.startDate : initiativeData.startDate.toISOString().split('T')[0]) : '',
         endDate: initiativeData.endDate ? (typeof initiativeData.endDate === 'string' ? initiativeData.endDate : initiativeData.endDate.toISOString().split('T')[0]) : '',
         areaId: initiativeData.areaId,
+        initiativeType: (initiativeData as any).initiativeType || 'strategic', // Default 'strategic' se não fornecido
         lastUpdate: new Date().toISOString(),
         topicNumber: nextTopicNumber,
         progress: 0, 
@@ -634,6 +664,7 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
           startDate: startDate,
           endDate: endDate,
           areaId: initiativeData.areaId,
+          initiativeType: (initiativeData as any).initiativeType || 'strategic', // Default 'strategic' se não fornecido
           lastUpdate: new Date().toISOString(),
           topicNumber: (nextTopicNumber++).toString(),
           progress: 0,
@@ -660,7 +691,7 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
   const updateInitiative = useCallback(async (initiativeId: string, data: InitiativeFormData) => {
     const initiativeDocRef = doc(db, 'initiatives', initiativeId);
     try {
-      const updatedData = {
+      const updatedData: any = {
           title: data.title,
           owner: data.owner,
           description: data.description,
@@ -695,6 +726,12 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
               })) || [],
           })) || [],
       };
+      
+      // Preservar initiativeType se fornecido (caso seja necessário atualizar)
+      if ((data as any).initiativeType !== undefined) {
+        updatedData.initiativeType = (data as any).initiativeType;
+      }
+      
       // Remover campos undefined antes de salvar
       const cleanedData = removeUndefinedFields(updatedData);
       await setDoc(initiativeDocRef, cleanedData, { merge: true });

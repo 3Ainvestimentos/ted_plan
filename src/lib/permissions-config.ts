@@ -19,6 +19,15 @@
 import type { UserType } from '@/types';
 
 /**
+ * Contexto da página de iniciativas para determinar permissões
+ * 
+ * Head terá permissões diferentes dependendo do contexto:
+ * - 'strategic-initiatives': Permissões restritas (comportamento atual)
+ * - 'other-initiatives': Permissões de PMO (pode criar, editar prazo, deletar)
+ */
+export type InitiativePageContext = 'strategic-initiatives' | 'other-initiatives';
+
+/**
  * Mapeamento de páginas e suas chaves de permissão
  * 
  * IMPORTANTE: As chaves devem corresponder aos paths das rotas
@@ -27,6 +36,7 @@ import type { UserType } from '@/types';
 export const PAGE_KEYS = {
   DASHBOARD: '', // Página inicial (/)
   STRATEGIC_INITIATIVES: 'strategic-initiatives',
+  OTHER_INITIATIVES: 'other-initiatives',
   AGENDA: 'agenda',
   SETTINGS: 'settings',
 } as const;
@@ -52,6 +62,7 @@ export const DEFAULT_PERMISSIONS_BY_ROLE: Record<UserType, string[]> = {
   admin: [
     PAGE_KEYS.DASHBOARD,
     PAGE_KEYS.STRATEGIC_INITIATIVES,
+    PAGE_KEYS.OTHER_INITIATIVES,
     PAGE_KEYS.AGENDA,
     PAGE_KEYS.SETTINGS,
   ],
@@ -63,6 +74,7 @@ export const DEFAULT_PERMISSIONS_BY_ROLE: Record<UserType, string[]> = {
   pmo: [
     PAGE_KEYS.DASHBOARD,
     PAGE_KEYS.STRATEGIC_INITIATIVES,
+    PAGE_KEYS.OTHER_INITIATIVES,
     PAGE_KEYS.AGENDA,
   ],
 
@@ -71,11 +83,13 @@ export const DEFAULT_PERMISSIONS_BY_ROLE: Record<UserType, string[]> = {
    * Pode acessar apenas:
    * - Painel Estratégico (Dashboard)
    * - Iniciativas Estratégicas
+   * - Outras Iniciativas
    * - Agenda
    */
   head: [
     PAGE_KEYS.DASHBOARD,
     PAGE_KEYS.STRATEGIC_INITIATIVES,
+    PAGE_KEYS.OTHER_INITIATIVES,
     PAGE_KEYS.AGENDA,
   ],
 };
@@ -172,26 +186,59 @@ export function canViewInitiativeArea(
 /**
  * Verifica se o usuário pode criar iniciativas
  * 
+ * REGRAS:
+ * - Admin e PMO: Sempre podem criar
+ * - Head em 'other-initiatives': Pode criar apenas para sua própria área
+ * - Head em 'strategic-initiatives' ou undefined: Não pode criar
+ * 
  * @param userType - Tipo de usuário (admin, pmo, head)
+ * @param pageContext - Contexto da página (opcional)
+ * @param userArea - Área do usuário (ID da BusinessArea) - obrigatório para head
+ * @param initiativeAreaId - ID da área da iniciativa que será criada - obrigatório para head
  * @returns true se o usuário pode criar iniciativas
  */
-export function canCreateInitiative(userType: UserType): boolean {
-  // Apenas admin e PMO podem criar iniciativas
-  return userType === 'admin' || userType === 'pmo';
+export function canCreateInitiative(
+  userType: UserType, 
+  pageContext?: InitiativePageContext,
+  userArea?: string,
+  initiativeAreaId?: string
+): boolean {
+  // Admin e PMO sempre podem criar
+  if (userType === 'admin' || userType === 'pmo') {
+    return true;
+  }
+  
+  // Head pode criar apenas em 'other-initiatives' E apenas para sua própria área
+  if (userType === 'head') {
+    if (pageContext !== 'other-initiatives') {
+      return false;
+    }
+    // Verificar se a iniciativa será criada na área do head
+    return userArea !== undefined && initiativeAreaId !== undefined && userArea === initiativeAreaId;
+  }
+  
+  return false;
 }
 
 /**
  * Verifica se o usuário pode editar o campo responsible dos itens
  * 
+ * REGRAS:
+ * - Admin e PMO: Sempre podem editar
+ * - Head em 'other-initiatives': Pode editar da própria área (permissoes de PMO)
+ * - Head em 'strategic-initiatives' ou undefined: Pode editar apenas da própria área (comportamento atual)
+ * 
  * @param userType - Tipo de usuário (admin, pmo, head)
  * @param userArea - Área do usuário (ID da BusinessArea)
  * @param initiativeAreaId - ID da área da iniciativa
+ * @param pageContext - Contexto da página (opcional)
  * @returns true se o usuário pode editar o responsible
  */
 export function canEditInitiativeResponsible(
   userType: UserType,
   userArea: string | undefined,
-  initiativeAreaId: string
+  initiativeAreaId: string,
+  pageContext?: InitiativePageContext
 ): boolean {
   // Admin e PMO sempre podem editar
   if (userType === 'admin' || userType === 'pmo') {
@@ -199,6 +246,7 @@ export function canEditInitiativeResponsible(
   }
   
   // Head só pode editar da própria área (comparar IDs)
+  // Comportamento igual em ambos os contextos
   if (userType === 'head') {
     return userArea === initiativeAreaId;
   }
@@ -209,15 +257,22 @@ export function canEditInitiativeResponsible(
 /**
  * Verifica se o usuário pode editar o status de execução (projeto, item ou subitem)
  * 
+ * REGRAS:
+ * - Admin e PMO: Sempre podem editar
+ * - Head em 'other-initiatives': Pode editar da própria área (permissoes de PMO)
+ * - Head em 'strategic-initiatives' ou undefined: Pode editar apenas da própria área (comportamento atual)
+ * 
  * @param userType - Tipo de usuário (admin, pmo, head)
  * @param userArea - Área do usuário (ID da BusinessArea)
  * @param initiativeAreaId - ID da área da iniciativa
+ * @param pageContext - Contexto da página (opcional)
  * @returns true se o usuário pode editar o status
  */
 export function canEditInitiativeStatus(
   userType: UserType,
   userArea: string | undefined,
-  initiativeAreaId: string
+  initiativeAreaId: string,
+  pageContext?: InitiativePageContext
 ): boolean {
   // Admin e PMO sempre podem editar
   if (userType === 'admin' || userType === 'pmo') {
@@ -225,6 +280,7 @@ export function canEditInitiativeStatus(
   }
   
   // Head só pode editar status da própria área (comparar IDs)
+  // Comportamento igual em ambos os contextos
   if (userType === 'head') {
     return userArea === initiativeAreaId;
   }
@@ -235,12 +291,38 @@ export function canEditInitiativeStatus(
 /**
  * Verifica se o usuário pode deletar iniciativas
  * 
+ * REGRAS:
+ * - Admin e PMO: Sempre podem deletar
+ * - Head em 'other-initiatives': Pode deletar apenas iniciativas da própria área
+ * - Head em 'strategic-initiatives' ou undefined: Não pode deletar
+ * 
  * @param userType - Tipo de usuário (admin, pmo, head)
+ * @param pageContext - Contexto da página (opcional)
+ * @param userArea - Área do usuário (ID da BusinessArea) - obrigatório para head
+ * @param initiativeAreaId - ID da área da iniciativa - obrigatório para head
  * @returns true se o usuário pode deletar iniciativas
  */
-export function canDeleteInitiative(userType: UserType): boolean {
-  // Apenas admin e PMO podem deletar iniciativas
-  return userType === 'admin' || userType === 'pmo';
+export function canDeleteInitiative(
+  userType: UserType, 
+  pageContext?: InitiativePageContext,
+  userArea?: string,
+  initiativeAreaId?: string
+): boolean {
+  // Admin e PMO sempre podem deletar
+  if (userType === 'admin' || userType === 'pmo') {
+    return true;
+  }
+  
+  // Head pode deletar apenas em 'other-initiatives' E apenas iniciativas da própria área
+  if (userType === 'head') {
+    if (pageContext !== 'other-initiatives') {
+      return false;
+    }
+    // Verificar se a iniciativa pertence à área do head
+    return userArea !== undefined && initiativeAreaId !== undefined && userArea === initiativeAreaId;
+  }
+  
+  return false;
 }
 
 /**
@@ -248,9 +330,11 @@ export function canDeleteInitiative(userType: UserType): boolean {
  * 
  * REGRAS:
  * - Admin e PMO: Podem importar iniciativas
- * - Head: Não pode importar iniciativas
+ * - Head em 'other-initiatives': Pode importar (permissoes de PMO)
+ * - Head em 'strategic-initiatives' ou undefined: Não pode importar
  * 
  * @param userType - Tipo de usuário (admin, pmo, head)
+ * @param pageContext - Contexto da página (opcional)
  * @returns true se o usuário pode importar iniciativas
  * 
  * @example
@@ -259,13 +343,27 @@ export function canDeleteInitiative(userType: UserType): boolean {
  * // Retorna: true
  * 
  * @example
- * // Head não pode importar
- * canImportInitiatives('head');
+ * // Head não pode importar em iniciativas estratégicas
+ * canImportInitiatives('head', 'strategic-initiatives');
  * // Retorna: false
+ * 
+ * @example
+ * // Head pode importar em outras iniciativas
+ * canImportInitiatives('head', 'other-initiatives');
+ * // Retorna: true
  */
-export function canImportInitiatives(userType: UserType): boolean {
-  // Apenas admin e PMO podem importar iniciativas
-  return userType === 'admin' || userType === 'pmo';
+export function canImportInitiatives(userType: UserType, pageContext?: InitiativePageContext): boolean {
+  // Admin e PMO sempre podem importar
+  if (userType === 'admin' || userType === 'pmo') {
+    return true;
+  }
+  
+  // Head pode importar apenas em 'other-initiatives'
+  if (userType === 'head') {
+    return pageContext === 'other-initiatives';
+  }
+  
+  return false;
 }
 
 /**
@@ -273,9 +371,13 @@ export function canImportInitiatives(userType: UserType): boolean {
  * 
  * REGRAS:
  * - Admin e PMO: Sempre podem editar prazo
- * - Head: NUNCA pode editar prazo (mesmo da própria área)
+ * - Head em 'other-initiatives': Pode editar prazo apenas de iniciativas da própria área
+ * - Head em 'strategic-initiatives' ou undefined: NUNCA pode editar prazo
  * 
  * @param userType - Tipo de usuário (admin, pmo, head)
+ * @param pageContext - Contexto da página (opcional)
+ * @param userArea - Área do usuário (ID da BusinessArea) - obrigatório para head
+ * @param initiativeAreaId - ID da área da iniciativa - obrigatório para head
  * @returns true se o usuário pode editar o prazo, false caso contrário
  * 
  * @example
@@ -284,17 +386,40 @@ export function canImportInitiatives(userType: UserType): boolean {
  * // Retorna: true
  * 
  * @example
- * // Head não pode editar
- * canEditDeadline('head');
+ * // Head não pode editar em iniciativas estratégicas
+ * canEditDeadline('head', 'strategic-initiatives');
+ * // Retorna: false
+ * 
+ * @example
+ * // Head pode editar em outras iniciativas da própria área
+ * canEditDeadline('head', 'other-initiatives', 'area-123', 'area-123');
+ * // Retorna: true
+ * 
+ * @example
+ * // Head não pode editar em outras iniciativas de área diferente
+ * canEditDeadline('head', 'other-initiatives', 'area-123', 'area-456');
  * // Retorna: false
  */
-export function canEditDeadline(userType: UserType): boolean {
+export function canEditDeadline(
+  userType: UserType, 
+  pageContext?: InitiativePageContext,
+  userArea?: string,
+  initiativeAreaId?: string
+): boolean {
   // Admin e PMO sempre podem editar prazo
   if (userType === 'admin' || userType === 'pmo') {
     return true;
   }
   
-  // Head nunca pode editar prazo
+  // Head pode editar prazo apenas em 'other-initiatives' E apenas de iniciativas da própria área
+  if (userType === 'head') {
+    if (pageContext !== 'other-initiatives') {
+      return false;
+    }
+    // Verificar se a iniciativa pertence à área do head
+    return userArea !== undefined && initiativeAreaId !== undefined && userArea === initiativeAreaId;
+  }
+  
   return false;
 }
 
@@ -303,11 +428,13 @@ export function canEditDeadline(userType: UserType): boolean {
  * 
  * REGRAS:
  * - Admin e PMO: Sempre podem editar observações
- * - Head: Pode editar apenas se for da mesma área da iniciativa (userArea === initiativeAreaId)
+ * - Head em 'other-initiatives': Pode editar da própria área (permissoes de PMO)
+ * - Head em 'strategic-initiatives' ou undefined: Pode editar apenas se for da mesma área (comportamento atual)
  * 
  * @param userType - Tipo de usuário (admin, pmo, head)
  * @param userArea - Área do usuário (ID da BusinessArea)
  * @param initiativeAreaId - ID da área da iniciativa
+ * @param pageContext - Contexto da página (opcional)
  * @returns true se o usuário pode editar as observações, false caso contrário
  * 
  * @example
@@ -328,7 +455,8 @@ export function canEditDeadline(userType: UserType): boolean {
 export function canEditDescription(
   userType: UserType,
   userArea: string | undefined,
-  initiativeAreaId: string
+  initiativeAreaId: string,
+  pageContext?: InitiativePageContext
 ): boolean {
   // Admin e PMO sempre podem editar
   if (userType === 'admin' || userType === 'pmo') {
@@ -336,6 +464,7 @@ export function canEditDescription(
   }
   
   // Head só pode editar da própria área (comparar IDs)
+  // Comportamento igual em ambos os contextos
   if (userType === 'head') {
     return userArea === initiativeAreaId;
   }
@@ -348,11 +477,13 @@ export function canEditDescription(
  * 
  * REGRAS:
  * - Admin e PMO: Sempre podem editar prioridade
- * - Head: Pode editar apenas se for da mesma área da iniciativa (userArea === initiativeAreaId)
+ * - Head em 'other-initiatives': Pode editar da própria área (permissoes de PMO)
+ * - Head em 'strategic-initiatives' ou undefined: Pode editar apenas se for da mesma área (comportamento atual)
  * 
  * @param userType - Tipo de usuário (admin, pmo, head)
  * @param userArea - Área do usuário (ID da BusinessArea)
  * @param initiativeAreaId - ID da área da iniciativa
+ * @param pageContext - Contexto da página (opcional)
  * @returns true se o usuário pode editar a prioridade, false caso contrário
  * 
  * @example
@@ -373,7 +504,8 @@ export function canEditDescription(
 export function canEditPriority(
   userType: UserType,
   userArea: string | undefined,
-  initiativeAreaId: string
+  initiativeAreaId: string,
+  pageContext?: InitiativePageContext
 ): boolean {
   // Admin e PMO sempre podem editar
   if (userType === 'admin' || userType === 'pmo') {
@@ -381,6 +513,7 @@ export function canEditPriority(
   }
   
   // Head só pode editar da própria área (comparar IDs)
+  // Comportamento igual em ambos os contextos
   if (userType === 'head') {
     return userArea === initiativeAreaId;
   }

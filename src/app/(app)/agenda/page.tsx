@@ -12,8 +12,10 @@ import { useStrategicPanel } from "@/contexts/strategic-panel-context";
 import { useToast } from "@/hooks/use-toast";
 import { getWeekItems, type AgendaItem } from "@/lib/agenda-helpers";
 import { canEditInitiativeStatus } from "@/lib/permissions-config";
+import type { InitiativePageContext } from "@/lib/permissions-config";
 import type { InitiativeStatus, InitiativePriority } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 /**
  * Obtém a área padrão baseada no tipo de usuário quando não há filtro selecionado.
@@ -84,6 +86,9 @@ export default function AgendaPage() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   
+  // Estado para controlar a aba ativa (strategic ou other)
+  const [activeTab, setActiveTab] = useState<'strategic' | 'other'>('strategic');
+  
   // Verificar permissões
   const userType = user?.userType || 'head';
   const userArea = getUserArea();
@@ -96,9 +101,26 @@ export default function AgendaPage() {
     return getEffectiveAreaId(selectedAreaId, userType, userArea, businessAreas);
   }, [selectedAreaId, userType, userArea, businessAreas]);
   
-  // Filtrar iniciativas por área efetiva
+  // Calcular pageContext baseado na aba ativa
+  const pageContext: InitiativePageContext = useMemo(() => {
+    return activeTab === 'other' ? 'other-initiatives' : 'strategic-initiatives';
+  }, [activeTab]);
+  
+  // Filtrar iniciativas por initiativeType E por área efetiva
   const filteredInitiatives = useMemo(() => {
-    let filtered = initiatives.filter(i => !i.archived);
+    let filtered = initiatives.filter(i => {
+      // Filtrar não arquivadas
+      if (i.archived) return false;
+      
+      // Filtrar por tipo baseado na aba ativa
+      if (activeTab === 'other') {
+        // Apenas iniciativas 'other'
+        return i.initiativeType === 'other';
+      } else {
+        // Apenas iniciativas 'strategic' ou undefined/null (tratado como strategic)
+        return i.initiativeType === 'strategic' || i.initiativeType === undefined || i.initiativeType === null;
+      }
+    });
     
     // Aplicar filtro de área
     if (effectiveAreaId) {
@@ -106,7 +128,7 @@ export default function AgendaPage() {
     }
     
     return filtered;
-  }, [initiatives, effectiveAreaId]);
+  }, [initiatives, effectiveAreaId, activeTab]);
   
   // Obter itens da semana vigente
   const weekItems = useMemo(() => {
@@ -152,8 +174,8 @@ export default function AgendaPage() {
     const initiative = filteredInitiatives.find(i => i.id === item.initiativeId);
     if (!initiative) return;
     
-    // Verificar permissão
-    const canEdit = canEditInitiativeStatus(userType, userArea, initiative.areaId);
+    // Verificar permissão com pageContext
+    const canEdit = canEditInitiativeStatus(userType, userArea, initiative.areaId, pageContext);
     if (!canEdit) {
       toast({
         variant: 'destructive',
@@ -192,8 +214,8 @@ export default function AgendaPage() {
     const initiative = filteredInitiatives.find(i => i.id === item.initiativeId);
     if (!initiative) return;
     
-    // Verificar permissão
-    const canEdit = canEditInitiativeStatus(userType, userArea, initiative.areaId);
+    // Verificar permissão com pageContext
+    const canEdit = canEditInitiativeStatus(userType, userArea, initiative.areaId, pageContext);
     if (!canEdit) {
       toast({
         variant: 'destructive',
@@ -237,35 +259,77 @@ export default function AgendaPage() {
       {/* Filtro de área (apenas para PMO e Admin) */}
       <AgendaAreaFilter />
       
-      {/* Filtros secundários */}
-      <AgendaFilters
-        items={weekItems}
-        projectFilter={projectFilter}
-        responsibleFilter={responsibleFilter}
-        priorityFilter={priorityFilter}
-        statusFilter={statusFilter}
-        onProjectChange={setProjectFilter}
-        onResponsibleChange={setResponsibleFilter}
-        onPriorityChange={setPriorityFilter}
-        onStatusChange={setStatusFilter}
-      />
-      
-      {/* Seção Agenda da Semana Vigente */}
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold">Agenda da Semana Vigente</h2>
-          <p className="text-sm text-muted-foreground">
-            {filteredItems.length} {filteredItems.length === 1 ? 'atividade encontrada' : 'atividades encontradas'}
-          </p>
-        </div>
+      {/* Tabs para alternar entre iniciativas estratégicas e outras */}
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'strategic' | 'other')} className="w-full">
+        <TabsList>
+          <TabsTrigger value="strategic">Iniciativas Estratégicas</TabsTrigger>
+          <TabsTrigger value="other">Outras Iniciativas</TabsTrigger>
+        </TabsList>
         
-        {/* Tabela */}
-        <AgendaTable
-          items={filteredItems}
-          onItemStatusChange={handleItemStatusChange}
-          onSubItemStatusChange={handleSubItemStatusChange}
-        />
-      </div>
+        <TabsContent value="strategic" className="space-y-6 mt-6">
+          {/* Filtros secundários */}
+          <AgendaFilters
+            items={weekItems}
+            projectFilter={projectFilter}
+            responsibleFilter={responsibleFilter}
+            priorityFilter={priorityFilter}
+            statusFilter={statusFilter}
+            onProjectChange={setProjectFilter}
+            onResponsibleChange={setResponsibleFilter}
+            onPriorityChange={setPriorityFilter}
+            onStatusChange={setStatusFilter}
+          />
+          
+          {/* Seção Agenda da Semana Vigente */}
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">Agenda da Semana Vigente</h2>
+              <p className="text-sm text-muted-foreground">
+                {filteredItems.length} {filteredItems.length === 1 ? 'atividade encontrada' : 'atividades encontradas'}
+              </p>
+            </div>
+            
+            {/* Tabela */}
+            <AgendaTable
+              items={filteredItems}
+              onItemStatusChange={handleItemStatusChange}
+              onSubItemStatusChange={handleSubItemStatusChange}
+            />
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="other" className="space-y-6 mt-6">
+          {/* Filtros secundários */}
+          <AgendaFilters
+            items={weekItems}
+            projectFilter={projectFilter}
+            responsibleFilter={responsibleFilter}
+            priorityFilter={priorityFilter}
+            statusFilter={statusFilter}
+            onProjectChange={setProjectFilter}
+            onResponsibleChange={setResponsibleFilter}
+            onPriorityChange={setPriorityFilter}
+            onStatusChange={setStatusFilter}
+          />
+          
+          {/* Seção Agenda da Semana Vigente */}
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">Agenda da Semana Vigente</h2>
+              <p className="text-sm text-muted-foreground">
+                {filteredItems.length} {filteredItems.length === 1 ? 'atividade encontrada' : 'atividades encontradas'}
+              </p>
+            </div>
+            
+            {/* Tabela */}
+            <AgendaTable
+              items={filteredItems}
+              onItemStatusChange={handleItemStatusChange}
+              onSubItemStatusChange={handleSubItemStatusChange}
+            />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

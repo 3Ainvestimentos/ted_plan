@@ -5,18 +5,21 @@ import { LayoutDashboard, Target, Settings, Shield, User, BarChart3, ListTodo, C
 export const NAV_ITEMS_CONFIG: NavItem[] = [
   { title: 'Painel Estratégico', href: '/', icon: LayoutDashboard },
   { title: 'Iniciativas Estratégicas', href: '/strategic-initiatives', icon: Target },
+  { title: 'Outras Iniciativas', href: '/other-initiatives', icon: FileText },
   { title: 'Agenda', href: '/agenda', icon: Calendar },
 ];
 
 // Mapeamento de páginas para chaves de permissão
 export const PAGE_PERMISSIONS_MAP: Record<string, string> = {
   'Iniciativas Estratégicas': 'strategic-initiatives',
+  'Outras Iniciativas': 'other-initiatives',
   'Agenda': 'agenda',
 };
 
 // Páginas que requerem permissão (excluindo Painel Estratégico que é apenas para Administradores)
 export const PERMISSIONABLE_PAGES = [
   { title: 'Iniciativas Estratégicas', key: 'strategic-initiatives' },
+  { title: 'Outras Iniciativas', key: 'other-initiatives' },
   { title: 'Agenda', key: 'agenda' },
 ];
 
