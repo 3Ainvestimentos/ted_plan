@@ -33,7 +33,8 @@ export const TeamControlProvider = ({ children }: { children: ReactNode }) => {
       const collaboratorsData = querySnapshot.docs.map(doc => ({
         id: doc.id, // ID agora é o email
         ...doc.data()
-      } as Collaborator));
+      } as Collaborator))
+      .filter(c => !c.deletedAt); // Filter out deleted collaborators
       setCollaborators(collaboratorsData);
     } catch (error) {
       console.error("Error fetching collaborators: ", error);
@@ -77,7 +78,8 @@ export const TeamControlProvider = ({ children }: { children: ReactNode }) => {
     }
     // Usar email como ID (agora id e email são a mesma coisa)
     const collaboratorDocRef = doc(db, 'collaborators', emailOrId);
-    await deleteDoc(collaboratorDocRef);
+    // Soft delete implementation
+    await updateDoc(collaboratorDocRef, { deletedAt: new Date().toISOString() });
     fetchCollaborators();
   };
   

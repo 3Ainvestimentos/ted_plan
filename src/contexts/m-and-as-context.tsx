@@ -51,10 +51,12 @@ export const MnaDealsProvider = ({ children }: { children: ReactNode }) => {
     try {
         const q = query(dealsCollectionRef, orderBy('topicNumber'));
         const querySnapshot = await getDocs(q);
-        const rawDeals = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        } as MnaDeal));
+        const rawDeals = querySnapshot.docs
+            .map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            } as MnaDeal))
+            .filter(deal => !deal.deletedAt); // Filter out soft-deleted deals
 
         const dealsWithProgress = rawDeals.map(deal => {
             let progress = deal.progress || 0;
@@ -167,7 +169,11 @@ export const MnaDealsProvider = ({ children }: { children: ReactNode }) => {
   const deleteDeal = useCallback(async (dealId: string) => {
     const dealDocRef = doc(db, 'mnaDeals', dealId);
     try {
-        await deleteDoc(dealDocRef);
+        // Soft delete implementation
+        await updateDoc(dealDocRef, {
+            deletedAt: new Date().toISOString(),
+            lastUpdate: new Date().toISOString()
+        });
         fetchDeals();
     } catch (error) {
         console.error("Error deleting deal: ", error);

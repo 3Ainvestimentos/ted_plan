@@ -347,10 +347,12 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
     try {
         const q = query(initiativesCollectionRef, orderBy('topicNumber'));
         const querySnapshot = await getDocs(q);
-        const rawInitiatives = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        } as Initiative));
+        const rawInitiatives = querySnapshot.docs
+            .map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            } as Initiative))
+            .filter(init => !init.deletedAt); // Filter out soft-deleted initiatives
 
         // Migrar iniciativas antigas para nova estrutura
         const migratedInitiatives = rawInitiatives.map(init => migrateInitiativeToThreeLayer(init));
@@ -744,7 +746,11 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
   const deleteInitiative = useCallback(async (initiativeId: string) => {
     const initiativeDocRef = doc(db, 'initiatives', initiativeId);
     try {
-        await deleteDoc(initiativeDocRef);
+        // Soft delete implementation
+        await updateDoc(initiativeDocRef, {
+            deletedAt: new Date().toISOString(),
+            lastUpdate: new Date().toISOString()
+        });
         fetchInitiatives();
     } catch (error) {
         console.error("Error deleting initiative: ", error);

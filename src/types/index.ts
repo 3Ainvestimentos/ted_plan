@@ -53,6 +53,7 @@ export interface Initiative {
   areaId: string; // Área obrigatória (seletor com áreas de negócio)
   items: InitiativeItem[]; // Itens obrigatórios (mínimo 1)
   archived?: boolean;
+  deletedAt?: string; // Soft delete field (ISO date)
   initiativeType?: 'strategic' | 'other'; // Tipo de iniciativa: 'strategic' (padrão) ou 'other'
   cidade?: string;
   auc?: number;
@@ -92,6 +93,7 @@ export interface DevProject {
     id: string;
     name: string;
     items: DevProjectItem[];
+    deletedAt?: string; // Soft delete field (ISO date)
 }
 
 // Types for Project Comments
@@ -130,6 +132,7 @@ export interface Collaborator {
     userType: UserType;
     remunerationHistory?: RemunerationHistory[];
     positionHistory?: PositionHistory[];
+    deletedAt?: string; // Soft delete field (ISO date)
 }
 
 
@@ -158,6 +161,7 @@ export interface Kpi {
     series: KpiSeriesData[];
     startDate?: string;
     endDate?: string;
+    deletedAt?: string; // Soft delete field (ISO date)
 }
 
 export interface Okr {
@@ -171,6 +175,7 @@ export interface Okr {
     lastUpdate: string | null;
     previousUpdate: string | null;
     observations?: string;
+    deletedAt?: string; // Soft delete field (ISO date)
 }
 
 export interface BusinessArea {
@@ -181,6 +186,7 @@ export interface BusinessArea {
     okrs: Okr[];
     kpis: Kpi[];
     generalContext?: string; // Contextualização geral da área (formato texto com bullets)
+    deletedAt?: string; // Soft delete field (ISO date)
 }
 
 // Form data types for Strategic Panel Management

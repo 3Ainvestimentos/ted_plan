@@ -40,10 +40,16 @@ export const StrategicPanelProvider = ({ children }: { children: ReactNode }) =>
             getDocs(kpisCollectionRef)
         ]);
 
-        const okrs = okrsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Okr));
-        const kpis = kpisSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Kpi));
+        const okrs = okrsSnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as Okr))
+            .filter(okr => !okr.deletedAt); // Filter out deleted OKRs
+            
+        const kpis = kpisSnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as Kpi))
+            .filter(kpi => !kpi.deletedAt); // Filter out deleted KPIs
 
-        const areas = areasSnapshot.docs.map(doc => {
+        const areas = areasSnapshot.docs
+            .map(doc => {
             const areaId = doc.id;
             return {
                 id: areaId,
@@ -51,7 +57,8 @@ export const StrategicPanelProvider = ({ children }: { children: ReactNode }) =>
                 okrs: okrs.filter(okr => okr.areaId === areaId),
                 kpis: kpis.filter(kpi => kpi.areaId === areaId)
             } as BusinessArea;
-        });
+        })
+        .filter(area => !area.deletedAt); // Filter out deleted Areas
 
         setBusinessAreas(areas);
     } catch (error) {
@@ -80,10 +87,10 @@ export const StrategicPanelProvider = ({ children }: { children: ReactNode }) =>
   
   const deleteBusinessArea = async (areaId: string) => {
     const areaDocRef = doc(db, 'businessAreas', areaId);
-    await deleteDoc(areaDocRef);
-    // Note: This doesn't delete sub-collections (OKRs, KPIs) in Firestore,
-    // which would require a backend function for robust deletion.
-    // For this app, we assume they are separate collections linked by areaId.
+    // Soft delete implementation
+    await updateDoc(areaDocRef, { deletedAt: new Date().toISOString() });
+    // Note: This doesn't recursively soft-delete sub-collections (OKRs, KPIs).
+    // They will just be orphaned visually or can be filtered out if we query them independently.
     fetchStrategicPanelData();
   };
 
@@ -102,7 +109,8 @@ export const StrategicPanelProvider = ({ children }: { children: ReactNode }) =>
 
   const deleteOkr = async (okrId: string) => {
     const okrDocRef = doc(db, 'okrs', okrId);
-    await deleteDoc(okrDocRef);
+    // Soft delete implementation
+    await updateDoc(okrDocRef, { deletedAt: new Date().toISOString() });
     fetchStrategicPanelData();
   };
 
@@ -121,7 +129,8 @@ export const StrategicPanelProvider = ({ children }: { children: ReactNode }) =>
   
   const deleteKpi = async (kpiId: string) => {
     const kpiDocRef = doc(db, 'kpis', kpiId);
-    await deleteDoc(kpiDocRef);
+    // Soft delete implementation
+    await updateDoc(kpiDocRef, { deletedAt: new Date().toISOString() });
     fetchStrategicPanelData();
   };
 
