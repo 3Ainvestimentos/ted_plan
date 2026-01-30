@@ -48,3 +48,19 @@ firestore-debug.log
 # migration logs
 migration.log
 scripts/*.log
+
+
+# Google Cloud Service Account credentials
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!components.json
+!firebase.json
+!firestore.indexes.json
+!firestore.rules
+!apphosting.yaml
+!postcss.config.mjs
+!next.config.ts
+!pyproject.toml
+ted-plan-*.json
