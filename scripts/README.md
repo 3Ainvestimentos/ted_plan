@@ -150,3 +150,5 @@ Em caso de problemas, verifique:
 2. Permissões da conta de serviço
 3. Conectividade com Firestore
 4. Formato dos dados no Firestore
+
+
