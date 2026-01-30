@@ -44,6 +44,7 @@ export interface Initiative {
   owner: string; // Responsável obrigatório
   description: string;
   lastUpdate: string; // Date string
+  createdAt?: string; // ISO date string - adicionado para novas iniciativas
   progress: number; // Percentage 0-100
   priority: InitiativePriority;
   startDate: string; // ISO date string 'YYYY-MM-DD' - OBRIGATÓRIO

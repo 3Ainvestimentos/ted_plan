@@ -4,7 +4,7 @@
 import type { Initiative, InitiativeStatus, InitiativePriority, SubItem, InitiativeItem } from '@/types';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, query, orderBy, deleteDoc, writeBatch, setDoc, deleteField } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, query, orderBy, deleteDoc, writeBatch, setDoc, deleteField, runTransaction } from 'firebase/firestore';
 import type { InitiativeFormData } from '@/components/initiatives/initiative-form';
 
 
@@ -470,12 +470,96 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
       return mainTopics.length > 0 ? (Math.max(...mainTopics.map(i => parseInt(i.topicNumber))) + 1) : 1;
   };
 
+  /**
+   * Calcula o próximo número de tópico sequencial para uma área e tipo específicos.
+   * Filtra apenas iniciativas ativas (sem deletedAt).
+   * 
+   * @param currentInitiatives - Array completo de iniciativas
+   * @param areaId - ID da área de negócio
+   * @param initiativeType - Tipo da iniciativa ('strategic' ou 'other')
+   * @returns Próximo número sequencial para aquela combinação área/tipo
+   */
+  const getNextTopicNumberForArea = (
+    currentInitiatives: Initiative[], 
+    areaId: string, 
+    initiativeType: 'strategic' | 'other'
+  ): number => {
+    const filtered = currentInitiatives.filter(i => 
+      !i.deletedAt && // Excluir soft-deleted
+      i.areaId === areaId && 
+      (i.initiativeType || 'strategic') === initiativeType
+    );
+    
+    if (filtered.length === 0) return 1;
+    
+    const numbers = filtered
+      .map(i => parseInt(i.topicNumber))
+      .filter(n => !isNaN(n) && n > 0);
+    
+    return numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
+  };
+
+  /**
+   * Renumera iniciativas ativas da mesma área/tipo após um soft delete.
+   * Ordena por createdAt quando disponível (ordenação cronológica), com fallback para topicNumber atual.
+   * 
+   * @param deletedInitiative - Objeto com areaId e initiativeType da iniciativa soft-deletada
+   * @param allInitiatives - Array completo de iniciativas (a função filtra internamente)
+   * @returns Array de atualizações { id, topicNumber } para aplicar em batch
+   */
+  const renumberAfterDelete = (
+    deletedInitiative: { areaId: string; initiativeType?: 'strategic' | 'other' },
+    allInitiatives: Initiative[]
+  ): Array<{ id: string; topicNumber: string }> => {
+    const initiativeType = deletedInitiative.initiativeType || 'strategic';
+    
+    // Filtrar apenas iniciativas ATIVAS (sem deletedAt) da mesma área/tipo
+    const activeSameAreaType = allInitiatives.filter(i => 
+      !i.deletedAt && // Apenas ativas
+      i.areaId === deletedInitiative.areaId &&
+      (i.initiativeType || 'strategic') === initiativeType
+    );
+    
+    if (activeSameAreaType.length === 0) return [];
+    
+    // Ordenar iniciativas: usar createdAt se ambos tiverem (ordenação cronológica),
+    // senão fallback para topicNumber atual (preserva ordem para iniciativas antigas)
+    activeSameAreaType.sort((a, b) => {
+      // Priorizar createdAt quando ambos tiverem (ordenação cronológica)
+      if (a.createdAt && b.createdAt) {
+        const aTime = new Date(a.createdAt).getTime();
+        const bTime = new Date(b.createdAt).getTime();
+        if (aTime !== bTime) {
+          return aTime - bTime;
+        }
+      }
+      // Fallback para topicNumber (preserva ordem atual para iniciativas antigas)
+      const aNum = parseInt(a.topicNumber) || 0;
+      const bNum = parseInt(b.topicNumber) || 0;
+      return aNum - bNum;
+    });
+    
+    // Renumerar sequencialmente começando em 1
+    const updates: Array<{ id: string; topicNumber: string }> = [];
+    
+    activeSameAreaType.forEach((init, index) => {
+      const newNumber = (index + 1).toString();
+      // Só adicionar atualização se o número mudou
+      if (init.topicNumber !== newNumber) {
+        updates.push({ id: init.id, topicNumber: newNumber });
+      }
+    });
+    
+    return updates;
+  };
+
   const addInitiative = useCallback(async (initiativeData: InitiativeFormData) => {
     // #region agent log
     fetch('http://127.0.0.1:7246/ingest/8c87e21a-3e34-4b39-9562-571850528ec6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'initiatives-context.tsx:442',message:'addInitiative called',data:{hasTitle:!!initiativeData.title,hasOwner:!!initiativeData.owner,itemsCount:initiativeData.items?.length||0,hasStartDate:!!initiativeData.startDate,hasEndDate:!!initiativeData.endDate,hasAreaId:!!initiativeData.areaId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
     // #endregion
     
-    const nextTopicNumber = getNextMainTopicNumber(initiatives).toString();
+    const initiativeType = (initiativeData as any).initiativeType || 'strategic';
+    const nextTopicNumber = getNextTopicNumberForArea(initiatives, initiativeData.areaId, initiativeType).toString();
     
     const newInitiative = {
         title: initiativeData.title,
@@ -486,8 +570,9 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
         startDate: initiativeData.startDate ? (typeof initiativeData.startDate === 'string' ? initiativeData.startDate : initiativeData.startDate.toISOString().split('T')[0]) : '',
         endDate: initiativeData.endDate ? (typeof initiativeData.endDate === 'string' ? initiativeData.endDate : initiativeData.endDate.toISOString().split('T')[0]) : '',
         areaId: initiativeData.areaId,
-        initiativeType: (initiativeData as any).initiativeType || 'strategic', // Default 'strategic' se não fornecido
+        initiativeType: initiativeType,
         lastUpdate: new Date().toISOString(),
+        createdAt: new Date().toISOString(), // Adicionar para novas iniciativas
         topicNumber: nextTopicNumber,
         progress: 0, 
         keyMetrics: [],
@@ -590,10 +675,33 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
       }>;
     }>;
   }>) => {
-    let nextTopicNumber = getNextMainTopicNumber(initiatives);
+    // Agrupar iniciativas por área/tipo antes de processar
+    const groupedByAreaType = newInitiativesData.reduce((acc, init) => {
+      const areaId = init.areaId;
+      const initiativeType = (init as any).initiativeType || 'strategic';
+      const key = `${areaId}_${initiativeType}`;
+      
+      if (!acc[key]) {
+        acc[key] = {
+          areaId,
+          initiativeType: initiativeType as 'strategic' | 'other',
+          initiatives: []
+        };
+      }
+      acc[key].initiatives.push(init);
+      return acc;
+    }, {} as Record<string, { areaId: string; initiativeType: 'strategic' | 'other'; initiatives: typeof newInitiativesData }>);
+
     const batch = writeBatch(db);
     
-    newInitiativesData.forEach(initiativeData => {
+    // Processar cada grupo com sua própria sequência
+    for (const [key, group] of Object.entries(groupedByAreaType)) {
+      const { areaId, initiativeType, initiatives: groupInitiatives } = group;
+      
+      // Calcular próximo número para este grupo
+      let nextTopicNumber = getNextTopicNumberForArea(initiatives, areaId, initiativeType);
+      
+      groupInitiatives.forEach(initiativeData => {
         // Validar que a iniciativa tem pelo menos 1 item
         if (!initiativeData.items || initiativeData.items.length === 0) {
             console.error(`Iniciativa "${initiativeData.title}" não possui itens. Será ignorada.`);
@@ -666,9 +774,10 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
           startDate: startDate,
           endDate: endDate,
           areaId: initiativeData.areaId,
-          initiativeType: (initiativeData as any).initiativeType || 'strategic', // Default 'strategic' se não fornecido
+          initiativeType: initiativeType,
           lastUpdate: new Date().toISOString(),
-          topicNumber: (nextTopicNumber++).toString(),
+          createdAt: new Date().toISOString(), // Adicionar para novas iniciativas
+          topicNumber: (nextTopicNumber++).toString(), // Incrementar para cada iniciativa do grupo
           progress: 0,
           keyMetrics: [],
           parentId: null,
@@ -680,7 +789,8 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
         const cleanedInitiative = removeUndefinedFields(newInitiative);
         const docRef = doc(initiativesCollectionRef);
         batch.set(docRef, cleanedInitiative);
-    });
+      });
+    }
 
     try {
       await batch.commit();
@@ -744,18 +854,54 @@ export const InitiativesProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchInitiatives]);
 
   const deleteInitiative = useCallback(async (initiativeId: string) => {
+    // 1. Buscar iniciativa no estado (ainda disponível, não foi deletada fisicamente)
+    const initiativeToDelete = initiatives.find(i => i.id === initiativeId);
+    if (!initiativeToDelete) {
+      console.error(`Initiative ${initiativeId} not found`);
+      return;
+    }
+    
+    const { areaId, initiativeType } = initiativeToDelete;
+    
+    // 2. Criar lista excluindo a iniciativa que será deletada
+    const initiativesWithoutDeleted = initiatives.filter(i => i.id !== initiativeId);
+    
+    // 3. Calcular renumerações com a lista sem a iniciativa que será deletada
+    const renumberUpdates = renumberAfterDelete(
+      { areaId, initiativeType },
+      initiativesWithoutDeleted // Lista sem a iniciativa que será deletada
+    );
+    
+    // 4. Usar transação para garantir atomicidade (evita race conditions)
     const initiativeDocRef = doc(db, 'initiatives', initiativeId);
     try {
-        // Soft delete implementation
-        await updateDoc(initiativeDocRef, {
-            deletedAt: new Date().toISOString(),
-            lastUpdate: new Date().toISOString()
+      await runTransaction(db, async (transaction) => {
+        // Soft delete da iniciativa
+        transaction.update(initiativeDocRef, {
+          deletedAt: new Date().toISOString(),
+          lastUpdate: new Date().toISOString()
         });
-        fetchInitiatives();
+        
+        // Aplicar renumerações dentro da mesma transação
+        if (renumberUpdates.length > 0) {
+          renumberUpdates.forEach(({ id, topicNumber }) => {
+            const docRef = doc(db, 'initiatives', id);
+            transaction.update(docRef, { 
+              topicNumber,
+              lastUpdate: new Date().toISOString()
+            });
+          });
+        }
+      });
+      
+      // 5. Recarregar após transação bem-sucedida (já filtra soft-deleted automaticamente)
+      await fetchInitiatives();
+      
     } catch (error) {
-        console.error("Error deleting initiative: ", error);
+      console.error("Error deleting initiative: ", error);
+      // Transação garante que ou tudo é aplicado ou nada é aplicado
     }
-  }, [fetchInitiatives]);
+  }, [initiatives, fetchInitiatives]);
 
   const archiveInitiative = useCallback(async (initiativeId: string) => {
     const initiativeDocRef = doc(db, 'initiatives', initiativeId);
