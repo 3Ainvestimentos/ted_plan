@@ -46,7 +46,7 @@ import {
   Undo,
   Pencil,
   ChevronsUpDown,
-  MoreHorizontal
+  Eye
 } from 'lucide-react';
 import { 
   startOfDay, 
@@ -996,7 +996,7 @@ export function TableGanttView({
                           }}
                           title="Ver informações"
                         >
-                          <MoreHorizontal className="h-4 w-4" />
+                          <Eye className="h-4 w-4" />
                         </Button>
                       </TableCell>
                       
@@ -1290,7 +1290,7 @@ export function TableGanttView({
                                 }}
                                 title="Ver informações"
                               >
-                                <MoreHorizontal className="h-4 w-4" />
+                                <Eye className="h-4 w-4" />
                               </Button>
                             </TableCell>
                             <TableCell className="pl-12 sticky left-28 bg-gray-100 z-10">
@@ -1577,7 +1577,7 @@ export function TableGanttView({
                                     }}
                                     title="Ver informações"
                                   >
-                                    <MoreHorizontal className="h-4 w-4" />
+                                    <Eye className="h-4 w-4" />
                                   </Button>
                                 </TableCell>
                                 <TableCell className="pl-20 sticky left-28 bg-gray-200 z-10">
