@@ -968,20 +968,22 @@ export function TableGanttView({
 
                 // Verificar se está em atraso
                 const initiativeIsOverdue = isOverdue(initiative.endDate, initiative.status);
+                const isCompletedRow = !initiative.archived && !initiativeIsOverdue && initiative.status === 'Concluído';
                 
                 return (
                   <React.Fragment key={initiative.id}>
                     <TableRow className={cn(
                       initiative.archived && 'bg-muted/30 text-muted-foreground hover:bg-muted/50',
-                      !initiative.archived && initiativeIsOverdue && 'bg-red-50 hover:bg-red-100'
+                      !initiative.archived && initiativeIsOverdue && 'bg-red-50 hover:bg-red-100',
+                      isCompletedRow && 'bg-green-50 hover:bg-green-100'
                     )}>
                       {/* Coluna # */}
-                      <TableCell className="font-medium sticky left-0 bg-background z-10">
+                      <TableCell className={cn("font-medium sticky left-0 z-10", isCompletedRow ? "bg-green-50" : "bg-background")}>
                         {initiative.topicNumber}
                       </TableCell>
                       
                       {/* Coluna Ações */}
-                      <TableCell className="sticky left-16 bg-background z-10">
+                      <TableCell className={cn("sticky left-16 z-10", isCompletedRow ? "bg-green-50" : "bg-background")}>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1001,7 +1003,7 @@ export function TableGanttView({
                       </TableCell>
                       
                       {/* Coluna Título */}
-                      <TableCell className="font-medium sticky left-28 bg-background z-10">
+                      <TableCell className={cn("font-medium sticky left-28 z-10", isCompletedRow ? "bg-green-50" : "bg-background")}>
                         <div className="flex items-center gap-1">
                           {hasItems && (
                             <Button 
